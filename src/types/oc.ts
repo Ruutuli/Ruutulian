@@ -86,6 +86,13 @@ export interface WorldStoryData {
   inspirations?: string | null;
   current_era_status?: string | null;
   notes?: string | null;
+  // New world information fields
+  canon_status?: string | null;
+  timeline_era?: string | null;
+  power_source?: string | null;
+  central_conflicts?: string | null;
+  world_rules_limitations?: string | null;
+  oc_integration_notes?: string | null;
   // World field system values (story-specific)
   modular_fields?: WorldFieldValues | null;
   created_at: string;
@@ -111,9 +118,7 @@ export interface World {
   updated_at: string;
   // Default world fields (custom depending on world)
   genre?: string | null;
-  synopsis?: string | null;
   setting?: string | null;
-  setting_img?: string | null;
   lore?: string | null;
   the_world_society?: string | null;
   culture?: string | null;
@@ -133,7 +138,13 @@ export interface World {
   inspirations?: string | null;
   current_era_status?: string | null;
   notes?: string | null;
-  banner_image?: string | null;
+  // New world information fields
+  canon_status?: string | null;
+  timeline_era?: string | null;
+  power_source?: string | null;
+  central_conflicts?: string | null;
+  world_rules_limitations?: string | null;
+  oc_integration_notes?: string | null;
   oc_templates?: Record<string, { fields: Array<{ key: string; label: string; type: 'text' | 'array' | 'number' }> }> | null;
   // World field system
   world_fields?: WorldFieldDefinitions | null;

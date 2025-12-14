@@ -11,8 +11,18 @@ export default async function AdminWorldsPage() {
 
   const { data: worlds } = await supabase
     .from('worlds')
-    .select('id, name, slug, series_type, is_public')
+    .select('id, name, slug, series_type, is_public, story_aliases(id)')
     .order('name', { ascending: true });
+
+  // Transform the data to include story count
+  const worldsWithStoryCount = worlds?.map((world) => ({
+    id: world.id,
+    name: world.name,
+    slug: world.slug,
+    series_type: world.series_type,
+    is_public: world.is_public,
+    story_count: Array.isArray(world.story_aliases) ? world.story_aliases.length : 0,
+  })) || [];
 
   return (
     <div>
@@ -26,7 +36,7 @@ export default async function AdminWorldsPage() {
         </Link>
       </div>
 
-      {worlds && worlds.length > 0 ? (
+      {worldsWithStoryCount && worldsWithStoryCount.length > 0 ? (
         <>
           {/* Desktop Table View */}
           <div className="hidden md:block bg-gray-700/90 rounded-lg shadow-lg overflow-hidden border border-gray-600/70">
@@ -42,13 +52,16 @@ export default async function AdminWorldsPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-200 uppercase tracking-wider">
                     Public
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-200 uppercase tracking-wider">
+                    Stories
+                  </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-200 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-gray-700/50 divide-y divide-gray-600/50">
-                {worlds.map((world) => (
+                {worldsWithStoryCount.map((world) => (
                   <tr key={world.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-100">{world.name}</div>
@@ -66,6 +79,9 @@ export default async function AdminWorldsPage() {
                         <span className="text-gray-500">No</span>
                       )}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-300">{world.story_count}</span>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Link
                         href={`/admin/worlds/${world.id}`}
@@ -82,7 +98,7 @@ export default async function AdminWorldsPage() {
 
           {/* Mobile Card View */}
           <div className="md:hidden space-y-4">
-            {worlds.map((world) => (
+            {worldsWithStoryCount.map((world) => (
               <div
                 key={world.id}
                 className="bg-gray-700/90 rounded-lg shadow-lg border border-gray-600/70 p-4"
@@ -104,6 +120,10 @@ export default async function AdminWorldsPage() {
                     ) : (
                       <span className="text-gray-500 text-sm">No</span>
                     )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">Stories:</span>
+                    <span className="text-sm text-gray-300">{world.story_count}</span>
                   </div>
                 </div>
                 <div className="pt-3 border-t border-gray-600/50">

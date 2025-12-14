@@ -42,18 +42,9 @@ const worldSchema = z.object({
     z.string().url(),
     z.literal(''),
   ]).optional(),
-  setting_img: z.union([
-    z.string().url(),
-    z.literal(''),
-  ]).optional(),
-  banner_image: z.union([
-    z.string().url(),
-    z.literal(''),
-  ]).optional(),
   is_public: z.boolean(),
   // Additional world fields
   genre: optionalString,
-  synopsis: optionalString,
   setting: optionalString,
   lore: optionalString,
   the_world_society: optionalString,
@@ -74,6 +65,13 @@ const worldSchema = z.object({
   inspirations: optionalString,
   current_era_status: optionalString,
   notes: optionalString,
+  // New world information fields
+  canon_status: optionalString,
+  timeline_era: optionalString,
+  power_source: optionalString,
+  central_conflicts: optionalString,
+  world_rules_limitations: optionalString,
+  oc_integration_notes: optionalString,
   // World field system (definitions - read-only in this form)
   world_fields: z.any().optional(),
   // Modular fields for world field system values
@@ -175,11 +173,8 @@ export function WorldForm({ world }: WorldFormProps) {
         is_public: data.is_public,
         header_image_url: data.header_image_url || null,
         icon_url: data.icon_url || null,
-        setting_img: data.setting_img || null,
-        banner_image: data.banner_image || null,
         description_markdown: data.description_markdown || null,
         genre: data.genre || null,
-        synopsis: data.synopsis || null,
         setting: data.setting || null,
         lore: data.lore || null,
         the_world_society: data.the_world_society || null,
@@ -200,6 +195,12 @@ export function WorldForm({ world }: WorldFormProps) {
         inspirations: data.inspirations || null,
         current_era_status: data.current_era_status || null,
         notes: data.notes || null,
+        canon_status: data.canon_status || null,
+        timeline_era: data.timeline_era || null,
+        power_source: data.power_source || null,
+        central_conflicts: data.central_conflicts || null,
+        world_rules_limitations: data.world_rules_limitations || null,
+        oc_integration_notes: data.oc_integration_notes || null,
         world_fields: world?.world_fields || null,
       };
     },
@@ -239,6 +240,12 @@ export function WorldForm({ world }: WorldFormProps) {
         inspirations: storyData.inspirations ?? world.inspirations,
         current_era_status: storyData.current_era_status ?? world.current_era_status,
         notes: storyData.notes ?? world.notes,
+        canon_status: storyData.canon_status ?? world.canon_status,
+        timeline_era: storyData.timeline_era ?? world.timeline_era,
+        power_source: storyData.power_source ?? world.power_source,
+        central_conflicts: storyData.central_conflicts ?? world.central_conflicts,
+        world_rules_limitations: storyData.world_rules_limitations ?? world.world_rules_limitations,
+        oc_integration_notes: storyData.oc_integration_notes ?? world.oc_integration_notes,
         modular_fields: storyData.modular_fields ?? world.modular_fields,
       };
     }
@@ -256,13 +263,10 @@ export function WorldForm({ world }: WorldFormProps) {
       description_markdown: getDefaultValue(mergedWorldData.description_markdown),
       primary_color: mergedWorldData.primary_color || '#64748b',
       accent_color: mergedWorldData.accent_color || '#94a3b8',
-      header_image_url: getDefaultValue(mergedWorldData.header_image_url),
-      icon_url: getDefaultValue(mergedWorldData.icon_url),
-      setting_img: getDefaultValue(mergedWorldData.setting_img),
-      banner_image: getDefaultValue(mergedWorldData.banner_image),
-      is_public: mergedWorldData.is_public ?? true,
+        header_image_url: getDefaultValue(mergedWorldData.header_image_url),
+        icon_url: getDefaultValue(mergedWorldData.icon_url),
+        is_public: mergedWorldData.is_public ?? true,
       genre: getDefaultValue(mergedWorldData.genre),
-      synopsis: getDefaultValue(mergedWorldData.synopsis),
       setting: getDefaultValue(mergedWorldData.setting),
       lore: getDefaultValue(mergedWorldData.lore),
       the_world_society: getDefaultValue(mergedWorldData.the_world_society),
@@ -283,6 +287,12 @@ export function WorldForm({ world }: WorldFormProps) {
       inspirations: getDefaultValue(mergedWorldData.inspirations),
       current_era_status: getDefaultValue(mergedWorldData.current_era_status),
       notes: getDefaultValue(mergedWorldData.notes),
+      canon_status: getDefaultValue(mergedWorldData.canon_status),
+      timeline_era: getDefaultValue(mergedWorldData.timeline_era),
+      power_source: getDefaultValue(mergedWorldData.power_source),
+      central_conflicts: getDefaultValue(mergedWorldData.central_conflicts),
+      world_rules_limitations: getDefaultValue(mergedWorldData.world_rules_limitations),
+      oc_integration_notes: getDefaultValue(mergedWorldData.oc_integration_notes),
       world_fields: mergedWorldData.world_fields || undefined,
     } : {
       name: '',
@@ -292,13 +302,10 @@ export function WorldForm({ world }: WorldFormProps) {
       description_markdown: '',
       primary_color: '#64748b',
       accent_color: '#94a3b8',
-      header_image_url: '',
-      icon_url: '',
-      setting_img: '',
-      banner_image: '',
-      is_public: true,
+        header_image_url: '',
+        icon_url: '',
+        is_public: true,
       genre: '',
-      synopsis: '',
       setting: '',
       lore: '',
       the_world_society: '',
@@ -319,6 +326,12 @@ export function WorldForm({ world }: WorldFormProps) {
       inspirations: '',
       current_era_status: '',
       notes: '',
+      canon_status: '',
+      timeline_era: '',
+      power_source: '',
+      central_conflicts: '',
+      world_rules_limitations: '',
+      oc_integration_notes: '',
       world_fields: undefined,
     },
   });
@@ -339,11 +352,8 @@ export function WorldForm({ world }: WorldFormProps) {
         accent_color: mergedWorldData.accent_color || '#94a3b8',
         header_image_url: getDefaultValue(mergedWorldData.header_image_url),
         icon_url: getDefaultValue(mergedWorldData.icon_url),
-        setting_img: getDefaultValue(mergedWorldData.setting_img),
-        banner_image: getDefaultValue(mergedWorldData.banner_image),
         is_public: mergedWorldData.is_public ?? true,
         genre: getDefaultValue(mergedWorldData.genre),
-        synopsis: getDefaultValue(mergedWorldData.synopsis),
         setting: getDefaultValue(mergedWorldData.setting),
         lore: getDefaultValue(mergedWorldData.lore),
         the_world_society: getDefaultValue(mergedWorldData.the_world_society),
@@ -364,6 +374,12 @@ export function WorldForm({ world }: WorldFormProps) {
         inspirations: getDefaultValue(mergedWorldData.inspirations),
         current_era_status: getDefaultValue(mergedWorldData.current_era_status),
         notes: getDefaultValue(mergedWorldData.notes),
+        canon_status: getDefaultValue(mergedWorldData.canon_status),
+        timeline_era: getDefaultValue(mergedWorldData.timeline_era),
+        power_source: getDefaultValue(mergedWorldData.power_source),
+        central_conflicts: getDefaultValue(mergedWorldData.central_conflicts),
+        world_rules_limitations: getDefaultValue(mergedWorldData.world_rules_limitations),
+        oc_integration_notes: getDefaultValue(mergedWorldData.oc_integration_notes),
         world_fields: mergedWorldData.world_fields || undefined,
       });
     }
@@ -424,6 +440,12 @@ export function WorldForm({ world }: WorldFormProps) {
           inspirations: data.inspirations || null,
           current_era_status: data.current_era_status || null,
           notes: data.notes || null,
+          canon_status: data.canon_status || null,
+          timeline_era: data.timeline_era || null,
+          power_source: data.power_source || null,
+          central_conflicts: data.central_conflicts || null,
+          world_rules_limitations: data.world_rules_limitations || null,
+          oc_integration_notes: data.oc_integration_notes || null,
           modular_fields: data.modular_fields || {},
         };
 
@@ -556,6 +578,17 @@ export function WorldForm({ world }: WorldFormProps) {
         </div>
 
         <div>
+          <FormLabel htmlFor="canon_status">
+            Canon Status
+          </FormLabel>
+          <FormInput
+            {...register('canon_status')}
+            placeholder="e.g., Canon, Semi-Canon, AU, OC-Only, Headcanon Expansion"
+            disabled={isSubmitting}
+          />
+        </div>
+
+        <div>
           <FormLabel htmlFor="summary" required>
             Summary
           </FormLabel>
@@ -656,12 +689,12 @@ export function WorldForm({ world }: WorldFormProps) {
         </div>
 
         <div>
-          <FormLabel htmlFor="synopsis">
-            Synopsis
+          <FormLabel htmlFor="timeline_era">
+            Timeline / Era
           </FormLabel>
-          <FormTextarea
-            {...register('synopsis')}
-            rows={3}
+          <FormInput
+            {...register('timeline_era')}
+            placeholder="e.g., Ancient, Modern, Post-Apocalyptic, Mythic Age, Pre-Canon/During Canon/Post-Canon"
             disabled={isSubmitting}
           />
         </div>
@@ -673,30 +706,6 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('setting')}
             rows={3}
-            disabled={isSubmitting}
-          />
-        </div>
-
-        <div>
-          <FormLabel htmlFor="setting_img">
-            Setting Image URL
-          </FormLabel>
-          <FormInput
-            type="url"
-            {...register('setting_img')}
-            placeholder="https://example.com/setting.jpg"
-            disabled={isSubmitting}
-          />
-        </div>
-
-        <div>
-          <FormLabel htmlFor="banner_image">
-            Banner Image URL
-          </FormLabel>
-          <FormInput
-            type="url"
-            {...register('banner_image')}
-            placeholder="https://example.com/banner.jpg"
             disabled={isSubmitting}
           />
         </div>
@@ -742,6 +751,28 @@ export function WorldForm({ world }: WorldFormProps) {
           </FormLabel>
           <FormTextarea
             {...register('politics')}
+            rows={3}
+            disabled={isSubmitting}
+          />
+        </div>
+
+        <div>
+          <FormLabel htmlFor="religion">
+            Religion
+          </FormLabel>
+          <FormTextarea
+            {...register('religion')}
+            rows={3}
+            disabled={isSubmitting}
+          />
+        </div>
+
+        <div>
+          <FormLabel htmlFor="government">
+            Government
+          </FormLabel>
+          <FormTextarea
+            {...register('government')}
             rows={3}
             disabled={isSubmitting}
           />
@@ -794,23 +825,12 @@ export function WorldForm({ world }: WorldFormProps) {
         </div>
 
         <div>
-          <FormLabel htmlFor="religion">
-            Religion
+          <FormLabel htmlFor="power_source">
+            Power Source
           </FormLabel>
-          <FormTextarea
-            {...register('religion')}
-            rows={3}
-            disabled={isSubmitting}
-          />
-        </div>
-
-        <div>
-          <FormLabel htmlFor="government">
-            Government
-          </FormLabel>
-          <FormTextarea
-            {...register('government')}
-            rows={3}
+          <FormInput
+            {...register('power_source')}
+            placeholder="e.g., Spiritual, Magical, Technological, Biological, Divine, Hybrid"
             disabled={isSubmitting}
           />
         </div>
@@ -833,6 +853,42 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('notable_figures')}
             rows={3}
+            disabled={isSubmitting}
+          />
+        </div>
+
+        <div>
+          <FormLabel htmlFor="central_conflicts">
+            Central Conflicts
+          </FormLabel>
+          <FormTextarea
+            {...register('central_conflicts')}
+            rows={3}
+            placeholder="Ongoing wars, political tensions, cosmic threats, cultural clashes"
+            disabled={isSubmitting}
+          />
+        </div>
+
+        <div>
+          <FormLabel htmlFor="world_rules_limitations">
+            World Rules & Limitations
+          </FormLabel>
+          <FormTextarea
+            {...register('world_rules_limitations')}
+            rows={3}
+            placeholder="What can't be done, costs of power, taboos, hard limits"
+            disabled={isSubmitting}
+          />
+        </div>
+
+        <div>
+          <FormLabel htmlFor="oc_integration_notes">
+            OC Integration Notes
+          </FormLabel>
+          <FormTextarea
+            {...register('oc_integration_notes')}
+            rows={3}
+            placeholder="How OCs typically enter this world, power scaling expectations, common roles for OCs"
             disabled={isSubmitting}
           />
         </div>

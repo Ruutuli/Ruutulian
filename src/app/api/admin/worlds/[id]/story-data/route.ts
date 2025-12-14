@@ -171,6 +171,12 @@ export async function POST(
       inspirations: body.inspirations || null,
       current_era_status: body.current_era_status || null,
       notes: body.notes || null,
+      canon_status: body.canon_status || null,
+      timeline_era: body.timeline_era || null,
+      power_source: body.power_source || null,
+      central_conflicts: body.central_conflicts || null,
+      world_rules_limitations: body.world_rules_limitations || null,
+      oc_integration_notes: body.oc_integration_notes || null,
       modular_fields: body.modular_fields || {},
     };
 
@@ -283,4 +289,5 @@ export async function DELETE(
     return handleError(error, 'Failed to delete world story data');
   }
 }
+
 

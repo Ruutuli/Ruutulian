@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '@/lib/auth/require-auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const user = await checkAuth();

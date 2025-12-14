@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { fetchTemplates } from '@/lib/templates/ocTemplates.server';
 import { checkAuth } from '@/lib/auth/require-auth';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/admin/templates
  * Returns templates aggregated from all worlds' oc_templates fields.

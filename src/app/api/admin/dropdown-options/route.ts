@@ -4,6 +4,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { checkAuth } from '@/lib/auth/require-auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const user = await checkAuth();

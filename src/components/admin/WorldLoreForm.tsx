@@ -18,6 +18,7 @@ import { FormSection } from './forms/FormSection';
 import { FormLabel } from './forms/FormLabel';
 import { FormInput } from './forms/FormInput';
 import { FormSelect } from './forms/FormSelect';
+import { FormAutocomplete } from './forms/FormAutocomplete';
 import { FormTextarea } from './forms/FormTextarea';
 import { FormButton } from './forms/FormButton';
 import { FormMessage } from './forms/FormMessage';
@@ -35,7 +36,7 @@ const worldLoreSchema = z.object({
   world_id: z.string().uuid('Invalid world'),
   name: z.string().min(1, 'Name is required'),
   slug: z.string().min(1, 'Slug is required'),
-  lore_type: z.enum(loreTypes),
+  lore_type: z.string().min(1, 'Lore type is required'),
   description: z.string().optional(),
   description_markdown: z.string().optional(),
   image_url: z.string().url().optional().or(z.literal('')),
@@ -237,10 +238,9 @@ export function WorldLoreForm({ lore, worldId }: WorldLoreFormProps) {
     label: world.name,
   }));
 
-  const loreTypeOptions = loreTypes.map((type) => ({
-    value: type,
-    label: type.charAt(0).toUpperCase() + type.slice(1),
-  }));
+  // Keep options as lowercase to match existing database values
+  // Users can still add custom values in any case
+  const loreTypeOptions = [...loreTypes];
 
   return (
     <FormProvider {...methods}>
@@ -296,9 +296,11 @@ export function WorldLoreForm({ lore, worldId }: WorldLoreFormProps) {
             <FormLabel htmlFor="lore_type" required>
               Lore Type
             </FormLabel>
-            <FormSelect
+            <FormAutocomplete
               {...register('lore_type')}
               options={loreTypeOptions}
+              allowCustom={true}
+              placeholder="Type to search or add custom type..."
               error={errors.lore_type?.message}
               disabled={isSubmitting}
             />

@@ -14,6 +14,7 @@ interface FormAutocompleteProps extends Omit<React.InputHTMLAttributes<HTMLInput
   options?: string[];
   optionsSource?: keyof typeof csvOptions;
   placeholder?: string;
+  allowCustom?: boolean; // Allow adding custom values not in the options list
 }
 
 export const FormAutocomplete = React.forwardRef<HTMLInputElement, FormAutocompleteProps>(
@@ -29,6 +30,7 @@ export const FormAutocomplete = React.forwardRef<HTMLInputElement, FormAutocompl
     value,
     onChange,
     onBlur,
+    allowCustom = false,
     ...props
   }, ref) => {
     // Handle both register and Controller field props
@@ -79,10 +81,20 @@ export const FormAutocomplete = React.forwardRef<HTMLInputElement, FormAutocompl
         return availableOptions.slice(0, 10); // Show first 10 when empty
       }
       const lowerInput = inputValue.toLowerCase();
-      return availableOptions
+      const matching = availableOptions
         .filter(option => option.toLowerCase().includes(lowerInput))
         .slice(0, 10); // Limit to 10 suggestions
-    }, [inputValue, availableOptions]);
+      
+      // If allowCustom is true and input doesn't exactly match any option, add "Add [value]" option
+      if (allowCustom && inputValue.trim()) {
+        const exactMatch = availableOptions.some(opt => opt.toLowerCase() === lowerInput);
+        if (!exactMatch) {
+          return [...matching, `Add "${inputValue.trim()}"`];
+        }
+      }
+      
+      return matching;
+    }, [inputValue, availableOptions, allowCustom]);
 
     // Calculate dropdown position (above or below)
     useEffect(() => {
@@ -142,13 +154,19 @@ export const FormAutocomplete = React.forwardRef<HTMLInputElement, FormAutocompl
 
     // Handle suggestion selection
     const handleSelectSuggestion = (suggestion: string) => {
-      setInputValue(suggestion);
+      // If it's a "Add [value]" option, extract the actual value
+      let finalValue = suggestion;
+      if (allowCustom && suggestion.startsWith('Add "') && suggestion.endsWith('"')) {
+        finalValue = suggestion.slice(5, -1); // Remove 'Add "' prefix and '"' suffix
+      }
+      
+      setInputValue(finalValue);
       setShowSuggestions(false);
       setHighlightedIndex(-1);
       
       // Create a synthetic event for react-hook-form
       const syntheticEvent = {
-        target: { value: suggestion, name: fieldName || '' },
+        target: { value: finalValue, name: fieldName || '' },
         type: 'change',
       } as React.ChangeEvent<HTMLInputElement>;
       
@@ -178,6 +196,12 @@ export const FormAutocomplete = React.forwardRef<HTMLInputElement, FormAutocompl
           e.preventDefault();
           if (highlightedIndex >= 0 && highlightedIndex < filteredSuggestions.length) {
             handleSelectSuggestion(filteredSuggestions[highlightedIndex]);
+          } else if (allowCustom && inputValue.trim()) {
+            // If no suggestion is highlighted but allowCustom is true, use the input value
+            const exactMatch = availableOptions.some(opt => opt.toLowerCase() === inputValue.toLowerCase());
+            if (!exactMatch) {
+              handleSelectSuggestion(inputValue.trim());
+            }
           }
           break;
         case 'Escape':
@@ -262,20 +286,23 @@ export const FormAutocomplete = React.forwardRef<HTMLInputElement, FormAutocompl
               showAbove ? 'bottom-full mb-1' : 'top-full mt-1'
             }`}
           >
-            {filteredSuggestions.map((suggestion, index) => (
-              <li
-                key={suggestion}
-                onClick={() => handleSelectSuggestion(suggestion)}
-                onMouseEnter={() => setHighlightedIndex(index)}
-                className={`px-4 py-2 cursor-pointer transition-colors ${
-                  index === highlightedIndex
-                    ? 'bg-purple-600/50 text-white'
-                    : 'text-gray-200 hover:bg-gray-700'
-                }`}
-              >
-                {suggestion}
-              </li>
-            ))}
+            {filteredSuggestions.map((suggestion, index) => {
+              const isAddOption = allowCustom && suggestion.startsWith('Add "');
+              return (
+                <li
+                  key={suggestion}
+                  onClick={() => handleSelectSuggestion(suggestion)}
+                  onMouseEnter={() => setHighlightedIndex(index)}
+                  className={`px-4 py-2 cursor-pointer transition-colors ${
+                    index === highlightedIndex
+                      ? 'bg-purple-600/50 text-white'
+                      : 'text-gray-200 hover:bg-gray-700'
+                  } ${isAddOption ? 'italic text-purple-300' : ''}`}
+                >
+                  {suggestion}
+                </li>
+              );
+            })}
           </ul>
         )}
         

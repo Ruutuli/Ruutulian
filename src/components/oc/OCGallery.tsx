@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { convertGoogleDriveUrl, isGoogleSitesUrl } from '@/lib/utils/googleDriveImage';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
@@ -13,6 +13,7 @@ interface OCGalleryProps {
 
 export function OCGallery({ images, ocName }: OCGalleryProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
   const [mounted, setMounted] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
@@ -35,15 +36,56 @@ export function OCGallery({ images, ocName }: OCGalleryProps) {
     };
   }, [selectedImage]);
 
+  const goToNextImage = useCallback(() => {
+    if (images.length > 1) {
+      setSelectedImageIndex((prevIndex) => {
+        const nextIndex = (prevIndex + 1) % images.length;
+        setSelectedImage(images[nextIndex]);
+        setCurrentUrlIndex(0);
+        setImageLoading(true);
+        setImageError(false);
+        return nextIndex;
+      });
+    }
+  }, [images]);
+
+  const goToPreviousImage = useCallback(() => {
+    if (images.length > 1) {
+      setSelectedImageIndex((prevIndex) => {
+        const prev = (prevIndex - 1 + images.length) % images.length;
+        setSelectedImage(images[prev]);
+        setCurrentUrlIndex(0);
+        setImageLoading(true);
+        setImageError(false);
+        return prev;
+      });
+    }
+  }, [images]);
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && selectedImage) {
         setSelectedImage(null);
       }
     };
+    const handleArrowKeys = (e: KeyboardEvent) => {
+      if (selectedImage && images.length > 1) {
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          goToNextImage();
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          goToPreviousImage();
+        }
+      }
+    };
     window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [selectedImage]);
+    window.addEventListener('keydown', handleArrowKeys);
+    return () => {
+      window.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('keydown', handleArrowKeys);
+    };
+  }, [selectedImage, images.length, goToNextImage, goToPreviousImage]);
 
   if (!images || images.length === 0) {
     return null;
@@ -108,6 +150,11 @@ export function OCGallery({ images, ocName }: OCGalleryProps) {
       className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4"
       onClick={() => setSelectedImage(null)}
     >
+      {images.length > 1 && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 text-white z-10 bg-black/50 rounded-full px-4 py-2 text-sm">
+          {selectedImageIndex + 1} / {images.length}
+        </div>
+      )}
       <button
         className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10 bg-black/50 rounded-full p-2 hover:bg-black/70"
         onClick={(e) => {
@@ -118,6 +165,30 @@ export function OCGallery({ images, ocName }: OCGalleryProps) {
       >
         <i className="fas fa-times text-2xl"></i>
       </button>
+      {images.length > 1 && (
+        <>
+          <button
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 transition-colors z-10 bg-black/50 rounded-full p-3 hover:bg-black/70"
+            onClick={(e) => {
+              e.stopPropagation();
+              goToPreviousImage();
+            }}
+            aria-label="Previous image"
+          >
+            <i className="fas fa-chevron-left text-2xl"></i>
+          </button>
+          <button
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 transition-colors z-10 bg-black/50 rounded-full p-3 hover:bg-black/70"
+            onClick={(e) => {
+              e.stopPropagation();
+              goToNextImage();
+            }}
+            aria-label="Next image"
+          >
+            <i className="fas fa-chevron-right text-2xl"></i>
+          </button>
+        </>
+      )}
       <div 
         className="relative max-w-[95vw] max-h-[95vh] w-full h-full flex items-center justify-center"
         onClick={(e) => e.stopPropagation()}
@@ -148,10 +219,17 @@ export function OCGallery({ images, ocName }: OCGalleryProps) {
             key={currentUrlIndex}
             src={currentImageUrl}
             alt={`${ocName} - Full size`}
-            className="object-contain max-w-full max-h-full rounded-lg"
+            className="object-contain max-w-full max-h-full rounded-lg cursor-pointer"
             onLoad={() => setImageLoading(false)}
             onError={handleImageError}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (images.length > 1) {
+                goToNextImage();
+              }
+            }}
             style={{ display: imageLoading ? 'none' : 'block' }}
+            title={images.length > 1 ? "Click to view next image" : undefined}
           />
         )}
       </div>
@@ -164,7 +242,10 @@ export function OCGallery({ images, ocName }: OCGalleryProps) {
         {images.map((imageUrl, index) => (
           <button
             key={index}
-            onClick={() => setSelectedImage(imageUrl)}
+            onClick={() => {
+              setSelectedImage(imageUrl);
+              setSelectedImageIndex(index);
+            }}
             className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-700/50 hover:border-purple-500/50 transition-all duration-300 hover:scale-105 group"
           >
             {imageUrl.includes('drive.google.com') ? (
@@ -190,7 +271,7 @@ export function OCGallery({ images, ocName }: OCGalleryProps) {
       </div>
 
       {/* Lightbox Modal - Rendered as portal to escape container constraints */}
-      {mounted && modalContent && createPortal(modalContent, document.body)}
+      {mounted && modalContent && typeof document !== 'undefined' && createPortal(modalContent, document.body)}
     </>
   );
 }

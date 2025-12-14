@@ -354,7 +354,7 @@ export interface TimelineEventCharacter {
 }
 
 // World Lore System Types
-export type LoreType = 'clan' | 'organization' | 'location' | 'religion' | 'species' | 'technique' | 'concept' | 'artifact' | 'other';
+export type LoreType = string; // Allow any string value for custom lore types
 
 export interface WorldLore {
   id: string;

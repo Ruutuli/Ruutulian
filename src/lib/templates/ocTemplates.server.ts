@@ -117,7 +117,7 @@ export function clearTemplatesCache() {
  */
 export async function fetchTemplate(key: string): Promise<TemplateDefinition> {
   const templates = await fetchTemplates();
-  return templates[key] || defaultTemplate;
+  return templates[key] || defaultFallbackTemplate;
 }
 
 /**

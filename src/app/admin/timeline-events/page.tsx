@@ -74,7 +74,7 @@ export default async function AdminTimelineEventsPage({
   // Get all unique categories
   const allCategories = new Set<string>();
   events?.forEach((event) => {
-    event.categories?.forEach((cat) => allCategories.add(cat));
+    event.categories?.forEach((cat: string) => allCategories.add(cat));
   });
 
   return (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
 interface NavigationClientProps {
@@ -9,6 +9,7 @@ interface NavigationClientProps {
 
 export function NavigationClient({ isAuthenticated }: NavigationClientProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   // Close mobile menu when clicking outside or on route change
   useEffect(() => {
@@ -38,6 +39,26 @@ export function NavigationClient({ isAuthenticated }: NavigationClientProps) {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
+  // Add native click listener to button as fallback
+  useEffect(() => {
+    const button = menuButtonRef.current;
+    if (!button) return;
+
+    const handleNativeClick = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      setIsMobileMenuOpen((prev) => !prev);
+    };
+
+    // Use capture phase to ensure it fires before any other listeners
+    button.addEventListener('click', handleNativeClick, true);
+    
+    return () => {
+      button.removeEventListener('click', handleNativeClick, true);
+    };
+  }, []);
+
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
   };
@@ -56,7 +77,7 @@ export function NavigationClient({ isAuthenticated }: NavigationClientProps) {
   ];
 
   return (
-    <nav className="bg-gray-900/80 backdrop-blur-md border-b border-gray-700/50 sticky top-0 z-50">
+    <nav className="bg-gray-900/80 backdrop-blur-md border-b border-gray-700/50 sticky top-0 z-50 relative">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
         <div className="flex justify-between items-center h-14 sm:h-16">
           <Link
@@ -84,18 +105,12 @@ export function NavigationClient({ isAuthenticated }: NavigationClientProps) {
 
           {/* Mobile Menu Button */}
           <button
+            ref={menuButtonRef}
             type="button"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              if (e.nativeEvent && e.nativeEvent.stopImmediatePropagation) {
-                e.nativeEvent.stopImmediatePropagation();
-              }
               toggleMobileMenu();
-            }}
-            onMouseDown={(e) => {
-              // Ensure button gets focus and click works
-              e.stopPropagation();
             }}
             className="md:hidden p-2 -mr-2 text-gray-300 hover:text-purple-400 active:text-purple-400 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-lg touch-manipulation relative z-[60] pointer-events-auto"
             aria-label="Toggle mobile menu"

@@ -1232,7 +1232,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
       setValue('name', combinedName, { shouldDirty: false }); // Don't mark as dirty for auto-updates
     } else if (firstName || lastName) {
       // If only one is provided, use that as the name temporarily
-      const partialName = (firstName || lastName).trim();
+      const partialName = (firstName ?? lastName ?? '').trim();
       if (partialName) {
         setValue('name', partialName, { shouldDirty: false });
       }

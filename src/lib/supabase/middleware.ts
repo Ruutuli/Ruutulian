@@ -5,22 +5,16 @@ export async function updateSession(request: NextRequest) {
   const url = request.nextUrl;
   const pathname = url.pathname;
 
-  // CRITICAL: Check for login page FIRST - use exact match
+  // Allow login page through without authentication
   // Handle both with and without trailing slash
   const isLoginPage = pathname === '/admin/login' || pathname === '/admin/login/';
-
-  // If it's the login page, allow it through IMMEDIATELY
   if (isLoginPage) {
-    const response = NextResponse.next();
-    response.headers.set('x-pathname', pathname);
-    return response;
+    return NextResponse.next();
   }
 
   // Allow all API routes through
   if (pathname.startsWith('/api')) {
-    const response = NextResponse.next();
-    response.headers.set('x-pathname', pathname);
-    return response;
+    return NextResponse.next();
   }
 
   // For all other admin routes, require authentication
@@ -31,7 +25,6 @@ export async function updateSession(request: NextRequest) {
     if (!sessionCookie?.value) {
       const loginUrl = url.clone();
       loginUrl.pathname = '/admin/login';
-      // Use 302 (temporary redirect) to avoid caching issues
       return NextResponse.redirect(loginUrl, 302);
     }
 
@@ -53,7 +46,5 @@ export async function updateSession(request: NextRequest) {
   }
 
   // For all other routes, just pass through
-  const response = NextResponse.next();
-  response.headers.set('x-pathname', pathname);
-  return response;
+  return NextResponse.next();
 }

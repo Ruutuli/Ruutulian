@@ -39,8 +39,6 @@ const worldLoreSchema = z.object({
   lore_type: z.string().min(1, 'Lore type is required'),
   description: z.string().optional(),
   description_markdown: z.string().optional(),
-  image_url: z.string().url().optional().or(z.literal('')),
-  icon_url: z.string().url().optional().or(z.literal('')),
   banner_image_url: z.string().url().optional().or(z.literal('')),
   world_fields: z.any().optional(),
   modular_fields: z.record(z.any()).optional(),
@@ -78,8 +76,6 @@ export function WorldLoreForm({ lore, worldId }: WorldLoreFormProps) {
       lore_type: lore.lore_type,
       description: lore.description || '',
       description_markdown: lore.description_markdown || '',
-      image_url: lore.image_url || '',
-      icon_url: lore.icon_url || '',
       banner_image_url: lore.banner_image_url || '',
       world_fields: lore.world_fields || { field_sets: [] },
       modular_fields: lore.modular_fields || {},
@@ -98,8 +94,6 @@ export function WorldLoreForm({ lore, worldId }: WorldLoreFormProps) {
       lore_type: 'other',
       description: '',
       description_markdown: '',
-      image_url: '',
-      icon_url: '',
       banner_image_url: '',
       world_fields: { field_sets: [] },
       modular_fields: {},
@@ -124,8 +118,6 @@ export function WorldLoreForm({ lore, worldId }: WorldLoreFormProps) {
     successMessage: 'Lore entry saved successfully!',
     transformData: (data) => ({
       ...data,
-      image_url: data.image_url || null,
-      icon_url: data.icon_url || null,
       banner_image_url: data.banner_image_url || null,
       description: data.description || null,
       description_markdown: data.description_markdown || null,
@@ -345,30 +337,6 @@ export function WorldLoreForm({ lore, worldId }: WorldLoreFormProps) {
               placeholder="https://example.com/banner.jpg"
               disabled={isSubmitting}
               helpText="Aesthetic banner image displayed at the top of the lore page"
-            />
-          </div>
-
-          <div>
-            <FormLabel htmlFor="image_url">
-              Image URL
-            </FormLabel>
-            <FormInput
-              type="url"
-              {...register('image_url')}
-              placeholder="https://example.com/image.jpg"
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <div>
-            <FormLabel htmlFor="icon_url">
-              Icon URL
-            </FormLabel>
-            <FormInput
-              type="url"
-              {...register('icon_url')}
-              placeholder="https://example.com/icon.png"
-              disabled={isSubmitting}
             />
           </div>
         </FormSection>

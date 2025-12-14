@@ -203,11 +203,11 @@ export const formStyles = {
       hoverTo: 'hover:to-amber-600/80',
     },
     'additional-information': {
-      border: 'border-slate-500/50',
-      from: 'from-slate-700/80',
-      to: 'to-slate-600/60',
-      hoverFrom: 'hover:from-slate-700',
-      hoverTo: 'hover:to-slate-600/80',
+      border: 'border-indigo-500/50',
+      from: 'from-indigo-700/80',
+      to: 'to-indigo-600/60',
+      hoverFrom: 'hover:from-indigo-700',
+      hoverTo: 'hover:to-indigo-600/80',
     },
     'media-preferences': {
       border: 'border-rose-500/50',

@@ -9,6 +9,7 @@ interface FormSectionProps {
   icon?: SectionIconName | string;
   accentColor?: 'core-identity' | 'visual-identity' | 'basic-information' | 'appearance' | 'relationships' | 'personality-traits' | 'content' | 'metadata' | 'settings' | 'timeline' | 'lore' | string;
   defaultOpen?: boolean;
+  description?: string;
   children: React.ReactNode;
   className?: string;
 }
@@ -18,6 +19,7 @@ export function FormSection({
   icon,
   accentColor,
   defaultOpen = true,
+  description,
   children,
   className = '',
 }: FormSectionProps) {
@@ -53,6 +55,11 @@ export function FormSection({
       </button>
       {isOpen && (
         <div className="p-4 md:p-5 space-y-4 md:space-y-5 bg-gray-800/20">
+          {description && (
+            <div className="mb-4 pb-3 border-b border-gray-700/50">
+              <p className="text-sm text-gray-300 italic leading-relaxed">{description}</p>
+            </div>
+          )}
           {children}
         </div>
       )}

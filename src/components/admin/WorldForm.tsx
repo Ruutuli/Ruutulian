@@ -533,6 +533,7 @@ export function WorldForm({ world }: WorldFormProps) {
         icon="core-identity" 
         accentColor="core-identity" 
         defaultOpen={true}
+        description="Basic identifying information about your world. Name, slug, and series type are required and cannot be changed after creation for canon worlds."
       >
         {selectedStoryAliasId && (
           <div className="mb-4 p-3 bg-amber-900/20 border border-amber-700/50 rounded text-sm text-amber-300">
@@ -596,6 +597,7 @@ export function WorldForm({ world }: WorldFormProps) {
             {...register('summary')}
             rows={3}
             error={errors.summary?.message}
+            placeholder="A brief 1-2 paragraph elevator pitch describing your world. What is this world about?"
             disabled={isSubmitting}
           />
         </div>
@@ -608,12 +610,19 @@ export function WorldForm({ world }: WorldFormProps) {
             {...register('description_markdown')}
             rows={10}
             markdown
+            placeholder="Full detailed description of your world. Supports Markdown formatting. This is the main content that appears on the world's page."
             disabled={isSubmitting}
           />
         </div>
       </FormSection>
 
-      <FormSection title="Visual Identity" icon="visual-identity" accentColor="visual-identity" defaultOpen={true}>
+      <FormSection 
+        title="Visual Identity" 
+        icon="visual-identity" 
+        accentColor="visual-identity" 
+        defaultOpen={true}
+        description="Colors and images that represent your world visually. These appear in world cards, headers, and throughout the site to give your world a distinct visual identity."
+      >
         <div className="grid grid-cols-2 gap-4">
           <div>
             <FormLabel htmlFor="primary_color" required>
@@ -677,13 +686,20 @@ export function WorldForm({ world }: WorldFormProps) {
         </div>
       </FormSection>
 
-      <FormSection title="Overview" icon="overview" accentColor="overview" defaultOpen={false}>
+      <FormSection 
+        title="Overview" 
+        icon="overview" 
+        accentColor="overview" 
+        defaultOpen={false}
+        description="High-level information about your world: genre, time period, physical setting, and foundational lore. This gives readers a quick understanding of what your world is about."
+      >
         <div>
           <FormLabel htmlFor="genre">
             Genre
           </FormLabel>
           <FormInput
             {...register('genre')}
+            placeholder="e.g., Fantasy, Sci-Fi, Modern, Historical, Adventure, Romance"
             disabled={isSubmitting}
           />
         </div>
@@ -706,6 +722,7 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('setting')}
             rows={3}
+            placeholder="Physical location and environment. Where does the story take place? Describe geography, climate, and notable locations."
             disabled={isSubmitting}
           />
         </div>
@@ -717,12 +734,19 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('lore')}
             rows={5}
+            placeholder="Deep history, myths, cosmology, and foundational stories. The rich background that shapes everything else."
             disabled={isSubmitting}
           />
         </div>
       </FormSection>
 
-      <FormSection title="Society & Culture" icon="society-culture" accentColor="society-culture" defaultOpen={false}>
+      <FormSection 
+        title="Society & Culture" 
+        icon="society-culture" 
+        accentColor="society-culture" 
+        defaultOpen={false}
+        description="The social fabric of your world: how people live, organize themselves, govern, worship, and interact. Includes society structure, culture, politics, religion, government, technology level, and environment."
+      >
         <div>
           <FormLabel htmlFor="the_world_society">
             The World Society
@@ -730,6 +754,7 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('the_world_society')}
             rows={3}
+            placeholder="Overall structure and organization of society. How do people live together? Social classes, hierarchies, or social systems."
             disabled={isSubmitting}
           />
         </div>
@@ -741,6 +766,7 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('culture')}
             rows={3}
+            placeholder="Cultural practices, traditions, customs, arts, values, and ways of life. What makes this world's culture unique?"
             disabled={isSubmitting}
           />
         </div>
@@ -752,6 +778,7 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('politics')}
             rows={3}
+            placeholder="Political landscape, power structures, alliances, conflicts, and how decisions are made."
             disabled={isSubmitting}
           />
         </div>
@@ -763,6 +790,7 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('religion')}
             rows={3}
+            placeholder="Religious beliefs, practices, deities, spiritual systems, and how faith shapes the world."
             disabled={isSubmitting}
           />
         </div>
@@ -774,6 +802,7 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('government')}
             rows={3}
+            placeholder="Governing systems, laws, leadership structures, and how authority is organized and exercised."
             disabled={isSubmitting}
           />
         </div>
@@ -785,6 +814,7 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('technology')}
             rows={3}
+            placeholder="Technological level and capabilities. What tools, machines, or systems exist? How advanced is the technology?"
             disabled={isSubmitting}
           />
         </div>
@@ -796,12 +826,19 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('environment')}
             rows={3}
+            placeholder="Natural environment, climate, ecosystems, and how the physical world affects life."
             disabled={isSubmitting}
           />
         </div>
       </FormSection>
 
-      <FormSection title="World Building" icon="world-building" accentColor="world-building" defaultOpen={false}>
+      <FormSection 
+        title="World Building" 
+        icon="world-building" 
+        accentColor="world-building" 
+        defaultOpen={false}
+        description="Core world mechanics and important elements: races/species, power systems, factions, notable figures, conflicts, world rules, and guidance for OC integration. Essential for understanding how the world works and what characters can do."
+      >
         <div>
           <FormLabel htmlFor="races_species">
             Races/Species
@@ -809,6 +846,7 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('races_species')}
             rows={3}
+            placeholder="Different races, species, or types of beings that exist. Describe their characteristics, relationships, and roles."
             disabled={isSubmitting}
           />
         </div>
@@ -820,6 +858,7 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('power_systems')}
             rows={3}
+            placeholder="How power, abilities, or magic work. Describe the mechanics, rules, and how characters gain or use power."
             disabled={isSubmitting}
           />
         </div>
@@ -842,6 +881,7 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('important_factions')}
             rows={3}
+            placeholder="Major groups, organizations, or factions. Nations, guilds, clans, or other organized groups that play significant roles."
             disabled={isSubmitting}
           />
         </div>
@@ -853,6 +893,7 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('notable_figures')}
             rows={3}
+            placeholder="Important historical or current figures. Leaders, heroes, villains, or other significant individuals who shape the world."
             disabled={isSubmitting}
           />
         </div>
@@ -865,6 +906,7 @@ export function WorldForm({ world }: WorldFormProps) {
             {...register('central_conflicts')}
             rows={3}
             placeholder="Ongoing wars, political tensions, cosmic threats, cultural clashes"
+            helpText="Major ongoing conflicts, tensions, or threats in the world. What drives the narrative tension? What are the stakes?"
             disabled={isSubmitting}
           />
         </div>
@@ -877,6 +919,7 @@ export function WorldForm({ world }: WorldFormProps) {
             {...register('world_rules_limitations')}
             rows={3}
             placeholder="What can't be done, costs of power, taboos, hard limits"
+            helpText="Hard rules and limitations of the world. What can't be done? What are the costs, taboos, or absolute limits? Essential for roleplay consistency."
             disabled={isSubmitting}
           />
         </div>
@@ -889,18 +932,26 @@ export function WorldForm({ world }: WorldFormProps) {
             {...register('oc_integration_notes')}
             rows={3}
             placeholder="How OCs typically enter this world, power scaling expectations, common roles for OCs"
+            helpText="Guidance for creating OCs in this world. How do OCs typically enter? What are power scaling expectations? What are common roles? Prevents future confusion."
             disabled={isSubmitting}
           />
         </div>
       </FormSection>
 
-      <FormSection title="Economy & Systems" icon="economy-systems" accentColor="economy-systems" defaultOpen={false}>
+      <FormSection 
+        title="Economy & Systems" 
+        icon="economy-systems" 
+        accentColor="economy-systems" 
+        defaultOpen={false}
+        description="Practical systems that keep the world running: languages spoken, trade networks, economic structures, and methods of travel and transportation."
+      >
         <div>
           <FormLabel htmlFor="languages">
             Languages
           </FormLabel>
           <FormInput
             {...register('languages')}
+            placeholder="e.g., Common, Elvish, Japanese, English, or list multiple languages spoken"
             disabled={isSubmitting}
           />
         </div>
@@ -912,6 +963,7 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('trade_economy')}
             rows={3}
+            placeholder="Economic systems, trade networks, currency, commerce, and how resources flow through the world."
             disabled={isSubmitting}
           />
         </div>
@@ -923,12 +975,19 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('travel_transport')}
             rows={3}
+            placeholder="Methods of travel and transportation. How do people and goods move around? Ships, teleportation, vehicles, etc."
             disabled={isSubmitting}
           />
         </div>
       </FormSection>
 
-      <FormSection title="Additional Information" icon="additional-information" accentColor="additional-information" defaultOpen={false}>
+      <FormSection 
+        title="Additional Information" 
+        icon="additional-information" 
+        accentColor="additional-information" 
+        defaultOpen={false}
+        description="Supplementary details: thematic elements, creative inspirations, current state of the world, and any additional notes. Useful for context and behind-the-scenes information."
+      >
         <div>
           <FormLabel htmlFor="themes">
             Themes
@@ -936,6 +995,7 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('themes')}
             rows={3}
+            placeholder="Thematic elements and underlying messages. What themes does this world explore? (e.g., friendship, sacrifice, power, redemption)"
             disabled={isSubmitting}
           />
         </div>
@@ -947,6 +1007,7 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('inspirations')}
             rows={3}
+            placeholder="What inspired this world? Media, real-world events, other stories, or concepts that influenced your worldbuilding."
             disabled={isSubmitting}
           />
         </div>
@@ -958,6 +1019,7 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('current_era_status')}
             rows={3}
+            placeholder="The current state of the world at the time your stories take place. What's happening now? What's the world's condition?"
             disabled={isSubmitting}
           />
         </div>
@@ -969,12 +1031,19 @@ export function WorldForm({ world }: WorldFormProps) {
           <FormTextarea
             {...register('notes')}
             rows={3}
+            placeholder="Any additional notes, behind-the-scenes information, or reminders that don't fit in other categories."
             disabled={isSubmitting}
           />
         </div>
       </FormSection>
 
-      <FormSection title="Settings" icon="settings" accentColor="settings" defaultOpen={true}>
+      <FormSection 
+        title="Settings" 
+        icon="settings" 
+        accentColor="settings" 
+        defaultOpen={true}
+        description="Visibility settings for your world. Public worlds are visible to everyone, while private worlds are only visible to you."
+      >
         <div className="flex items-center">
           <input
             type="checkbox"
@@ -989,7 +1058,13 @@ export function WorldForm({ world }: WorldFormProps) {
       </FormSection>
 
       {world && (
-        <FormSection title="Story Aliases" icon="story-aliases" accentColor="story-aliases" defaultOpen={false}>
+        <FormSection 
+          title="Story Aliases" 
+          icon="story-aliases" 
+          accentColor="story-aliases" 
+          defaultOpen={false}
+          description="For canon worlds, create different story versions (AUs, alternate timelines, etc.). Each story alias can have its own world content while sharing the same core identity. Original worlds don't need story aliases."
+        >
           <StoryAliasManager
             worldId={world.id}
             worldIsCanon={world.series_type === 'canon'}

@@ -3,6 +3,12 @@ import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import { OCForm } from '@/components/admin/OCForm';
 
+// Helper function to check if a string is a UUID
+function isUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -10,11 +16,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const supabase = await createClient();
 
-  const { data: oc } = await supabase
-    .from('ocs')
-    .select('name')
-    .eq('id', params.id)
-    .single();
+  // Support both ID (UUID) and slug
+  const query = isUUID(params.id)
+    ? supabase.from('ocs').select('name').eq('id', params.id)
+    : supabase.from('ocs').select('name').eq('slug', params.id);
+
+  const { data: oc } = await query.single();
 
   if (!oc) {
     return {
@@ -104,7 +111,8 @@ export default async function EditOCPage({
 }) {
   const supabase = await createClient();
 
-  const { data: oc } = await supabase
+  // Support both ID (UUID) and slug
+  const baseQuery = supabase
     .from('ocs')
     .select(`
       *,
@@ -120,9 +128,13 @@ export default async function EditOCPage({
           world:worlds(id, name, slug)
         )
       )
-    `)
-    .eq('id', params.id)
-    .single();
+    `);
+
+  const query = isUUID(params.id)
+    ? baseQuery.eq('id', params.id)
+    : baseQuery.eq('slug', params.id);
+
+  const { data: oc } = await query.single();
 
   if (!oc) {
     notFound();

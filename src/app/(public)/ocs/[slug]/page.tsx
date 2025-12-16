@@ -40,8 +40,10 @@ export async function generateMetadata({
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ruutulian.com';
   const url = `${baseUrl}/ocs/${resolvedParams.slug}`;
-  const description = oc.history_summary 
-    ? oc.history_summary.substring(0, 155).replace(/\n/g, ' ').trim() + (oc.history_summary.length > 155 ? '...' : '')
+  // Use history_summary for description, clean up markdown syntax
+  const descriptionText = oc.history_summary || '';
+  const description = descriptionText
+    ? descriptionText.substring(0, 155).replace(/\n/g, ' ').replace(/[#*`]/g, '').trim() + (descriptionText.length > 155 ? '...' : '')
     : `${oc.name}${oc.world ? ` from ${(oc.world as any).name}` : ''} - Original Character on Ruutulian`;
   const world = oc.world as any;
 
@@ -66,11 +68,13 @@ export async function generateMetadata({
             {
               url: oc.image_url,
               alt: oc.name,
+              width: 1200,
+              height: 630,
             },
           ]
         : [
             {
-              url: '/images/logo.png',
+              url: `${baseUrl}/icon.png`,
               width: 512,
               height: 512,
               alt: oc.name,
@@ -78,10 +82,10 @@ export async function generateMetadata({
           ],
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title: `${oc.name} | Ruutulian`,
       description,
-      images: oc.image_url ? [oc.image_url] : ['/images/logo.png'],
+      images: oc.image_url ? [oc.image_url] : [`${baseUrl}/icon.png`],
     },
     alternates: {
       canonical: url,

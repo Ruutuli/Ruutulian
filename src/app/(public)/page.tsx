@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: '/images/logo.png',
+        url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://ruutulian.com'}/icon.png`,
         width: 512,
         height: 512,
         alt: 'Ruutulian Logo',
@@ -24,10 +24,10 @@ export const metadata: Metadata = {
     ],
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
     title: "Ruu's Personal OC Wiki - Ruutulian",
     description: "Ruu's personal OC wiki! A place to store and organize information on her original characters, worlds, lore, and timelines. Browse characters, worlds, lore, timelines, and statistics.",
-    images: ['/images/logo.png'],
+    images: [`${process.env.NEXT_PUBLIC_SITE_URL || 'https://ruutulian.com'}/icon.png`],
   },
   alternates: {
     canonical: '/',

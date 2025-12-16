@@ -34,7 +34,11 @@ export async function generateMetadata({
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ruutulian.com';
   const url = `${baseUrl}/worlds/${resolvedParams.slug}`;
-  const description = world.summary || world.description_markdown?.substring(0, 155).replace(/\n/g, ' ').trim() || `${world.name} - ${world.series_type} world on Ruutulian`;
+  // Prioritize description_markdown, then summary, then fallback
+  const descriptionText = world.description_markdown || world.summary || '';
+  const description = descriptionText
+    ? descriptionText.substring(0, 155).replace(/\n/g, ' ').replace(/[#*`]/g, '').trim() + (descriptionText.length > 155 ? '...' : '')
+    : `${world.name} - ${world.series_type} world on Ruutulian`;
 
   return {
     title: world.name,
@@ -55,13 +59,15 @@ export async function generateMetadata({
       images: world.header_image_url || world.icon_url
         ? [
             {
-              url: world.header_image_url || world.icon_url || '/images/logo.png',
+              url: world.header_image_url || world.icon_url || `${baseUrl}/icon.png`,
               alt: world.name,
+              width: 1200,
+              height: 630,
             },
           ]
         : [
             {
-              url: '/images/logo.png',
+              url: `${baseUrl}/icon.png`,
               width: 512,
               height: 512,
               alt: world.name,
@@ -72,7 +78,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title: `${world.name} | Ruutulian`,
       description,
-      images: world.header_image_url || world.icon_url ? [world.header_image_url || world.icon_url || '/images/logo.png'] : ['/images/logo.png'],
+      images: world.header_image_url || world.icon_url ? [world.header_image_url || world.icon_url || `${baseUrl}/icon.png`] : [`${baseUrl}/icon.png`],
     },
     alternates: {
       canonical: url,

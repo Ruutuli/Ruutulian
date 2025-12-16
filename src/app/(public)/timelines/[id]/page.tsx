@@ -29,8 +29,10 @@ export async function generateMetadata({
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ruutulian.com';
   const url = `${baseUrl}/timelines/${params.id}`;
   const world = timeline.world as any;
-  const description = timeline.description_markdown
-    ? timeline.description_markdown.substring(0, 155).replace(/\n/g, ' ').trim() + (timeline.description_markdown.length > 155 ? '...' : '')
+  // Use description_markdown for description, clean up markdown syntax
+  const descriptionText = timeline.description_markdown || '';
+  const description = descriptionText
+    ? descriptionText.substring(0, 155).replace(/\n/g, ' ').replace(/[#*`]/g, '').trim() + (descriptionText.length > 155 ? '...' : '')
     : `${timeline.name}${world ? ` - Timeline from ${world.name}` : ''} on Ruutulian`;
 
   return {
@@ -51,7 +53,7 @@ export async function generateMetadata({
       type: 'website',
       images: [
         {
-          url: '/images/logo.png',
+          url: `${baseUrl}/icon.png`,
           width: 512,
           height: 512,
           alt: timeline.name,
@@ -59,10 +61,10 @@ export async function generateMetadata({
       ],
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title: `${timeline.name} | Ruutulian`,
       description,
-      images: ['/images/logo.png'],
+      images: [`${baseUrl}/icon.png`],
     },
     alternates: {
       canonical: url,

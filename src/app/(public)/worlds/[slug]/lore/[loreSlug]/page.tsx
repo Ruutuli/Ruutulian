@@ -1,7 +1,86 @@
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { LoreDetail } from '@/components/lore/LoreDetail';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string; loreSlug: string }>;
+}): Promise<Metadata> {
+  const supabase = await createClient();
+  const resolvedParams = await params;
+
+  const { data: lore } = await supabase
+    .from('world_lore')
+    .select('name, slug, description, description_markdown, banner_image_url, lore_type, world:worlds(name, slug)')
+    .eq('slug', resolvedParams.loreSlug)
+    .eq('world.is_public', true)
+    .single();
+
+  if (!lore || !lore.world) {
+    return {
+      title: 'Lore Entry Not Found',
+    };
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ruutulian.com';
+  const url = `${baseUrl}/worlds/${(lore.world as any).slug}/lore/${resolvedParams.loreSlug}`;
+  const world = lore.world as any;
+  
+  // Use description_markdown first, then description, then fallback
+  const descriptionText = lore.description_markdown || lore.description || '';
+  const description = descriptionText
+    ? descriptionText.substring(0, 155).replace(/\n/g, ' ').replace(/[#*`]/g, '').trim() + (descriptionText.length > 155 ? '...' : '')
+    : `${lore.name} - ${lore.lore_type} lore entry from ${world.name} on Ruutulian`;
+
+  return {
+    title: `${lore.name} | ${world.name}`,
+    description,
+    keywords: [
+      lore.name,
+      lore.lore_type,
+      'lore',
+      'codex',
+      world.name,
+      'world building',
+      'OC wiki',
+    ].filter(Boolean),
+    openGraph: {
+      title: `${lore.name} | ${world.name} - Ruutulian`,
+      description,
+      url,
+      type: 'article',
+      images: lore.banner_image_url
+        ? [
+            {
+              url: lore.banner_image_url,
+              alt: lore.name,
+              width: 1200,
+              height: 630,
+            },
+          ]
+        : [
+            {
+              url: `${baseUrl}/icon.png`,
+              width: 512,
+              height: 512,
+              alt: lore.name,
+            },
+          ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${lore.name} | ${world.name} - Ruutulian`,
+      description,
+      images: lore.banner_image_url ? [lore.banner_image_url] : [`${baseUrl}/icon.png`],
+    },
+    alternates: {
+      canonical: url,
+    },
+  };
+}
 
 export default async function LoreEntryPage({
   params,

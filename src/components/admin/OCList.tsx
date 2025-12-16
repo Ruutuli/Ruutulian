@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface OC {
   id: string;
@@ -28,7 +29,33 @@ interface OCListProps {
 }
 
 export function OCList({ ocs, templates }: OCListProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone and will completely remove this OC from the database.`)) {
+      return;
+    }
+
+    setDeletingId(id);
+    try {
+      const response = await fetch(`/api/admin/ocs/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete OC');
+      }
+
+      router.refresh();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to delete OC');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const filteredOCs = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -144,6 +171,13 @@ export function OCList({ ocs, templates }: OCListProps) {
                         >
                           Edit
                         </Link>
+                        <button
+                          onClick={() => handleDelete(oc.id, oc.name)}
+                          disabled={deletingId === oc.id}
+                          className="text-red-400 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {deletingId === oc.id ? 'Deleting...' : 'Delete'}
+                        </button>
                       </td>
                     </tr>
                   );
@@ -209,13 +243,20 @@ export function OCList({ ocs, templates }: OCListProps) {
                       )}
                     </div>
                   </div>
-                  <div className="pt-3 border-t border-gray-600/50">
+                  <div className="pt-3 border-t border-gray-600/50 flex gap-4">
                     <Link
                       href={`/admin/ocs/${oc.id}`}
                       className="inline-block text-pink-400 hover:text-pink-300 text-sm font-medium"
                     >
                       Edit →
                     </Link>
+                    <button
+                      onClick={() => handleDelete(oc.id, oc.name)}
+                      disabled={deletingId === oc.id}
+                      className="text-red-400 hover:text-red-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {deletingId === oc.id ? 'Deleting...' : 'Delete'}
+                    </button>
                   </div>
                 </div>
               );

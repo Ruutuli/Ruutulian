@@ -185,3 +185,39 @@ export async function PUT(
     return handleError(error, 'Failed to update OC');
   }
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await checkAuth();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const supabase = createAdminClient();
+    const { id } = await params;
+
+    if (!id) {
+      return errorResponse('OC ID is required');
+    }
+
+    // Delete OC (cascade will handle related tables)
+    const { error } = await supabase
+      .from('ocs')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      logger.error('OC', 'Delete error', error);
+      return errorResponse(error.message || 'Failed to delete OC');
+    }
+
+    logger.success('OC', `OC ${id} deleted successfully`);
+    return successResponse({ success: true });
+  } catch (error) {
+    logger.error('OC', 'Unexpected error in DELETE handler', error);
+    return handleError(error, 'Failed to delete OC');
+  }
+}

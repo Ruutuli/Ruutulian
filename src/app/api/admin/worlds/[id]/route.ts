@@ -320,3 +320,39 @@ export async function PUT(
     return handleError(error, 'Failed to update world');
   }
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await checkAuth();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const supabase = createAdminClient();
+    const { id } = await params;
+
+    if (!id) {
+      return errorResponse('World ID is required');
+    }
+
+    // Delete world (cascade will handle related tables)
+    const { error } = await supabase
+      .from('worlds')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      logger.error('World', 'Delete error', error);
+      return errorResponse(error.message || 'Failed to delete world');
+    }
+
+    logger.success('World', `World ${id} deleted successfully`);
+    return successResponse({ success: true });
+  } catch (error) {
+    logger.error('World', 'Unexpected error in DELETE handler', error);
+    return handleError(error, 'Failed to delete world');
+  }
+}

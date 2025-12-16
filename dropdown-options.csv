@@ -1,0 +1,1827 @@
+Field,Option
+pronouns,He/Him
+pronouns,He/They
+pronouns,She/He
+pronouns,She/He/They
+pronouns,She/Her
+pronouns,She/They
+pronouns,They/He
+pronouns,They/She
+pronouns,They/Them
+gender_identity,Agender
+gender_identity,Androgynous
+gender_identity,Bigender
+gender_identity,Cisgender
+gender_identity,Demiboy
+gender_identity,Demigirl
+gender_identity,Genderfluid
+gender_identity,Genderqueer
+gender_identity,Intersex
+gender_identity,Neutrois
+gender_identity,Non-binary
+gender_identity,Pangender
+gender_identity,Third Gender
+gender_identity,Transgender
+gender_identity,Two-spirit
+romantic,Biromantic
+romantic,Demiromantic
+romantic,Greyromantic
+romantic,Heteroromantic
+romantic,Homoromantic
+romantic,Lithromantic
+romantic,Monogamy
+romantic,Panromantic
+sexual,Androsexual
+sexual,Asexual
+sexual,Autosexual
+sexual,Bisexual
+sexual,Demisexual
+sexual,Greysexual
+sexual,Gynosexual
+sexual,Heterosexual
+sexual,Homosexual
+sexual,Lithsexual
+sexual,Pansexual
+sexual,Polysexual
+sexual,Queer
+sexual,Sapiosexual
+sexual,Skoliosexual
+relationship_type,Aromantic
+relationship_type,Asexual
+relationship_type,Casual Relationship
+relationship_type,Co-parenting
+relationship_type,Dom/sub (d/s)
+relationship_type,Friends With Benefits
+relationship_type,Group Marriage
+relationship_type,Long-distance Relationship (ldr)
+relationship_type,Monogamy
+relationship_type,Open Relationship
+relationship_type,Platonic Relationship
+relationship_type,Polyamory
+relationship_type,Polyandry
+relationship_type,Polygamy
+relationship_type,Polygyny
+relationship_type,Primary/secondary
+relationship_type,Quad
+relationship_type,Queerplatonic Relationship (qpr)
+relationship_type,Relationship Anarchy
+relationship_type,Swinging
+relationship_type,Triad
+sex,Androgyne
+sex,Female
+sex,Intersex
+sex,Male
+accent,Boston
+accent,Brazilian Portuguese
+accent,Californian
+accent,Canadian
+accent,Caribbean
+accent,Chicago
+accent,Chicano English (Mexican-American)
+accent,Chinese
+accent,Dutch
+accent,German
+accent,Greek
+accent,Hawaiian Pidgin
+accent,Indian
+accent,Jamaican
+accent,Japanese
+accent,Korean
+accent,Midwestern
+accent,Minnesotan
+accent,New Orleans (cajun)
+accent,New York
+accent,New Zealand
+accent,Pacific Northwest
+accent,Philadelphia
+accent,Polish
+accent,Russian
+accent,South African
+accent,Southern Appalachian
+accent,Southern Californian (SoCal)
+accent,Texan
+accent,Turkish
+accent,Valley (California)
+accent,Welsh
+nationality,Afghan
+nationality,American
+nationality,Argentine
+nationality,Australian
+nationality,Austrian
+nationality,Bangladeshi
+nationality,Belgian
+nationality,Bosnian
+nationality,Brazilian
+nationality,British
+nationality,Bulgarian
+nationality,Canadian
+nationality,Chilean
+nationality,Chinese
+nationality,Colombian
+nationality,Costa Rican
+nationality,Croatian
+nationality,Cuban
+nationality,Czech
+nationality,Danish
+nationality,Dominican
+nationality,Dutch
+nationality,Egyptian
+nationality,Emirati
+nationality,Ethiopian
+nationality,Filipino
+nationality,Finnish
+nationality,French
+nationality,German
+nationality,Greek
+nationality,Haitian
+nationality,Hungarian
+nationality,Icelandic
+nationality,Inariko
+nationality,Indian
+nationality,Indonesian
+nationality,Iranian
+nationality,Iraqi
+nationality,Irish
+nationality,Israeli
+nationality,Italian
+nationality,Jamaican
+nationality,Japanese
+nationality,Jordanian
+nationality,Kenyan
+nationality,Konohagakure
+nationality,Korean
+nationality,Lebanese
+nationality,Malaysian
+nationality,Mexican
+nationality,Mongolian
+nationality,Moroccan
+nationality,New Zealander (Kiwi)
+nationality,Nigerian
+nationality,Norwegian
+nationality,Pakistani
+nationality,Palestinian
+nationality,Panamanian
+nationality,Peruvian
+nationality,Polish
+nationality,Portuguese
+nationality,Romanian
+nationality,Rudania
+nationality,Russian
+nationality,Saudi Arabian
+nationality,Scottish
+nationality,Serbian
+nationality,Singaporean
+nationality,South African
+nationality,Spanish
+nationality,Sri Lankan
+nationality,Sun Empire
+nationality,Sunagakure
+nationality,Swedish
+nationality,Swiss
+nationality,Syrian
+nationality,Thai
+nationality,Trinidadian
+nationality,Turkish
+nationality,Ukrainian
+nationality,Venezuelan
+nationality,Vhintl
+nationality,Vietnamese
+nationality,Welsh
+ethnicity_race,African
+ethnicity_race,African Descent
+ethnicity_race,Afro-Caribbean
+ethnicity_race,Afro-Latinx
+ethnicity_race,Arab
+ethnicity_race,Armenian
+ethnicity_race,Ashkenazi Jewish
+ethnicity_race,Asian
+ethnicity_race,Asian Descent
+ethnicity_race,Australian Aboriginal
+ethnicity_race,Basque
+ethnicity_race,Bengali
+ethnicity_race,Berber
+ethnicity_race,Bhutanese
+ethnicity_race,Brazilian
+ethnicity_race,Burmese
+ethnicity_race,Cambodian
+ethnicity_race,Caribbean
+ethnicity_race,Caucasian
+ethnicity_race,Caucasian / Pacific Islander
+ethnicity_race,Chicano
+ethnicity_race,Chinese
+ethnicity_race,Creole
+ethnicity_race,Cuban
+ethnicity_race,Dominican
+ethnicity_race,Druze
+ethnicity_race,Eastern European
+ethnicity_race,Egyptian
+ethnicity_race,Ethiopian
+ethnicity_race,Finnish
+ethnicity_race,First Nations
+ethnicity_race,French
+ethnicity_race,German
+ethnicity_race,German Descent
+ethnicity_race,Gerudo / Sheikah
+ethnicity_race,Ghanaian
+ethnicity_race,Greek Descent
+ethnicity_race,Guatemalan
+ethnicity_race,Haitian
+ethnicity_race,Hmong
+ethnicity_race,Hylian
+ethnicity_race,Icelandic
+ethnicity_race,Igbo
+ethnicity_race,Indigenous Australian
+ethnicity_race,Indigenous Canadian
+ethnicity_race,Inuit
+ethnicity_race,Iranian
+ethnicity_race,Iraqi
+ethnicity_race,Israeli
+ethnicity_race,Italian
+ethnicity_race,Italian/Chinese
+ethnicity_race,Japanese
+ethnicity_race,Japanese/British
+ethnicity_race,Jewish
+ethnicity_race,Kazakh
+ethnicity_race,Korean
+ethnicity_race,Kurdish
+ethnicity_race,Latinx
+ethnicity_race,Lebanese
+ethnicity_race,Lithuanian
+ethnicity_race,Lithuanian / Romanian
+ethnicity_race,Lithuanian/Mediterranean/French/Arabian
+ethnicity_race,Lithuanian/Romanian/French/Arabian
+ethnicity_race,Maori
+ethnicity_race,Mayan
+ethnicity_race,Mediterranean
+ethnicity_race,Mediterranean Caucasian Mix
+ethnicity_race,Mediterranean Descent
+ethnicity_race,Meowth
+ethnicity_race,Mestizo
+ethnicity_race,Mexican
+ethnicity_race,Mexican-American
+ethnicity_race,Middle Eastern
+ethnicity_race,Mongolian
+ethnicity_race,Moravian
+ethnicity_race,Nigerian
+ethnicity_race,Pacific Islander
+ethnicity_race,Palestinian
+ethnicity_race,Pashtun
+ethnicity_race,Persian
+ethnicity_race,Polynesian Descent
+ethnicity_race,Portuguese
+ethnicity_race,Punjabi
+ethnicity_race,Quechua
+ethnicity_race,Roma
+ethnicity_race,Romanian
+ethnicity_race,Russian
+ethnicity_race,Samoan
+ethnicity_race,Sardinian
+ethnicity_race,Scandinavian
+ethnicity_race,Scanner
+ethnicity_race,Sephardic Jewish
+ethnicity_race,Sicilian
+ethnicity_race,Somali
+ethnicity_race,South Asian
+ethnicity_race,Southeast Asian
+ethnicity_race,Swahili
+ethnicity_race,Syrian
+ethnicity_race,Tibetan
+ethnicity_race,Tlingit
+ethnicity_race,Tongan
+ethnicity_race,Turkish
+ethnicity_race,Uyghur
+ethnicity_race,Venezuelan
+ethnicity_race,Vietnamese
+ethnicity_race,West African
+ethnicity_race,White
+ethnicity_race,Yoruba
+species,Android
+species,Chimera
+species,Demon
+species,Dragon
+species,Elf
+species,Gijinka
+species,God
+species,Golem
+species,Human
+species,Humanoid Machine
+species,Mosaic
+species,Numen
+species,Saiyan
+species,Shadow
+species,Tabaxi
+species,Werewolf
+species,Yokai
+species,Zora
+eye_color,Ash
+eye_color,Azure
+eye_color,Black
+eye_color,Black/Silver
+eye_color,Blood
+eye_color,Blue
+eye_color,Brown
+eye_color,Bubblegum
+eye_color,Burnt
+eye_color,Cardinal
+eye_color,Carmine
+eye_color,Coral
+eye_color,Crimson
+eye_color,Deep
+eye_color,Espresso
+eye_color,Gold
+eye_color,Gray
+eye_color,Green
+eye_color,Green/Pink
+eye_color,Ice
+eye_color,Indigo
+eye_color,Lemon
+eye_color,Light
+eye_color,Lilac
+eye_color,Lime
+eye_color,Multi
+eye_color,Orange
+eye_color,Pink
+eye_color,Purple
+eye_color,Red
+eye_color,Yellow
+hair_color,Ash
+hair_color,Baby
+hair_color,Beige
+hair_color,Black
+hair_color,Black/Silver
+hair_color,Blonde
+hair_color,Blue
+hair_color,Brown
+hair_color,Cobalt
+hair_color,Cool
+hair_color,Dark
+hair_color,Dusty
+hair_color,Dusty Rose
+hair_color,Fern
+hair_color,Gray
+hair_color,Green
+hair_color,Jade
+hair_color,Medium
+hair_color,Neutral
+hair_color,Olive
+hair_color,Orange
+hair_color,Pink
+hair_color,Pumpkin
+hair_color,Purple
+hair_color,Silver
+hair_color,Soft
+hair_color,Tawny
+hair_color,White
+skin_tone,Albino
+skin_tone,Amber
+skin_tone,Ashen
+skin_tone,Black
+skin_tone,Bronze
+skin_tone,Brown
+skin_tone,Caramel
+skin_tone,Chestnut
+skin_tone,Copper
+skin_tone,Dark Brown
+skin_tone,Deep Brown
+skin_tone,Ebony
+skin_tone,Fair
+skin_tone,Golden
+skin_tone,Honey
+skin_tone,Ivory
+skin_tone,Light
+skin_tone,Light Beige
+skin_tone,Mahogany
+skin_tone,Medium
+skin_tone,Olive
+skin_tone,Pale
+skin_tone,Porcelain
+skin_tone,Rosy
+skin_tone,Ruddy
+skin_tone,Sable
+skin_tone,Sienna
+skin_tone,Tan
+occupation,Abbot/abbess
+occupation,Abecedarian
+occupation,Abjurer
+occupation,Acater
+occupation,Accoucheur/obstetrician/midwife
+occupation,Accountant
+occupation,Accoutrements/coinsmith
+occupation,Acolyte
+occupation,Acrobat
+occupation,Actor
+occupation,Actuary
+occupation,Acupuncturist
+occupation,Administrator
+occupation,Admiral
+occupation,Adventurer
+occupation,Advertising Executive
+occupation,Aerialist/trapezist
+occupation,Affeeror
+occupation,Agister
+occupation,Air Traffic Controller
+occupation,Aircraft Engineer
+occupation,Alchemist
+occupation,Alderman
+occupation,Alienist
+occupation,Almoner
+occupation,Anaesthetist
+occupation,Animal Breeder
+occupation,Animal Collector/monster Collector
+occupation,Animal/monster Handler
+occupation,Anthropologist
+occupation,Antique Dealer
+occupation,Apothecary
+occupation,Appraiser
+occupation,Apprentice
+occupation,Arborist
+occupation,Archaeologist
+occupation,Archbishop
+occupation,Architect
+occupation,Archivist
+occupation,Archmage
+occupation,Armorer
+occupation,Aromatherapist
+occupation,Arranger
+occupation,Art Critic
+occupation,Art Dealer
+occupation,Art Historian
+occupation,Art Therapist
+occupation,Artificer
+occupation,Artist
+occupation,Arts / Artists / Artistic
+occupation,Assassin
+occupation,Assay Master
+occupation,Assayer
+occupation,Assembly Line Worker
+occupation,Assistant
+occupation,Astrologer
+occupation,Astronomer
+occupation,Athlete
+occupation,Au Pair
+occupation,Auctioneer
+occupation,Auditor
+occupation,Author
+occupation,Baggage Handler
+occupation,Bagnio Keeper
+occupation,Bailiff
+occupation,Baker
+occupation,Baler
+occupation,Bandit
+occupation,Bank Clerk
+occupation,Bank Manager
+occupation,Banker
+occupation,Bar Staff
+occupation,Barber
+occupation,Bard
+occupation,Barkeep
+occupation,Barmaid/barboy
+occupation,Baron/baroness
+occupation,Barrister
+occupation,Beekeeper
+occupation,Beggar/pauper
+occupation,Billboard Poster
+occupation,Biochemist
+occupation,Biologist
+occupation,Bishop
+occupation,Blacksmith
+occupation,Bladesmith
+occupation,Blood Hunter/monster Hunter
+occupation,Bloodletter
+occupation,Boat Builder
+occupation,Boatman
+occupation,Bodyguard
+occupation,Bone Oracle
+occupation,Bookbinder
+occupation,Bookkeeper
+occupation,Bookmaker
+occupation,Bosun
+occupation,Botanist
+occupation,Bottler
+occupation,Bouncer
+occupation,Bounty Hunter
+occupation,Bowyer
+occupation,Breeder
+occupation,Brewer
+occupation,Brewery Worker
+occupation,Brick Mason / Bricklayer / Mason
+occupation,Bricklayer
+occupation,Brickmaker
+occupation,Broadcaster
+occupation,Broom Maker
+occupation,Brothel Keeper
+occupation,Bug Catcher
+occupation,Builder
+occupation,Building Labourer
+occupation,Burglar
+occupation,Bus Driver
+occupation,Business Consultant
+occupation,Business Owner
+occupation,Busker/street Musician
+occupation,Butcher
+occupation,Butler
+occupation,Cabbie/wagoner
+occupation,Cabin Boy/cabin Girl
+occupation,Cabin Crew
+occupation,Cabinet Maker
+occupation,Calligraphist
+occupation,Camera Operator
+occupation,Candlemaker
+occupation,Cantor
+occupation,Captain
+occupation,Car Dealer
+occupation,Car Wash Attendant
+occupation,Caravaneer
+occupation,Cardinal
+occupation,Care Assistant
+occupation,Career Criminal
+occupation,Careers Advisor
+occupation,Caregiver
+occupation,Caretaker
+occupation,Carpenter
+occupation,Carpet Fitter
+occupation,Carter
+occupation,Cartographer
+occupation,Cartoonist
+occupation,Cartwright
+occupation,Cashier
+occupation,Castellan
+occupation,Casual Worker
+occupation,Catering Staff
+occupation,Cavalryman/cavalier
+occupation,Celebrity
+occupation,Cemetery Worker
+occupation,Ceo
+occupation,Chancellor
+occupation,Chandler
+occupation,Chaplain
+occupation,Charcoal Maker
+occupation,Charioteer
+occupation,Charlatan/conman
+occupation,Chatelaine/majordomo
+occupation,Chauffeur
+occupation,Chef
+occupation,Chef Or Cook
+occupation,Chemist
+occupation,Chief
+occupation,Childcare Worker
+occupation,Childminder
+occupation,Childrens Entertainer
+occupation,Chimney Sweep
+occupation,Chimney Sweeper
+occupation,Chiropodist
+occupation,Chiropractor
+occupation,Choirmaster
+occupation,Choreographer
+occupation,Circus Worker
+occupation,City Watch
+occupation,Civil Servant
+occupation,Clairvoyant
+occupation,Cleaner
+occupation,Clergyman
+occupation,Cleric
+occupation,Clerical Assistant
+occupation,Clerk
+occupation,Clockmaker
+occupation,Clown
+occupation,Coastguard
+occupation,Cobbler
+occupation,Cockfighter/game Fighter
+occupation,Collector
+occupation,Comedian
+occupation,Commissar
+occupation,Community Worker
+occupation,Company Director
+occupation,Composer
+occupation,Composer Or Songwriter
+occupation,Computer Analyst
+occupation,Computer Engineer
+occupation,Computer Programmer
+occupation,Con Artist
+occupation,Conductor
+occupation,Confessor
+occupation,Conjuror
+occupation,Conservationist
+occupation,Constable
+occupation,Construction Worker
+occupation,Contortionist
+occupation,Cook
+occupation,Cooper/hooper
+occupation,Copyist
+occupation,Coroner
+occupation,Costume Designer
+occupation,Costumer
+occupation,Councillor
+occupation,Counsellor
+occupation,Count/earl/countess
+occupation,Courier
+occupation,Courtier
+occupation,Cowherd
+occupation,Craftsperson
+occupation,Crane Driver
+occupation,Crematorium Worker
+occupation,Crime
+occupation,Crime Boss
+occupation,Crossing Sweeper
+occupation,Croupier
+occupation,Crown Prosecutor
+occupation,Cult Leader
+occupation,Cultist
+occupation,Curator
+occupation,Customs Officer
+occupation,Cutler
+occupation,Cutpurse
+occupation,Dairy Boy/dairymaid
+occupation,Dancer
+occupation,Data Processor
+occupation,Deacon
+occupation,Dean
+occupation,Debt Collector
+occupation,Decorator
+occupation,Deity
+occupation,Delivery Driver
+occupation,Dental Hygienist
+occupation,Dental Nurse
+occupation,Dentist
+occupation,Deserter
+occupation,Designer
+occupation,Detective/investigator
+occupation,Dietician
+occupation,Diplomat
+occupation,Director
+occupation,Disc Jockey
+occupation,Disgraced Noble
+occupation,Diver
+occupation,Diviner
+occupation,Doctor
+occupation,Doctor/physician
+occupation,Domestic Staff
+occupation,Doorman
+occupation,Drakologist
+occupation,Draper
+occupation,Dressmaker
+occupation,Driving Instructor
+occupation,Drug Dealer
+occupation,Drug Lord
+occupation,Druid
+occupation,Drummer/fifer
+occupation,Drunkard
+occupation,Duelist
+occupation,Duke/duchess
+occupation,Dungeon Delver
+occupation,Dyer
+occupation,Economist
+occupation,Editor
+occupation,Elder
+occupation,Electrician
+occupation,Elementalist
+occupation,Embalmer
+occupation,Embroiderer
+occupation,Emperor/empress
+occupation,Enchanter/enchantress
+occupation,Engineer
+occupation,Engraver
+occupation,Entomologist
+occupation,Entrepreneur
+occupation,Equilibrist
+occupation,Estate Agent
+occupation,Events Organiser
+occupation,Evoker
+occupation,Executioner
+occupation,Exile
+occupation,Exorcist
+occupation,Explorer
+occupation,Exterminator
+occupation,Extortioner
+occupation,Factory Worker
+occupation,Fairground Worker
+occupation,Falconer
+occupation,Farm Worker
+occupation,Farmer
+occupation,Farrier
+occupation,Fashion Designer
+occupation,Fbi Agent
+occupation,Fence
+occupation,Ferryman
+occupation,Film Director
+occupation,Financial Advisor
+occupation,Firefighter
+occupation,First Mate
+occupation,Fisher
+occupation,Fisherman/woman
+occupation,Fitness Instructor
+occupation,Fletcher
+occupation,Florist
+occupation,Flower Arranger
+occupation,Flying Instructor
+occupation,Folk Hero
+occupation,Food & Drink Taster
+occupation,Footballer
+occupation,Forager
+occupation,Forester
+occupation,Forger
+occupation,Forklift Driver
+occupation,Foster Parent
+occupation,Fowler
+occupation,Fugitive
+occupation,Fundraiser
+occupation,Funeral Director
+occupation,Furniture Artisan
+occupation,Furrier
+occupation,Gambler
+occupation,Gamekeeper
+occupation,Gang Leader
+occupation,Gangster
+occupation,Garden Designer
+occupation,Gardener
+occupation,Gardener/landscaper
+occupation,Gas Fitter
+occupation,Genealogist
+occupation,General
+occupation,General Contractor
+occupation,Geneticist
+occupation,Geologist
+occupation,Gladiator
+occupation,Glasspainter
+occupation,Glassworker
+occupation,Glazier
+occupation,Glove Maker
+occupation,God
+occupation,Goldsmith/silversmith
+occupation,Gong Farmer
+occupation,Graphic Designer
+occupation,Grave Digger
+occupation,Grave Keeper
+occupation,Grave Robber/tomb Raider
+occupation,Gravedigger
+occupation,Gremlin
+occupation,Grim Reaper
+occupation,Grocer
+occupation,Groom
+occupation,Groundskeeper
+occupation,Groundsperson
+occupation,Guard
+occupation,Guard/sentinel
+occupation,Guild Master
+occupation,Hacker
+occupation,Hair Stylist
+occupation,Hairdresser
+occupation,Handyman
+occupation,Hatter/milliner
+occupation,Head Hunter
+occupation,Healer
+occupation,Health Visitor
+occupation,Healthcare Assistant
+occupation,Hearth Witch/hearth Wizard
+occupation,Heating Engineer
+occupation,Helmsman
+occupation,Herald
+occupation,Herbalist
+occupation,Herder
+occupation,Heretic
+occupation,Hermit
+occupation,High Priest/pope
+occupation,Highwayman
+occupation,Historian
+occupation,Home-worker
+occupation,Homemaker
+occupation,Homeopath
+occupation,Horologist
+occupation,Horse Trainer
+occupation,Horticulturist
+occupation,Housekeeper
+occupation,Housewife/househusband
+occupation,Hunter
+occupation,Hypnotherapist
+occupation,Illuminator
+occupation,Illusionist
+occupation,Illustrator
+occupation,Immigration Officer
+occupation,Independent Means
+occupation,Innkeeper
+occupation,Inquisitor
+occupation,Inspection Officer
+occupation,Instrument Maker
+occupation,Insurance Consultant
+occupation,Intelligence Officer
+occupation,Interior Designer
+occupation,Interpreter
+occupation,Inventor
+occupation,It Consultant
+occupation,Jack Of All Trades
+occupation,Jack The Ripper
+occupation,Jailer
+occupation,Jester
+occupation,Jeweler
+occupation,Jeweller
+occupation,Jewellery Maker
+occupation,Jockey
+occupation,Journalist
+occupation,Judge
+occupation,Juggler
+occupation,Kennel Worker
+occupation,Kidnapper
+occupation,King/queen
+occupation,Kitchen Drudge
+occupation,Knacker
+occupation,Knight
+occupation,Laboratory Technician
+occupation,Labourer
+occupation,Lady
+occupation,Lamplighter
+occupation,Land Surveyor
+occupation,Landowner
+occupation,Lap Dancer
+occupation,Lapidary
+occupation,Laundry Worker
+occupation,Lawyer
+occupation,Lawyer/advocate
+occupation,Leaflet Distributor
+occupation,Leatherworker
+occupation,Lector
+occupation,Lecturer
+occupation,Legal Secretary
+occupation,Librarian
+occupation,Lieutenant
+occupation,Lifeguard
+occupation,Lift Engineer
+occupation,Lighthouse Keeper
+occupation,Limner
+occupation,Linguist
+occupation,Literary Agent
+occupation,Loan Shark
+occupation,Local Govt Worker
+occupation,Lock Keeper
+occupation,Locksmith
+occupation,Longshoreman
+occupation,Lord
+occupation,Lorry Driver
+occupation,Lumberjack
+occupation,Luthier
+occupation,Machinist
+occupation,Mafia Princess
+occupation,Mage
+occupation,Magician
+occupation,Magistrate
+occupation,Maid
+occupation,Makeup Artist
+occupation,Management Consultant
+occupation,Managing Director
+occupation,Manicurist
+occupation,Market Trader
+occupation,Marketing Director
+occupation,Marksman/archer
+occupation,Marquess/marchioness
+occupation,Marshall
+occupation,Martial Artist
+occupation,Mason
+occupation,Massage Therapist
+occupation,Master
+occupation,Mathematician
+occupation,Mayor
+occupation,Mechanic
+occupation,Medic
+occupation,Medical Student
+occupation,Medium
+occupation,Mercenary
+occupation,Mercer
+occupation,Merchant
+occupation,Merchant Navy Personnel
+occupation,Messenger
+occupation,Meteorologist
+occupation,Meter Reader
+occupation,Midwife
+occupation,Miller
+occupation,Miner
+occupation,Minister
+occupation,Minstrel
+occupation,Missionary
+occupation,Model
+occupation,Model Maker
+occupation,Moneychanger
+occupation,Moneylender
+occupation,Monk
+occupation,Mortician
+occupation,Musician
+occupation,Nanny
+occupation,Nanny/nursemaid
+occupation,Navigator
+occupation,Necromancer
+occupation,Ninja
+occupation,Noble
+occupation,Noble/aristocrat
+occupation,Notary
+occupation,Nun
+occupation,Nurse
+occupation,Occupational Therapist
+occupation,Oceanographer
+occupation,Oil Rig Crew
+occupation,Operator
+occupation,Optician
+occupation,Optometrist
+occupation,Oracle
+occupation,Orator/spokesman
+occupation,Osteopath
+occupation,Page
+occupation,Painter
+occupation,Paladin
+occupation,Paramedic
+occupation,Pardoner
+occupation,Park Ranger
+occupation,Park-keeper
+occupation,Party Planner
+occupation,Pastry Chef
+occupation,Pathfinder
+occupation,Pathologist
+occupation,Pawnbroker
+occupation,Peddler
+occupation,Pest Controller
+occupation,Pharmacist
+occupation,Philosopher
+occupation,Photographer
+occupation,Physicist
+occupation,Physiotherapist
+occupation,Pickpocket
+occupation,Picture Framer
+occupation,Pilgrim
+occupation,Pilot
+occupation,Pimp/madame
+occupation,Pirate
+occupation,Plantation Owner
+occupation,Plasterer
+occupation,Playwright
+occupation,Plumber
+occupation,Plumer
+occupation,Poacher
+occupation,Poet
+occupation,Poisoner
+occupation,Police Officer
+occupation,Politician
+occupation,Pop Star
+occupation,Porter
+occupation,Postal Delivery Worker
+occupation,Postman Or Postwoman
+occupation,Potion Master
+occupation,Potter
+occupation,Preacher
+occupation,Priest
+occupation,Priestess
+occupation,Prince
+occupation,Prince/princess
+occupation,Princess
+occupation,Print Manager
+occupation,Printer
+occupation,Prison Officer
+occupation,Prisoner
+occupation,Private Investigator
+occupation,Private Tutor
+occupation,Privateer
+occupation,Probation Officer
+occupation,Producer
+occupation,Professor
+occupation,Prop Maker
+occupation,Property Developer
+occupation,Prophet
+occupation,Prospector
+occupation,Prostitute
+occupation,Psychiatrist
+occupation,Psychologist
+occupation,Publican
+occupation,Publisher
+occupation,Purser
+occupation,Quarryman/quarrywoman
+occupation,Quartermaster
+occupation,Racing Driver
+occupation,Radio Presenter
+occupation,Raider/marauder
+occupation,Ranger
+occupation,Rebel/political Dissident
+occupation,Receptionist
+occupation,Refugee
+occupation,Refuse Collector
+occupation,Renderer
+occupation,Reporter
+occupation,Researcher
+occupation,Restorer
+occupation,Retired
+occupation,Ringmaster/ringmistress
+occupation,Ritualist
+occupation,Road Sweeper
+occupation,Roadlayer/streetlayer
+occupation,Roofer
+occupation,Roofer/thatcher
+occupation,Room Attendant
+occupation,Ropemaker
+occupation,Ropewalker
+occupation,Roustabout
+occupation,Royal Guard
+occupation,Rugmaker
+occupation,Runaway Slave
+occupation,Runecaster
+occupation,Runner
+occupation,Saddler
+occupation,Sage
+occupation,Sailor
+occupation,Salesperson
+occupation,Sapper
+occupation,Scaffolder
+occupation,Scanner Unit
+occupation,Scavenger/mudlark/tosher
+occupation,Scholar/researcher
+occupation,School Crossing Warden
+occupation,School Meals Supervisor
+occupation,Scientist
+occupation,Scout
+occupation,Scribe
+occupation,Sculptor
+occupation,Sea Captain
+occupation,Seamstress
+occupation,Seamstress/tailor
+occupation,Secretary
+occupation,Security Guard
+occupation,Seer/oracle
+occupation,Senator
+occupation,Sergeant
+occupation,Servant
+occupation,Sexton
+occupation,Shaman
+occupation,Shapeshifter
+occupation,Shepard
+occupation,Shepherd
+occupation,Sheriff
+occupation,Ship Builder
+occupation,Shipwright
+occupation,Shoe Repairer
+occupation,Shoemaker
+occupation,Shop Assistant
+occupation,Shop Owner
+occupation,Shopfitter
+occupation,Shrine Priestess
+occupation,Siege Artillerist
+occupation,Singer
+occupation,Singer/soprano
+occupation,Skald
+occupation,Slave
+occupation,Slave Driver
+occupation,Slayer
+occupation,Smuggler
+occupation,Soaper
+occupation,Social Worker
+occupation,Software Developer
+occupation,Soldier
+occupation,Soldier/man
+occupation,Solicitor
+occupation,Song Writer
+occupation,Sorcerer/sorceress
+occupation,Soul Piper
+occupation,Soul Reaper
+occupation,Special Constable
+occupation,Special Force Soldier
+occupation,Speculator
+occupation,Speech Therapist
+occupation,Spirit Medium
+occupation,Sports Coach
+occupation,Sportsperson
+occupation,Spy
+occupation,Spymaster
+occupation,Squatter
+occupation,Squire
+occupation,Stablehand
+occupation,Stage Magician
+occupation,Stagehand
+occupation,Stay At Home Mom
+occupation,Steeplejack
+occupation,Steward
+occupation,Stockbroker
+occupation,Stonemason
+occupation,Street Entertainer
+occupation,Student
+occupation,Stuntman/stuntwoman
+occupation,Summoner
+occupation,Surgeon
+occupation,Surgeon/chirurgeon
+occupation,Surveyor
+occupation,Tactician
+occupation,Tailor
+occupation,Tailor Or Dressmaker
+occupation,Talent Scout
+occupation,Tanner
+occupation,Tarot Reader
+occupation,Tattooist
+occupation,Tax Collector
+occupation,Tax Inspector
+occupation,Taxi Driver
+occupation,Taxidermist
+occupation,Taxonomist
+occupation,Teacher
+occupation,Teaching Assistant
+occupation,Telephonist
+occupation,Telesales Person
+occupation,Television Presenter
+occupation,Templar
+occupation,Theater Director
+occupation,Theologian
+occupation,Thief
+occupation,Thresher
+occupation,Thrift Dealer
+occupation,Thug
+occupation,Tinker
+occupation,Toilet Attendant
+occupation,Tollkeeper
+occupation,Toolmaker
+occupation,Torturer
+occupation,Tour Guide
+occupation,Town Crier
+occupation,Toymaker
+occupation,Tradesman
+occupation,Traffic Warden
+occupation,Train Conductor
+occupation,Train Driver
+occupation,Trainer
+occupation,Translator
+occupation,Transmuter
+occupation,Trapper
+occupation,Travel Agent
+occupation,Traveler/wanderer/vagabond
+occupation,Tunner
+occupation,Tutor
+occupation,Typist
+occupation,Undertaker
+occupation,Unemployed
+occupation,Urchin
+occupation,Vendor
+occupation,Veterinarian
+occupation,Vintner
+occupation,Viscount/viscountess
+occupation,Waiting Staff
+occupation,Ward
+occupation,Warden
+occupation,Warlock
+occupation,Warmage
+occupation,Warrior
+occupation,Watchmaker
+occupation,Water Bearer
+occupation,Water Witch
+occupation,Weaponsmith
+occupation,Weaver
+occupation,Welder
+occupation,Wet Nurse
+occupation,Wheelwright
+occupation,Whittler/woodcarver
+occupation,Window Cleaner
+occupation,Witch
+occupation,Witchdoctor
+occupation,Wizard
+occupation,Wordsmith
+occupation,Wrestler
+occupation,Writer
+occupation,Zookeeper
+occupation,Zoologist
+mbti,ENFJ
+mbti,ENFP
+mbti,ENTJ
+mbti,ENTP
+mbti,ESFJ
+mbti,ESFP
+mbti,ESTJ
+mbti,ESTP
+mbti,INFJ
+mbti,INFP
+mbti,INTJ
+mbti,INTP
+mbti,ISFJ
+mbti,ISFP
+mbti,ISTJ
+mbti,ISTP
+moral,Chaotic Evil
+moral,Chaotic Good
+moral,Chaotic Neutral
+moral,Lawful Evil
+moral,Lawful Good
+moral,Lawful Neutral
+moral,Neutral Evil
+moral,Neutral Good
+moral,True Neutral
+positive_traits,ACCESSIBLE
+positive_traits,ACTIVE
+positive_traits,ADAPTABLE
+positive_traits,ADMIRABLE
+positive_traits,ADVENTUROUS
+positive_traits,AGREEABLE
+positive_traits,ALERT
+positive_traits,ALLOCENTRIC
+positive_traits,ATTRACTIVE
+positive_traits,BALANCED
+positive_traits,BENEVOLENT
+positive_traits,BRILLIANT
+positive_traits,CALM
+positive_traits,CAPABLE
+positive_traits,CAPTIVATING
+positive_traits,CARING
+positive_traits,CHALLENGING
+positive_traits,CHARISMATIC
+positive_traits,CHARMING
+positive_traits,CHEERFUL
+positive_traits,CLEAN
+positive_traits,CLEAR-HEADED
+positive_traits,CLEVER
+positive_traits,COLORFUL
+positive_traits,COMPANIONLY
+positive_traits,COMPASSIONATE
+positive_traits,CONCILIATORY
+positive_traits,CONFIDENT
+positive_traits,CONSCIENTIOUS
+positive_traits,CONSIDERATE
+positive_traits,CONSTANT
+positive_traits,CONTEMPLATIVE
+positive_traits,COOPERATIVE
+positive_traits,COURAGEOUS
+positive_traits,COURTEOUS
+positive_traits,CREATIVE
+positive_traits,CULTURED
+positive_traits,CURIOUS
+positive_traits,DARING
+positive_traits,DEBONAIR
+positive_traits,DECENT
+positive_traits,DECISIVE
+positive_traits,DEDICATED
+positive_traits,DEEP
+positive_traits,DIGNIFIED
+positive_traits,DIRECTED
+positive_traits,DISCIPLINED
+positive_traits,DISCREET
+positive_traits,DRAMATIC
+positive_traits,DUTIFUL
+positive_traits,DYNAMIC
+positive_traits,EARNEST
+positive_traits,EBULLIENT
+positive_traits,EDUCATED
+positive_traits,EFFICIENT
+positive_traits,ELEGANT
+positive_traits,ELOQUENT
+positive_traits,EMPATHETIC
+positive_traits,ENERGETIC
+positive_traits,ENTHUSIASTIC
+positive_traits,ESTHETIC
+positive_traits,EXCITING
+positive_traits,EXTRAORDINARY
+positive_traits,FAIR
+positive_traits,FAITHFUL
+positive_traits,FARSIGHTED
+positive_traits,FEARLESS
+positive_traits,FELICIFIC
+positive_traits,FIRM
+positive_traits,FLEXIBLE
+positive_traits,FOCUSED
+positive_traits,FORCEFUL
+positive_traits,FORGIVING
+positive_traits,FORTHRIGHT
+positive_traits,FREETHINKING
+positive_traits,FRIENDLY
+positive_traits,FUN-LOVING
+positive_traits,GALLANT
+positive_traits,GENEROUS
+positive_traits,GENTLE
+positive_traits,GENUINE
+positive_traits,GOOD-NATURED
+positive_traits,GRACIOUS
+positive_traits,HARDWORKING
+positive_traits,HEALTHY
+positive_traits,HEARTY
+positive_traits,HELPFUL
+positive_traits,HEROIC
+positive_traits,HIGH-MINDED
+positive_traits,HONEST
+positive_traits,HONORABLE
+positive_traits,HUMBLE
+positive_traits,HUMOROUS
+positive_traits,IDEALISTIC
+positive_traits,IMAGINATIVE
+positive_traits,IMPRESSIVE
+positive_traits,INCISIVE
+positive_traits,INCORRUPTIBLE
+positive_traits,INDEPENDENT
+positive_traits,INDIVIDUALISTIC
+positive_traits,INNOVATIVE
+positive_traits,INOFFENSIVE
+positive_traits,INSIGHTFUL
+positive_traits,INSOUCIANT
+positive_traits,INTELLIGENT
+positive_traits,INTUITIVE
+positive_traits,INVULNERABLE
+positive_traits,KIND
+positive_traits,KNOWLEDGE
+positive_traits,LEADERLY
+positive_traits,LEISURELY
+positive_traits,LIBERAL
+positive_traits,LOGICAL
+positive_traits,LOVABLE
+positive_traits,LOYAL
+positive_traits,LYRICAL
+positive_traits,MAGNANIMOUS
+positive_traits,MANY-SIDED
+positive_traits,MASCULINE (MANLY)
+positive_traits,MATURE
+positive_traits,METHODICAL
+positive_traits,METICULOUS
+positive_traits,MODERATE
+positive_traits,MODEST
+positive_traits,MULTI-LEVELED
+positive_traits,NEAT
+positive_traits,NON AUTHORITARIAN
+positive_traits,OBJECTIVE
+positive_traits,OBSERVANT
+positive_traits,OPEN
+positive_traits,OPTIMISTIC
+positive_traits,ORDERLY
+positive_traits,ORGANIZED
+positive_traits,ORIGINAL
+positive_traits,PAINSTAKING
+positive_traits,PASSIONATE
+positive_traits,PATIENT
+positive_traits,PATRIOTIC
+positive_traits,PEACEFUL
+positive_traits,PERCEPTIVE
+positive_traits,PERFECTIONIST
+positive_traits,PERSONABLE
+positive_traits,PERSUASIVE
+positive_traits,PLANFUL
+positive_traits,PLAYFUL
+positive_traits,POLISHED
+positive_traits,POPULAR
+positive_traits,PRACTICAL
+positive_traits,PRECISE
+positive_traits,PRINCIPLED
+positive_traits,PROFOUND
+positive_traits,PROTEAN
+positive_traits,PROTECTIVE
+positive_traits,PROVIDENTIAL
+positive_traits,PRUDENT
+positive_traits,PUNCTUAL
+positive_traits,PURPOSEFUL
+positive_traits,RATIONAL
+positive_traits,REALISTIC
+positive_traits,REFLECTIVE
+positive_traits,RELAXED
+positive_traits,RELIABLE
+positive_traits,RESILIENT
+positive_traits,RESOURCEFUL
+positive_traits,RESPECTFUL
+positive_traits,RESPONSIBLE
+positive_traits,RESPONSIVE
+positive_traits,REVERENTIAL
+positive_traits,ROMANTIC
+positive_traits,RUSTIC
+positive_traits,SAGE
+positive_traits,SANE
+positive_traits,SCHOLARLY
+positive_traits,SCRUPULOUS
+positive_traits,SECURE
+positive_traits,SELF-CRITICAL
+positive_traits,SELF-DEFACING
+positive_traits,SELF-DENYING
+positive_traits,SELF-RELIANT
+positive_traits,SELF-SUFFICIENT
+positive_traits,SELFLESS
+positive_traits,SENSITIVE
+positive_traits,SENTIMENTAL
+positive_traits,SERAPHIC
+positive_traits,SERIOUS
+positive_traits,SEXY
+positive_traits,SHARING
+positive_traits,SHREWD
+positive_traits,SIMPLE
+positive_traits,SKILLFUL
+positive_traits,SOBER
+positive_traits,SOCIABLE
+positive_traits,SOLID
+positive_traits,SOPHISTICATED
+positive_traits,SPONTANEOUS
+positive_traits,SPORTING
+positive_traits,STABLE
+positive_traits,STEADFAST
+positive_traits,STEADY
+positive_traits,STOIC
+positive_traits,STRONG
+positive_traits,STUDIOUS
+positive_traits,SUAVE
+positive_traits,SUBTLE
+positive_traits,SWEET
+positive_traits,SYMPATHETIC
+positive_traits,SYSTEMATIC
+positive_traits,TASTEFUL
+positive_traits,TEACHERLY
+positive_traits,THOROUGH
+positive_traits,TIDY
+positive_traits,TOLERANT
+positive_traits,TRACTABLE
+positive_traits,TRUSTING
+positive_traits,UNCOMPLAINING
+positive_traits,UNDERSTANDING
+positive_traits,UNDOGMATIC
+positive_traits,UNFOOLABLE
+positive_traits,UPRIGHT
+positive_traits,URBANE
+positive_traits,VENTURESOME
+positive_traits,VIVACIOUS
+positive_traits,WARM
+positive_traits,WELL-BRED
+positive_traits,WELL-READ
+positive_traits,WELL-ROUNDED
+positive_traits,WINNING
+positive_traits,WISE
+positive_traits,WITTY
+positive_traits,YOUTHFUL
+neutral_traits,ABSENTMINDED
+neutral_traits,AGGRESSIVE
+neutral_traits,AMBITIOUS
+neutral_traits,AMUSING
+neutral_traits,ARTFUL
+neutral_traits,ASCETIC
+neutral_traits,AUTHORITARIAN
+neutral_traits,BIG-THINKING
+neutral_traits,CHUMMY
+neutral_traits,CIRCUMSPECT
+neutral_traits,COMPETITIVE
+neutral_traits,COMPLEX
+neutral_traits,CONFIDENTIAL
+neutral_traits,CONSERVATIVE
+neutral_traits,CONTRADICTORY
+neutral_traits,CRISP
+neutral_traits,CUTE
+neutral_traits,DECEPTIVE
+neutral_traits,DETERMINED
+neutral_traits,DOMINATING
+neutral_traits,DREAMY
+neutral_traits,DRIVING
+neutral_traits,DROLL
+neutral_traits,DRY
+neutral_traits,EARTHY
+neutral_traits,EFFEMINATE
+neutral_traits,EMOTIONAL
+neutral_traits,ENIGMATIC
+neutral_traits,EXPERIMENTAL
+neutral_traits,FAMILIAL
+neutral_traits,FOLKSY
+neutral_traits,FORMAL
+neutral_traits,FREEWHEELING
+neutral_traits,FRUGAL
+neutral_traits,GLAMOROUS
+neutral_traits,GUILELESS
+neutral_traits,HIGH-SPIRITED
+neutral_traits,HURIED
+neutral_traits,HYPNOTIC
+neutral_traits,ICONOCLASTIC
+neutral_traits,IDIOSYNCRATIC
+neutral_traits,IMPASSIVE
+neutral_traits,IMPERSONAL
+neutral_traits,IMPRESSIONABLE
+neutral_traits,INTENSE
+neutral_traits,INVISIBLE
+neutral_traits,IRRELIGIOUS
+neutral_traits,IRREVERENT
+neutral_traits,MATERNAL
+neutral_traits,MELLOW
+neutral_traits,MODERN
+neutral_traits,MORALISTIC
+neutral_traits,MYSTICAL
+neutral_traits,NEUTRAL
+neutral_traits,NONCOMMITTAL
+neutral_traits,NONCOMPETITIVE
+neutral_traits,OBEDIENT
+neutral_traits,OLD-FASHIONED
+neutral_traits,ORDINARY
+neutral_traits,OUTSPOKEN
+neutral_traits,PATERNALISTIC
+neutral_traits,PHYSICAL
+neutral_traits,PLACID
+neutral_traits,POLITICAL
+neutral_traits,PREDICTABLE
+neutral_traits,PREOCCUPIED
+neutral_traits,PRIVATE
+neutral_traits,PROGRESSIVE
+neutral_traits,PROUD
+neutral_traits,PURE
+neutral_traits,QUESTIONING
+neutral_traits,QUIET
+neutral_traits,RELIGIOUS
+neutral_traits,RESERVED
+neutral_traits,RESTRAINED
+neutral_traits,RETIRING
+neutral_traits,SARCASTIC
+neutral_traits,SELF-CONSCIOUS
+neutral_traits,SENSUAL
+neutral_traits,SKEPTICAL
+neutral_traits,SMOOTH
+neutral_traits,SOFT
+neutral_traits,SOLEMN
+neutral_traits,SOLITARY
+neutral_traits,STERN
+neutral_traits,STOLID
+neutral_traits,STRICT
+neutral_traits,STUBBORN
+neutral_traits,STYLISH
+neutral_traits,SUBJECTIVE
+neutral_traits,SURPRISING
+neutral_traits,TOUGH
+neutral_traits,UNAGGRESSIVE
+neutral_traits,UNAMBITIOUS
+neutral_traits,UNCEREMONIOUS
+neutral_traits,UNCHANGING
+neutral_traits,UNDEMANDING
+neutral_traits,UNFATHOMABLE
+neutral_traits,UNHURRIED
+neutral_traits,UNINHIBITED
+neutral_traits,UNPATRIOTIC
+neutral_traits,UNPREDICTABLE
+neutral_traits,UNRELIGIOUS
+neutral_traits,UNSENTIMENTAL
+neutral_traits,WHIMSICAL
+negative_traits,ABRASIVE
+negative_traits,ABRUPT
+negative_traits,AGONIZING
+negative_traits,AIMLESS
+negative_traits,AIRY
+negative_traits,ALOOF
+negative_traits,AMORAL
+negative_traits,ANGRY
+negative_traits,ASOCIAL
+negative_traits,ASSERTIVE
+negative_traits,ASTIGMATIC
+negative_traits,BARBARIC
+negative_traits,BEWILDERED
+negative_traits,BIZARRE
+negative_traits,BLAND
+negative_traits,BLUNT
+negative_traits,BOISTEROUS
+negative_traits,BRITTLE
+negative_traits,BRUTAL
+negative_traits,CALCULATING
+negative_traits,CALLOUS
+negative_traits,CANTANKEROUS
+negative_traits,CARELESS
+negative_traits,CAUTIOUS
+negative_traits,CHARMLESS
+negative_traits,CHILDISH
+negative_traits,CLUMSY
+negative_traits,COARSE
+negative_traits,COLD
+negative_traits,COLORLESS
+negative_traits,COMPLACENT
+negative_traits,COMPLAINTIVE
+negative_traits,COMPULSIVE
+negative_traits,CONCEITED
+negative_traits,CONDEMNATORY
+negative_traits,CONFORMIST
+negative_traits,CONFUSED
+negative_traits,CONTEMPTIBLE
+negative_traits,CONVENTIONAL
+negative_traits,COWARDLY
+negative_traits,CRAFTY
+negative_traits,CRASS
+negative_traits,CRAZY
+negative_traits,CRIMINAL
+negative_traits,CRITICAL
+negative_traits,CRUDE
+negative_traits,CRUEL
+negative_traits,CYNICAL
+negative_traits,DECADENT
+negative_traits,DECEITFUL
+negative_traits,DELICATE
+negative_traits,DEMANDING
+negative_traits,DEPENDENT
+negative_traits,DESPERATE
+negative_traits,DESTRUCTIVE
+negative_traits,DEVIOUS
+negative_traits,DIFFICULT
+negative_traits,DIRTY
+negative_traits,DISCONCERTING
+negative_traits,DISCONTENTED
+negative_traits,DISCOURAGING
+negative_traits,DISCOURTEOUS
+negative_traits,DISHONEST
+negative_traits,DISLOYAL
+negative_traits,DISOBEDIENT
+negative_traits,DISORDERLY
+negative_traits,DISORGANIZED
+negative_traits,DISPUTATIOUS
+negative_traits,DISRESPECTFUL
+negative_traits,DISRUPTIVE
+negative_traits,DISSOLUTE
+negative_traits,DISSONANT
+negative_traits,DISTRACTIBLE
+negative_traits,DISTURBING
+negative_traits,DOGMATIC
+negative_traits,DOMINEERING
+negative_traits,DULL
+negative_traits,EASILY DISCOURAGED
+negative_traits,EGOCENTRIC
+negative_traits,ENERVATED
+negative_traits,ENVIOUS
+negative_traits,ERRATIC
+negative_traits,ESCAPIST
+negative_traits,EXCITABLE
+negative_traits,EXPEDIENT
+negative_traits,EXTRAVAGANT
+negative_traits,EXTREME
+negative_traits,FAITHLESS
+negative_traits,FANATICAL
+negative_traits,FANCIFUL
+negative_traits,FATALISTIC
+negative_traits,FAWNING
+negative_traits,FEARFUL
+negative_traits,FICKLE
+negative_traits,FIERY
+negative_traits,FIXED
+negative_traits,FLAMBOYANT
+negative_traits,FOOLISH
+negative_traits,FORGETFUL
+negative_traits,FRAUDULENT
+negative_traits,FRIGHTENING
+negative_traits,FRIVOLOUS
+negative_traits,GLOOMY
+negative_traits,GRACELESS
+negative_traits,GRAND
+negative_traits,GREEDY
+negative_traits,GRIM
+negative_traits,GULLIBLE
+negative_traits,HATEFUL
+negative_traits,HAUGHTY
+negative_traits,HEDONISTIC
+negative_traits,HESITANT
+negative_traits,HIDEBOUND
+negative_traits,HIGH-HANDED
+negative_traits,HOSTILE
+negative_traits,IGNORANT
+negative_traits,IMITATIVE
+negative_traits,IMPATIENT
+negative_traits,IMPRACTICAL
+negative_traits,IMPRUDENT
+negative_traits,IMPULSIVE
+negative_traits,INCONSIDERATE
+negative_traits,INCURIOUS
+negative_traits,INDECISIVE
+negative_traits,INDULGENT
+negative_traits,INERT
+negative_traits,INHIBITED
+negative_traits,INSECURE
+negative_traits,INSENSITIVE
+negative_traits,INSINCERE
+negative_traits,INSULTING
+negative_traits,INTOLERANT
+negative_traits,IRASCIBLE
+negative_traits,IRRATIONAL
+negative_traits,IRRESPONSIBLE
+negative_traits,IRRITABLE
+negative_traits,LAZY
+negative_traits,LIBIDINOUS
+negative_traits,LOQUACIOUS
+negative_traits,MALICIOUS
+negative_traits,MANIPULATIVE
+negative_traits,MANNERED
+negative_traits,MANNERLESS
+negative_traits,MAWKISH
+negative_traits,MEALY MOUTHED
+negative_traits,MECHANICAL
+negative_traits,MEDDLESOME
+negative_traits,MELANCHOLIC
+negative_traits,MERETRICIOUS
+negative_traits,MESSY
+negative_traits,MISERABLE
+negative_traits,MISERLY
+negative_traits,MISGUIDED
+negative_traits,MISTAKEN
+negative_traits,MONEY-MINDED
+negative_traits,MONSTROUS
+negative_traits,MOODY
+negative_traits,MORBID
+negative_traits,MUDDLE-HEADED
+negative_traits,NAIVE
+negative_traits,NARCISSISTIC
+negative_traits,NARROW
+negative_traits,NARROW-MINDED
+negative_traits,NATTY
+negative_traits,NEGATIVISTIC
+negative_traits,NEGLECTFUL
+negative_traits,NEUROTIC
+negative_traits,NIHILISTIC
+negative_traits,OBNOXIOUS
+negative_traits,OBSESSIVE
+negative_traits,OBVIOUS
+negative_traits,ODD
+negative_traits,OFFHAND
+negative_traits,ONE-DIMENSIONAL
+negative_traits,ONE-SIDED
+negative_traits,OPINIONATED
+negative_traits,OPPORTUNISTIC
+negative_traits,OPPRESSED
+negative_traits,OUTRAGEOUS
+negative_traits,OVER IMAGINATIVE
+negative_traits,PARANOID
+negative_traits,PASSIVE
+negative_traits,PEDANTIC
+negative_traits,PERVERSE
+negative_traits,PETTY
+negative_traits,PHARISAICAL
+negative_traits,PHLEGMATIC
+negative_traits,PLODDING
+negative_traits,POMPOUS
+negative_traits,POSSESSIVE
+negative_traits,POWER-HUNGRY
+negative_traits,PREDATORY
+negative_traits,PREJUDICED
+negative_traits,PRESUMPTUOUS
+negative_traits,PRETENTIOUS
+negative_traits,PRIM
+negative_traits,PROCRASTINATING
+negative_traits,PROFLIGATE
+negative_traits,PROVOCATIVE
+negative_traits,PUGNACIOUS
+negative_traits,PURITANICAL
+negative_traits,QUIRKY
+negative_traits,REACTIONARY
+negative_traits,REACTIVE
+negative_traits,REGIMENTAL
+negative_traits,REGRETFUL
+negative_traits,REPENTANT
+negative_traits,REPRESSED
+negative_traits,RESENTFUL
+negative_traits,RIDICULOUS
+negative_traits,RIGID
+negative_traits,RITUALISTIC
+negative_traits,ROWDY
+negative_traits,RUINED
+negative_traits,SADISTIC
+negative_traits,SANCTIMONIOUS
+negative_traits,SCHEMING
+negative_traits,SCORNFUL
+negative_traits,SECRETIVE
+negative_traits,SEDENTARY
+negative_traits,SELF-INDULGENT
+negative_traits,SELFISH
+negative_traits,SHALLOW
+negative_traits,SHORTSIGHTED
+negative_traits,SHY
+negative_traits,SILLY
+negative_traits,SINGLE-MINDED
+negative_traits,SLOPPY
+negative_traits,SLOW
+negative_traits,SLY
+negative_traits,SMALL-THINKING
+negative_traits,SOFT HEADED
+negative_traits,SORDID
+negative_traits,STEELY
+negative_traits,STIFF
+negative_traits,STRONG-WILLED
+negative_traits,STUPID
+negative_traits,SUBMISSIVE
+negative_traits,SUPERFICIAL
+negative_traits,SUPERSTITIOUS
+negative_traits,SUSPICIOUS
+negative_traits,TACTLESS
+negative_traits,TASTELESS
+negative_traits,TENSE
+negative_traits,THIEVISH
+negative_traits,THOUGHTLESS
+negative_traits,TIMID
+negative_traits,TRANSPARENT
+negative_traits,TREACHEROUS
+negative_traits,TRENDY
+negative_traits,TROUBLESOME
+negative_traits,UNAPPRECIATIVE
+negative_traits,UNCARING
+negative_traits,UNCHARITABLE
+negative_traits,UNCONVINCING
+negative_traits,UNCOOPERATIVE
+negative_traits,UNCREATIVE
+negative_traits,UNCRITICAL
+negative_traits,UNCTUOUS
+negative_traits,UNDISCIPLINED
+negative_traits,UNFRIENDLY
+negative_traits,UNGRATEFUL
+negative_traits,UNHEALTHY
+negative_traits,UNIMAGINATIVE
+negative_traits,UNIMPRESSIVE
+negative_traits,UNLOVABLE
+negative_traits,UNPOLISHED
+negative_traits,UNPREDICTABLE
+negative_traits,UNPRINCIPLED
+negative_traits,UNREALISTIC
+negative_traits,UNREFLECTIVE
+negative_traits,UNRELIABLE
+negative_traits,UNRESTRAINED
+negative_traits,UNSELF-CRITICAL
+negative_traits,UNSTABLE
+negative_traits,VACUOUS
+negative_traits,VAGUE
+negative_traits,VENAL
+negative_traits,VENOMOUS
+negative_traits,VINDICTIVE
+negative_traits,VULNERABLE
+negative_traits,WEAK
+negative_traits,WEAK-WILLED
+negative_traits,WELL-MEANING
+negative_traits,WILLFUL
+negative_traits,WISHFUL
+negative_traits,ZANY
+

@@ -80,6 +80,7 @@ function escapeCSVValue(value) {
 
 // Update CSV file with new options
 function updateCSVFile(csvPath, fieldToColumn, updatedOptions) {
+  // Note: This function assumes the file exists (check is done before calling)
   if (!fs.existsSync(csvPath)) {
     throw new Error(`CSV file not found: ${csvPath}`);
   }
@@ -164,6 +165,92 @@ function updateCSVFile(csvPath, fieldToColumn, updatedOptions) {
   console.log(`Updated CSV file: ${csvPath}`);
 }
 
+// Update the options TypeScript file directly (for production when CSV files don't exist)
+function updateOptionsFileDirectly(optionsFilePath, updatedOptions) {
+  if (!fs.existsSync(optionsFilePath)) {
+    throw new Error(`Options file not found: ${optionsFilePath}`);
+  }
+
+  // Read current options file
+  let fileContent = fs.readFileSync(optionsFilePath, 'utf-8');
+  
+  // Update each field in the options
+  Object.entries(updatedOptions).forEach(([field, newValues]) => {
+    // Sort values for consistency
+    const sortedValues = [...newValues].sort();
+    
+    // Create the new array content with proper indentation
+    const valuesString = sortedValues
+      .map(v => `    "${String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`)
+      .join(',\n');
+    
+    // Match the field definition - handle multiline arrays with balanced brackets
+    // This regex matches: "field": [ ... ] where ... can contain nested brackets
+    const fieldName = field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const startPattern = `"${fieldName}":\\s*\\[`;
+    const startIndex = fileContent.search(new RegExp(startPattern));
+    
+    if (startIndex === -1) {
+      console.warn(`Field ${field} not found in options file, skipping`);
+      return;
+    }
+    
+    // Find the matching closing bracket
+    let bracketCount = 0;
+    let inString = false;
+    let escapeNext = false;
+    let endIndex = startIndex;
+    
+    for (let i = startIndex; i < fileContent.length; i++) {
+      const char = fileContent[i];
+      
+      if (escapeNext) {
+        escapeNext = false;
+        continue;
+      }
+      
+      if (char === '\\') {
+        escapeNext = true;
+        continue;
+      }
+      
+      if (char === '"' && !escapeNext) {
+        inString = !inString;
+        continue;
+      }
+      
+      if (!inString) {
+        if (char === '[') {
+          bracketCount++;
+        } else if (char === ']') {
+          bracketCount--;
+          if (bracketCount === 0) {
+            endIndex = i;
+            break;
+          }
+        }
+      }
+    }
+    
+    if (bracketCount !== 0) {
+      console.warn(`Could not find matching bracket for field ${field}, skipping`);
+      return;
+    }
+    
+    // Extract the part before and after the field
+    const before = fileContent.substring(0, startIndex);
+    const after = fileContent.substring(endIndex + 1);
+    
+    // Reconstruct with new values
+    fileContent = before + `"${field}": [\n${valuesString}\n  ]` + after;
+    console.log(`Updated field: ${field} with ${newValues.length} values`);
+  });
+  
+  // Write updated content
+  fs.writeFileSync(optionsFilePath, fileContent, 'utf-8');
+  console.log(`Updated options file: ${optionsFilePath}`);
+}
+
 // Main function
 function updateOptions(updatedOptions) {
   try {
@@ -184,23 +271,41 @@ function updateOptions(updatedOptions) {
       }
     });
 
-    // Update INFO CSV
+    // Update INFO CSV (skip if file doesn't exist - common in production)
     if (Object.keys(infoCsvUpdates).length > 0) {
-      updateCSVFile(infoCsvPath, fieldToCsvColumn, infoCsvUpdates);
+      if (fs.existsSync(infoCsvPath)) {
+        updateCSVFile(infoCsvPath, fieldToCsvColumn, infoCsvUpdates);
+      } else {
+        console.warn(`INFO CSV file not found at ${infoCsvPath}, skipping CSV update. Options will still be saved.`);
+      }
     }
 
-    // Update OC List CSV
+    // Update OC List CSV (skip if file doesn't exist - common in production)
     if (Object.keys(ocListCsvUpdates).length > 0) {
-      updateCSVFile(ocListCsvPath, fieldToCsvColumn, ocListCsvUpdates);
+      if (fs.existsSync(ocListCsvPath)) {
+        updateCSVFile(ocListCsvPath, fieldToCsvColumn, ocListCsvUpdates);
+      } else {
+        console.warn(`OC List CSV file not found at ${ocListCsvPath}, skipping CSV update. Options will still be saved.`);
+      }
     }
 
-    // Regenerate the options file
-    console.log('Regenerating options file...');
-    const scriptPath = path.join(projectRoot, 'scripts', 'utilities', 'generate-csv-options.ts');
-    execSync(`npx tsx "${scriptPath}"`, { 
-      cwd: projectRoot,
-      stdio: 'inherit'
-    });
+    // Update the options file
+    const optionsFilePath = path.join(projectRoot, 'src/lib/utils/csvOptionsData.ts');
+    const csvFilesExist = fs.existsSync(infoCsvPath) && fs.existsSync(ocListCsvPath);
+    
+    if (csvFilesExist) {
+      // If CSV files exist, regenerate from CSV (development/local)
+      console.log('Regenerating options file from CSV...');
+      const scriptPath = path.join(projectRoot, 'scripts', 'utilities', 'generate-csv-options.ts');
+      execSync(`npx tsx "${scriptPath}"`, { 
+        cwd: projectRoot,
+        stdio: 'inherit'
+      });
+    } else {
+      // If CSV files don't exist, update the options file directly (production)
+      console.log('CSV files not found, updating options file directly...');
+      updateOptionsFileDirectly(optionsFilePath, updatedOptions);
+    }
 
     console.log('Options updated successfully!');
     return { success: true };

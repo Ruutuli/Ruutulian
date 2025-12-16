@@ -87,7 +87,7 @@ export async function PUT(request: NextRequest) {
           cwd: projectRoot,
           stdio: 'pipe',
           encoding: 'utf-8',
-          shell: process.platform === 'win32' ? true : false,
+          shell: process.platform === 'win32' ? (process.env.COMSPEC || 'cmd.exe') : '/bin/sh',
         });
         
         // Clean up temp file if it still exists (script should delete it)

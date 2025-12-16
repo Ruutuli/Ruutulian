@@ -326,6 +326,17 @@ export function WorldDetails({ world }: WorldDetailsProps) {
         </SectionWithImage>
       )}
 
+      {/* History Section */}
+      {world.history && (
+        <SectionWithImage
+          title="History"
+          icon="fas fa-scroll"
+          iconColor="text-red-400"
+          imageUrl={world.history_image_url || null}
+          content={world.history}
+        />
+      )}
+
       {/* Additional Information Section */}
       {(world.themes || world.inspirations || world.current_era_status || world.notes) && (
         <SectionWithImage
@@ -373,17 +384,6 @@ export function WorldDetails({ world }: WorldDetailsProps) {
             )}
           </div>
         </SectionWithImage>
-      )}
-
-      {/* History Section */}
-      {world.history && (
-        <SectionWithImage
-          title="History"
-          icon="fas fa-scroll"
-          iconColor="text-red-400"
-          imageUrl={world.history_image_url || null}
-          content={world.history}
-        />
       )}
     </div>
   );

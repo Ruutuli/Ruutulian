@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://ruutulian.com'),
   title: {
     template: '%s | Ruutulian',
-    default: 'Ruutulian - Original Character Wiki',
+    default: "Ruu's Personal OC Wiki - Ruutulian",
   },
-  description: 'Explore characters and worlds across every universe. A personal wiki for organizing and showcasing original characters and worlds.',
+  description: "Ruu's personal OC wiki! A place to store and organize information on her original characters, worlds, lore, and timelines across every universe.",
   keywords: ['original characters', 'OC wiki', 'character wiki', 'world building', 'character development', 'fictional characters', 'OC database'],
   authors: [{ name: 'Ruutulian' }],
   creator: 'Ruutulian',
@@ -23,8 +23,8 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: '/',
     siteName: 'Ruutulian',
-    title: 'Ruutulian - Original Character Wiki',
-    description: 'Explore characters and worlds across every universe. A personal wiki for organizing and showcasing original characters and worlds.',
+    title: "Ruu's Personal OC Wiki - Ruutulian",
+    description: "Ruu's personal OC wiki! A place to store and organize information on her original characters, worlds, lore, and timelines across every universe.",
     images: [
       {
         url: '/icon.png',
@@ -36,8 +36,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary',
-    title: 'Ruutulian - Original Character Wiki',
-    description: 'Explore characters and worlds across every universe. A personal wiki for organizing and showcasing original characters and worlds.',
+    title: "Ruu's Personal OC Wiki - Ruutulian",
+    description: "Ruu's personal OC wiki! A place to store and organize information on her original characters, worlds, lore, and timelines across every universe.",
     images: ['/icon.png'],
   },
   icons: {

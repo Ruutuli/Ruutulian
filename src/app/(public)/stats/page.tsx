@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: '/icon.png',
+        url: '/images/logo.png',
         width: 512,
         height: 512,
         alt: 'Ruutulian Logo',
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     card: 'summary',
     title: 'Statistics | Ruutulian',
     description: 'Comprehensive statistics and analytics for Ruutulian.',
-    images: ['/icon.png'],
+    images: ['/images/logo.png'],
   },
   alternates: {
     canonical: '/stats',

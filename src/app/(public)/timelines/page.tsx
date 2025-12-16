@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: '/icon.png',
+        url: '/images/logo.png',
         width: 512,
         height: 512,
         alt: 'Ruutulian Logo',
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     card: 'summary',
     title: 'Timelines | Ruutulian',
     description: 'Explore chronological timelines and events across all worlds.',
-    images: ['/icon.png'],
+    images: ['/images/logo.png'],
   },
   alternates: {
     canonical: '/timelines',

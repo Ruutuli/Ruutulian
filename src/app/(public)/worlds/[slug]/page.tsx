@@ -55,13 +55,13 @@ export async function generateMetadata({
       images: world.header_image_url || world.icon_url
         ? [
             {
-              url: world.header_image_url || world.icon_url || '/icon.png',
+              url: world.header_image_url || world.icon_url || '/images/logo.png',
               alt: world.name,
             },
           ]
         : [
             {
-              url: '/icon.png',
+              url: '/images/logo.png',
               width: 512,
               height: 512,
               alt: world.name,
@@ -72,7 +72,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title: `${world.name} | Ruutulian`,
       description,
-      images: world.header_image_url || world.icon_url ? [world.header_image_url || world.icon_url || '/icon.png'] : ['/icon.png'],
+      images: world.header_image_url || world.icon_url ? [world.header_image_url || world.icon_url || '/images/logo.png'] : ['/images/logo.png'],
     },
     alternates: {
       canonical: url,

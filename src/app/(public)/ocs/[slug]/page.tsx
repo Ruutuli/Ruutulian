@@ -70,7 +70,7 @@ export async function generateMetadata({
           ]
         : [
             {
-              url: '/icon.png',
+              url: '/images/logo.png',
               width: 512,
               height: 512,
               alt: oc.name,
@@ -81,7 +81,7 @@ export async function generateMetadata({
       card: 'summary',
       title: `${oc.name} | Ruutulian`,
       description,
-      images: oc.image_url ? [oc.image_url] : ['/icon.png'],
+      images: oc.image_url ? [oc.image_url] : ['/images/logo.png'],
     },
     alternates: {
       canonical: url,

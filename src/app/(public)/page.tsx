@@ -7,16 +7,16 @@ import { FeatureTile } from '@/components/admin/FeatureTile';
 
 export const metadata: Metadata = {
   title: 'Home',
-  description: 'Welcome to Ruutulian - Explore characters and worlds across every universe. Browse original characters, worlds, lore, timelines, and statistics.',
+  description: "Welcome to Ruutulian - Ruu's personal OC wiki! A place to store and organize information on her original characters, worlds, lore, and timelines. Browse characters, worlds, lore, timelines, and statistics.",
   keywords: ['original characters', 'OC wiki', 'character wiki', 'world building', 'character development', 'fictional characters'],
   openGraph: {
-    title: 'Ruutulian - Original Character Wiki',
-    description: 'Explore characters and worlds across every universe. Browse original characters, worlds, lore, timelines, and statistics.',
+    title: "Ruu's Personal OC Wiki - Ruutulian",
+    description: "Ruu's personal OC wiki! A place to store and organize information on her original characters, worlds, lore, and timelines. Browse characters, worlds, lore, timelines, and statistics.",
     url: '/',
     type: 'website',
     images: [
       {
-        url: '/icon.png',
+        url: '/images/logo.png',
         width: 512,
         height: 512,
         alt: 'Ruutulian Logo',
@@ -25,9 +25,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary',
-    title: 'Ruutulian - Original Character Wiki',
-    description: 'Explore characters and worlds across every universe. Browse original characters, worlds, lore, timelines, and statistics.',
-    images: ['/icon.png'],
+    title: "Ruu's Personal OC Wiki - Ruutulian",
+    description: "Ruu's personal OC wiki! A place to store and organize information on her original characters, worlds, lore, and timelines. Browse characters, worlds, lore, timelines, and statistics.",
+    images: ['/images/logo.png'],
   },
   alternates: {
     canonical: '/',
@@ -120,7 +120,7 @@ export default async function HomePage() {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'Ruutulian',
-    description: 'Explore characters and worlds across every universe. A personal wiki for organizing and showcasing original characters and worlds.',
+    description: "Ruu's personal OC wiki! A place to store and organize information on her original characters, worlds, lore, and timelines across every universe.",
     url: baseUrl,
     potentialAction: {
       '@type': 'SearchAction',
@@ -145,7 +145,7 @@ export default async function HomePage() {
           Ruutulian
         </h1>
         <p className="text-base md:text-lg lg:text-xl text-gray-300 max-w-2xl mx-auto mb-6 md:mb-8 px-4">
-          Explore characters and worlds across every universe. A personal wiki for organizing and showcasing original characters and worlds.
+          Ruu's personal OC wiki! A place to store and organize information on her original characters, worlds, lore, and timelines across every universe.
         </p>
         <div className="flex flex-wrap justify-center gap-3 md:gap-4 px-4">
           <Link
@@ -372,7 +372,7 @@ export default async function HomePage() {
         </div>
         <div className="wiki-card p-4 md:p-6">
           <p className="text-gray-300 mb-4">
-            Welcome to Ruutulian! This is a personal wiki project for organizing and showcasing original characters and worlds across various universes.
+            Welcome to Ruutulian! Ruu's personal OC wiki for organizing and storing information on her original characters, worlds, lore, and timelines across various universes.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-start gap-3 p-4 bg-gradient-to-br from-purple-900/30 to-purple-800/30 rounded-lg">

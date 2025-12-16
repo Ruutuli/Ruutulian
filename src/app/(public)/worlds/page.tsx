@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: '/icon.png',
+        url: '/images/logo.png',
         width: 512,
         height: 512,
         alt: 'Ruutulian Logo',
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     card: 'summary',
     title: 'Worlds | Ruutulian',
     description: 'Browse all fictional worlds and universes on Ruutulian.',
-    images: ['/icon.png'],
+    images: ['/images/logo.png'],
   },
   alternates: {
     canonical: '/worlds',

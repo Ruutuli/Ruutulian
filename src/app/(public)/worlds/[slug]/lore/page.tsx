@@ -48,7 +48,7 @@ export async function generateMetadata({
       type: 'website',
       images: [
         {
-          url: '/icon.png',
+          url: '/images/logo.png',
           width: 512,
           height: 512,
           alt: world.name,
@@ -59,7 +59,7 @@ export async function generateMetadata({
       card: 'summary',
       title: `${world.name} - Lore | Ruutulian`,
       description,
-      images: ['/icon.png'],
+      images: ['/images/logo.png'],
     },
     alternates: {
       canonical: url,

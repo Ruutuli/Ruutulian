@@ -51,7 +51,7 @@ export async function generateMetadata({
       type: 'website',
       images: [
         {
-          url: '/icon.png',
+          url: '/images/logo.png',
           width: 512,
           height: 512,
           alt: timeline.name,
@@ -62,7 +62,7 @@ export async function generateMetadata({
       card: 'summary',
       title: `${timeline.name} | Ruutulian`,
       description,
-      images: ['/icon.png'],
+      images: ['/images/logo.png'],
     },
     alternates: {
       canonical: url,

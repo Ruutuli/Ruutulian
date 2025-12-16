@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { WorldCard } from '@/components/world/WorldCard';
 import { OCCard } from '@/components/oc/OCCard';
 import { FeatureTile } from '@/components/admin/FeatureTile';
+import { LoreCard } from '@/components/lore/LoreCard';
 
 export const metadata: Metadata = {
   title: 'Home',
@@ -82,7 +83,7 @@ export default async function HomePage() {
   ] = await Promise.all([
     supabase.from('worlds').select('*', { count: 'exact', head: true }).eq('is_public', true),
     supabase.from('ocs').select('*', { count: 'exact', head: true }).eq('is_public', true),
-    supabase.from('world_lore').select('*', { count: 'exact', head: true }).eq('is_public', true),
+    supabase.from('world_lore').select('*, world:worlds!inner(is_public)', { count: 'exact', head: true }).eq('world.is_public', true),
     supabase.from('timeline_events').select('*', { count: 'exact', head: true }),
   ]);
 
@@ -107,11 +108,22 @@ export default async function HomePage() {
       .limit(3),
     supabase
       .from('world_lore')
-      .select('id, name, slug, updated_at, world:worlds(slug)')
-      .eq('is_public', true)
+      .select('id, name, slug, updated_at, world:worlds!inner(slug, is_public)')
+      .eq('world.is_public', true)
       .order('updated_at', { ascending: false })
       .limit(3),
   ]);
+
+  // Get recently updated lore for dedicated section
+  const { data: recentlyUpdatedLore } = await supabase
+    .from('world_lore')
+    .select(`
+      *,
+      world:worlds!inner(id, name, slug, is_public, primary_color, accent_color)
+    `)
+    .eq('world.is_public', true)
+    .order('updated_at', { ascending: false })
+    .limit(6);
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ruutulian.com';
   
@@ -363,6 +375,30 @@ export default async function HomePage() {
           </div>
         </section>
       ) : null}
+
+      {/* Recently Updated Lore Section */}
+      {recentlyUpdatedLore && recentlyUpdatedLore.length > 0 && (
+        <section className="slide-up">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 md:mb-6">
+            <div className="flex items-center gap-2 md:gap-3">
+              <i className="fas fa-book text-teal-400 text-xl md:text-2xl"></i>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-100">Recently Updated Lore</h2>
+            </div>
+            <Link
+              href="/lore"
+              prefetch={true}
+              className="text-teal-400 hover:text-teal-300 font-medium flex items-center gap-2 text-sm md:text-base"
+            >
+              View All <i className="fas fa-arrow-right"></i>
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {recentlyUpdatedLore.map((lore) => (
+              <LoreCard key={lore.id} lore={lore} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Current Projects Section */}
       <section className="slide-up">

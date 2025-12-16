@@ -162,6 +162,13 @@ export default async function WorldDetailPage({
     inspirations: storyData.inspirations ?? world.inspirations,
     current_era_status: storyData.current_era_status ?? world.current_era_status,
     notes: storyData.notes ?? world.notes,
+    overview_image_url: storyData.overview_image_url ?? world.overview_image_url,
+    society_culture_image_url: storyData.society_culture_image_url ?? world.society_culture_image_url,
+    world_building_image_url: storyData.world_building_image_url ?? world.world_building_image_url,
+    economy_systems_image_url: storyData.economy_systems_image_url ?? world.economy_systems_image_url,
+    additional_info_image_url: storyData.additional_info_image_url ?? world.additional_info_image_url,
+    history_image_url: storyData.history_image_url ?? world.history_image_url,
+    history: storyData.history ?? world.history,
     modular_fields: storyData.modular_fields ?? world.modular_fields,
   } : world;
 

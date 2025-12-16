@@ -72,6 +72,33 @@ const worldSchema = z.object({
   central_conflicts: optionalString,
   world_rules_limitations: optionalString,
   oc_integration_notes: optionalString,
+  // Section image URLs
+  overview_image_url: z.union([
+    z.string().url(),
+    z.literal(''),
+  ]).optional(),
+  society_culture_image_url: z.union([
+    z.string().url(),
+    z.literal(''),
+  ]).optional(),
+  world_building_image_url: z.union([
+    z.string().url(),
+    z.literal(''),
+  ]).optional(),
+  economy_systems_image_url: z.union([
+    z.string().url(),
+    z.literal(''),
+  ]).optional(),
+  additional_info_image_url: z.union([
+    z.string().url(),
+    z.literal(''),
+  ]).optional(),
+  history_image_url: z.union([
+    z.string().url(),
+    z.literal(''),
+  ]).optional(),
+  // History field
+  history: optionalString,
   // World field system (definitions - read-only in this form)
   world_fields: z.any().optional(),
   // Modular fields for world field system values
@@ -201,6 +228,13 @@ export function WorldForm({ world }: WorldFormProps) {
         central_conflicts: data.central_conflicts || null,
         world_rules_limitations: data.world_rules_limitations || null,
         oc_integration_notes: data.oc_integration_notes || null,
+        overview_image_url: data.overview_image_url || null,
+        society_culture_image_url: data.society_culture_image_url || null,
+        world_building_image_url: data.world_building_image_url || null,
+        economy_systems_image_url: data.economy_systems_image_url || null,
+        additional_info_image_url: data.additional_info_image_url || null,
+        history_image_url: data.history_image_url || null,
+        history: data.history || null,
         world_fields: world?.world_fields || null,
       };
     },
@@ -246,6 +280,13 @@ export function WorldForm({ world }: WorldFormProps) {
         central_conflicts: storyData.central_conflicts ?? world.central_conflicts,
         world_rules_limitations: storyData.world_rules_limitations ?? world.world_rules_limitations,
         oc_integration_notes: storyData.oc_integration_notes ?? world.oc_integration_notes,
+        overview_image_url: storyData.overview_image_url ?? world.overview_image_url,
+        society_culture_image_url: storyData.society_culture_image_url ?? world.society_culture_image_url,
+        world_building_image_url: storyData.world_building_image_url ?? world.world_building_image_url,
+        economy_systems_image_url: storyData.economy_systems_image_url ?? world.economy_systems_image_url,
+        additional_info_image_url: storyData.additional_info_image_url ?? world.additional_info_image_url,
+        history_image_url: storyData.history_image_url ?? world.history_image_url,
+        history: storyData.history ?? world.history,
         modular_fields: storyData.modular_fields ?? world.modular_fields,
       };
     }
@@ -290,10 +331,17 @@ export function WorldForm({ world }: WorldFormProps) {
       canon_status: getDefaultValue(mergedWorldData.canon_status),
       timeline_era: getDefaultValue(mergedWorldData.timeline_era),
       power_source: getDefaultValue(mergedWorldData.power_source),
-      central_conflicts: getDefaultValue(mergedWorldData.central_conflicts),
-      world_rules_limitations: getDefaultValue(mergedWorldData.world_rules_limitations),
-      oc_integration_notes: getDefaultValue(mergedWorldData.oc_integration_notes),
-      world_fields: mergedWorldData.world_fields || undefined,
+        central_conflicts: getDefaultValue(mergedWorldData.central_conflicts),
+        world_rules_limitations: getDefaultValue(mergedWorldData.world_rules_limitations),
+        oc_integration_notes: getDefaultValue(mergedWorldData.oc_integration_notes),
+        overview_image_url: getDefaultValue(mergedWorldData.overview_image_url),
+        society_culture_image_url: getDefaultValue(mergedWorldData.society_culture_image_url),
+        world_building_image_url: getDefaultValue(mergedWorldData.world_building_image_url),
+        economy_systems_image_url: getDefaultValue(mergedWorldData.economy_systems_image_url),
+        additional_info_image_url: getDefaultValue(mergedWorldData.additional_info_image_url),
+        history_image_url: getDefaultValue(mergedWorldData.history_image_url),
+        history: getDefaultValue(mergedWorldData.history),
+        world_fields: mergedWorldData.world_fields || undefined,
     } : {
       name: '',
       slug: '',
@@ -332,6 +380,13 @@ export function WorldForm({ world }: WorldFormProps) {
       central_conflicts: '',
       world_rules_limitations: '',
       oc_integration_notes: '',
+      overview_image_url: '',
+      society_culture_image_url: '',
+      world_building_image_url: '',
+      economy_systems_image_url: '',
+      additional_info_image_url: '',
+      history_image_url: '',
+      history: '',
       world_fields: undefined,
     },
   });
@@ -380,6 +435,13 @@ export function WorldForm({ world }: WorldFormProps) {
         central_conflicts: getDefaultValue(mergedWorldData.central_conflicts),
         world_rules_limitations: getDefaultValue(mergedWorldData.world_rules_limitations),
         oc_integration_notes: getDefaultValue(mergedWorldData.oc_integration_notes),
+        overview_image_url: getDefaultValue(mergedWorldData.overview_image_url),
+        society_culture_image_url: getDefaultValue(mergedWorldData.society_culture_image_url),
+        world_building_image_url: getDefaultValue(mergedWorldData.world_building_image_url),
+        economy_systems_image_url: getDefaultValue(mergedWorldData.economy_systems_image_url),
+        additional_info_image_url: getDefaultValue(mergedWorldData.additional_info_image_url),
+        history_image_url: getDefaultValue(mergedWorldData.history_image_url),
+        history: getDefaultValue(mergedWorldData.history),
         world_fields: mergedWorldData.world_fields || undefined,
       });
     }
@@ -446,6 +508,13 @@ export function WorldForm({ world }: WorldFormProps) {
           central_conflicts: data.central_conflicts || null,
           world_rules_limitations: data.world_rules_limitations || null,
           oc_integration_notes: data.oc_integration_notes || null,
+          overview_image_url: data.overview_image_url || null,
+          society_culture_image_url: data.society_culture_image_url || null,
+          world_building_image_url: data.world_building_image_url || null,
+          economy_systems_image_url: data.economy_systems_image_url || null,
+          additional_info_image_url: data.additional_info_image_url || null,
+          history_image_url: data.history_image_url || null,
+          history: data.history || null,
           modular_fields: data.modular_fields || {},
         };
 
@@ -739,6 +808,19 @@ export function WorldForm({ world }: WorldFormProps) {
             disabled={isSubmitting}
           />
         </div>
+
+        <div>
+          <FormLabel htmlFor="overview_image_url">
+            Overview Section Image URL
+          </FormLabel>
+          <FormInput
+            type="url"
+            {...register('overview_image_url')}
+            placeholder="https://example.com/image.jpg"
+            disabled={isSubmitting}
+          />
+          <p className="mt-1 text-xs text-gray-400">Optional image to display with the Overview section</p>
+        </div>
       </FormSection>
 
       <FormSection 
@@ -830,6 +912,19 @@ export function WorldForm({ world }: WorldFormProps) {
             placeholder="Natural environment, climate, ecosystems, and how the physical world affects life."
             disabled={isSubmitting}
           />
+        </div>
+
+        <div>
+          <FormLabel htmlFor="society_culture_image_url">
+            Society & Culture Section Image URL
+          </FormLabel>
+          <FormInput
+            type="url"
+            {...register('society_culture_image_url')}
+            placeholder="https://example.com/image.jpg"
+            disabled={isSubmitting}
+          />
+          <p className="mt-1 text-xs text-gray-400">Optional image to display with the Society & Culture section</p>
         </div>
       </FormSection>
 
@@ -934,6 +1029,19 @@ export function WorldForm({ world }: WorldFormProps) {
             disabled={isSubmitting}
           />
         </div>
+
+        <div>
+          <FormLabel htmlFor="world_building_image_url">
+            World Building Section Image URL
+          </FormLabel>
+          <FormInput
+            type="url"
+            {...register('world_building_image_url')}
+            placeholder="https://example.com/image.jpg"
+            disabled={isSubmitting}
+          />
+          <p className="mt-1 text-xs text-gray-400">Optional image to display with the World Building section</p>
+        </div>
       </FormSection>
 
       <FormSection 
@@ -976,6 +1084,19 @@ export function WorldForm({ world }: WorldFormProps) {
             placeholder="Methods of travel and transportation. How do people and goods move around? Ships, teleportation, vehicles, etc."
             disabled={isSubmitting}
           />
+        </div>
+
+        <div>
+          <FormLabel htmlFor="economy_systems_image_url">
+            Economy & Systems Section Image URL
+          </FormLabel>
+          <FormInput
+            type="url"
+            {...register('economy_systems_image_url')}
+            placeholder="https://example.com/image.jpg"
+            disabled={isSubmitting}
+          />
+          <p className="mt-1 text-xs text-gray-400">Optional image to display with the Economy & Systems section</p>
         </div>
       </FormSection>
 
@@ -1032,6 +1153,53 @@ export function WorldForm({ world }: WorldFormProps) {
             placeholder="Any additional notes, behind-the-scenes information, or reminders that don't fit in other categories."
             disabled={isSubmitting}
           />
+        </div>
+
+        <div>
+          <FormLabel htmlFor="additional_info_image_url">
+            Additional Information Section Image URL
+          </FormLabel>
+          <FormInput
+            type="url"
+            {...register('additional_info_image_url')}
+            placeholder="https://example.com/image.jpg"
+            disabled={isSubmitting}
+          />
+          <p className="mt-1 text-xs text-gray-400">Optional image to display with the Additional Information section</p>
+        </div>
+      </FormSection>
+
+      <FormSection 
+        title="History" 
+        icon="history" 
+        accentColor="history" 
+        defaultOpen={false}
+        description="Detailed history and background of the world. Major events, historical periods, and how the world came to be what it is today."
+      >
+        <div>
+          <FormLabel htmlFor="history">
+            History
+          </FormLabel>
+          <FormTextarea
+            {...register('history')}
+            rows={10}
+            markdown
+            placeholder="Detailed history and background of the world. Describe major historical events, periods, and how the world evolved over time."
+            disabled={isSubmitting}
+          />
+        </div>
+
+        <div>
+          <FormLabel htmlFor="history_image_url">
+            History Section Image URL
+          </FormLabel>
+          <FormInput
+            type="url"
+            {...register('history_image_url')}
+            placeholder="https://example.com/image.jpg"
+            disabled={isSubmitting}
+          />
+          <p className="mt-1 text-xs text-gray-400">Optional image to display with the History section</p>
         </div>
       </FormSection>
 

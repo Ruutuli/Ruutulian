@@ -93,6 +93,15 @@ export interface WorldStoryData {
   central_conflicts?: string | null;
   world_rules_limitations?: string | null;
   oc_integration_notes?: string | null;
+  // Section image URLs (story-specific)
+  overview_image_url?: string | null;
+  society_culture_image_url?: string | null;
+  world_building_image_url?: string | null;
+  economy_systems_image_url?: string | null;
+  additional_info_image_url?: string | null;
+  history_image_url?: string | null;
+  // History field
+  history?: string | null;
   // World field system values (story-specific)
   modular_fields?: WorldFieldValues | null;
   created_at: string;
@@ -145,6 +154,15 @@ export interface World {
   central_conflicts?: string | null;
   world_rules_limitations?: string | null;
   oc_integration_notes?: string | null;
+  // Section image URLs
+  overview_image_url?: string | null;
+  society_culture_image_url?: string | null;
+  world_building_image_url?: string | null;
+  economy_systems_image_url?: string | null;
+  additional_info_image_url?: string | null;
+  history_image_url?: string | null;
+  // History field
+  history?: string | null;
   oc_templates?: Record<string, { fields: Array<{ key: string; label: string; type: 'text' | 'array' | 'number' }> }> | null;
   // World field system
   world_fields?: WorldFieldDefinitions | null;

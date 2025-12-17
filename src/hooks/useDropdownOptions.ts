@@ -27,6 +27,21 @@ interface UseDropdownOptionsResult {
  * This ensures form components always have the latest data
  */
 export function useDropdownOptions(field: DropdownField | undefined): UseDropdownOptionsResult {
+  // Initialize with hardcoded options immediately for instant availability
+  const getInitialOptions = (): string[] => {
+    if (field && csvOptions[field]) {
+      return csvOptions[field];
+    }
+    return [];
+  };
+
+  const getInitialHexCodes = (): Record<string, string> => {
+    if (field && colorHexCodes && colorHexCodes[field]) {
+      return colorHexCodes[field];
+    }
+    return {};
+  };
+
   const [dbOptions, setDbOptions] = useState<string[] | null>(null);
   const [dbHexCodes, setDbHexCodes] = useState<Record<string, string> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,10 +50,13 @@ export function useDropdownOptions(field: DropdownField | undefined): UseDropdow
   useEffect(() => {
     if (!field) {
       setDbOptions(null);
+      setDbHexCodes(null);
+      setIsLoading(false);
       return;
     }
 
-    // Fetch from database
+    // Fetch from database in the background
+    // Hardcoded options are already available, so this is just an update
     setIsLoading(true);
     setError(null);
     
@@ -48,6 +66,7 @@ export function useDropdownOptions(field: DropdownField | undefined): UseDropdow
           // Don't throw for 401/403 - just use fallback silently
           if (res.status === 401 || res.status === 403) {
             setDbOptions(null);
+            setDbHexCodes(null);
             setIsLoading(false);
             return null;
           }
@@ -84,12 +103,12 @@ export function useDropdownOptions(field: DropdownField | undefined): UseDropdow
         }
         
         if (fieldData && Array.isArray(fieldData)) {
-          console.log(`[useDropdownOptions] Setting ${fieldData.length} options for "${field}"`);
+          console.log(`[useDropdownOptions] Updating with ${fieldData.length} options from database for "${field}"`);
           setDbOptions(fieldData);
           setDbHexCodes(hexCodeData || {});
         } else {
-          console.warn(`[useDropdownOptions] Field "${field}" not found, using fallback`);
-          // Field not found in database, will use fallback
+          console.warn(`[useDropdownOptions] Field "${field}" not found in database, keeping hardcoded fallback`);
+          // Field not found in database, keep using hardcoded fallback
           setDbOptions(null);
           setDbHexCodes(null);
         }
@@ -97,39 +116,33 @@ export function useDropdownOptions(field: DropdownField | undefined): UseDropdow
       })
       .catch(err => {
         setError(err);
+        // On error, keep using hardcoded fallback (don't clear dbOptions to null)
+        // This way the hardcoded options remain available
         setDbOptions(null);
         setDbHexCodes(null);
         setIsLoading(false);
       });
   }, [field]);
 
-  // Return database options if available, otherwise fallback to generated file
-  // Always provide fallback immediately so components work while fetching
+  // Return database options if available, otherwise use hardcoded fallback immediately
+  // This ensures options are always available right away
   const options = useMemo(() => {
     // If we have database options (not null), use them (even if empty array)
     // This handles the case where field exists in DB but has no options yet
     if (dbOptions !== null) {
       return dbOptions;
     }
-    // Fallback to generated file (always available, even while fetching)
-    if (field && csvOptions[field]) {
-      return csvOptions[field];
-    }
-    // If field is not in csvOptions, return empty array but keep loading state
-    // This allows the component to show loading or wait for database fetch
-    return [];
+    // Use hardcoded options immediately (preloaded for instant availability)
+    return getInitialOptions();
   }, [dbOptions, field]);
 
-  // Return hex codes from database or fallback to generated file
+  // Return hex codes from database or fallback to hardcoded file
   const hexCodes = useMemo(() => {
     if (dbHexCodes !== null) {
       return dbHexCodes;
     }
-    // Fallback to generated file
-    if (field && colorHexCodes && colorHexCodes[field]) {
-      return colorHexCodes[field];
-    }
-    return {};
+    // Use hardcoded hex codes immediately
+    return getInitialHexCodes();
   }, [dbHexCodes, field]);
 
   return {

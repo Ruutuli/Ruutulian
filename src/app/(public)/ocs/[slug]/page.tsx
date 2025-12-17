@@ -542,7 +542,32 @@ export default async function OCDetailPage({
                   )}
 
                   {/* Template fields with "Abilities" category */}
-                  {renderCategoryFields('Abilities')}
+                  {(() => {
+                    const fields = fieldsByCategory.get('Abilities') || [];
+                    const fieldsWithValues = fields.filter(field => {
+                      const value = getFieldValue(field, oc.modular_fields);
+                      return value !== null && value !== undefined && value !== '' && 
+                        (Array.isArray(value) ? value.length > 0 : true);
+                    });
+
+                    if (fieldsWithValues.length === 0) return null;
+
+                    return fieldsWithValues.map((field) => {
+                      const value = getFieldValue(field, oc.modular_fields);
+                      const rendered = renderFieldValue(field, value);
+                      if (!rendered) return null;
+                      
+                      return (
+                        <div key={field.key}>
+                          <h3 className="text-lg font-semibold text-gray-200 mb-2 flex items-center gap-2">
+                            <i className="fas fa-magic text-indigo-400" aria-hidden="true" suppressHydrationWarning></i>
+                            {field.label}
+                          </h3>
+                          {rendered}
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             )}

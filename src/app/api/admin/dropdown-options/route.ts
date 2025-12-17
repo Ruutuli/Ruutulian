@@ -93,7 +93,7 @@ export async function GET() {
     // Query all options from database
     const { data, error } = await supabase
       .from('dropdown_options')
-      .select('field, option')
+      .select('field, option, hex_code')
       .order('field', { ascending: true })
       .order('option', { ascending: true });
 

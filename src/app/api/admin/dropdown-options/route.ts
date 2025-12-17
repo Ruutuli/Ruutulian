@@ -89,16 +89,48 @@ export async function GET() {
       );
     }
 
+    // Debug: Also query positive_traits specifically to verify it exists
+    const { data: positiveTraitsData, error: positiveTraitsError } = await supabase
+      .from('dropdown_options')
+      .select('field, option')
+      .eq('field', 'positive_traits')
+      .order('option', { ascending: true });
+    
+    console.log('[API] Direct query for positive_traits:', {
+      found: positiveTraitsData?.length || 0,
+      error: positiveTraitsError,
+      sample: positiveTraitsData?.slice(0, 3),
+    });
+
     // Group options by field
     const options: Record<string, string[]> = {};
     
     if (data) {
+      // Debug: log all unique fields
+      const uniqueFields = new Set(data.map((row: any) => row.field));
+      console.log('[API] Unique fields in database response:', Array.from(uniqueFields).sort());
+      console.log('[API] Total rows:', data.length);
+      
+      // Check specifically for positive_traits
+      const positiveTraitsRows = data.filter((row: any) => row.field === 'positive_traits');
+      console.log('[API] positive_traits rows found:', positiveTraitsRows.length);
+      if (positiveTraitsRows.length > 0) {
+        console.log('[API] Sample positive_traits:', positiveTraitsRows.slice(0, 5));
+      }
+      
       for (const row of data) {
         if (!options[row.field]) {
           options[row.field] = [];
         }
         options[row.field].push(row.option);
       }
+    }
+
+    // Debug: log what we're returning
+    console.log('[API] Returning options for fields:', Object.keys(options).sort());
+    console.log('[API] positive_traits in response?', 'positive_traits' in options);
+    if ('positive_traits' in options) {
+      console.log('[API] positive_traits count:', options['positive_traits'].length);
     }
 
     return NextResponse.json({ options });

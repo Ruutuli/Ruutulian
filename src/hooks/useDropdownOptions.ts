@@ -47,11 +47,34 @@ export function useDropdownOptions(field: DropdownField | undefined): UseDropdow
       .then(data => {
         if (!data) return; // Handled auth error above
         
+        // Debug logging
+        console.log(`[useDropdownOptions] Fetched data for field "${field}":`, {
+          hasOptions: !!data.options,
+          fieldsInData: data.options ? Object.keys(data.options) : [],
+          hasField: data.options && data.options[field] !== undefined,
+          fieldValue: data.options && data.options[field],
+          fieldValueLength: data.options && data.options[field] ? data.options[field].length : 0,
+        });
+        
         if (data.options && data.options[field]) {
+          console.log(`[useDropdownOptions] Setting dbOptions for "${field}":`, data.options[field].length, 'options');
           setDbOptions(data.options[field]);
         } else {
           // Field not found in database, will use fallback
-          setDbOptions(null);
+          console.warn(`[useDropdownOptions] Field "${field}" not found in database response`);
+          // Check if field exists with different casing
+          if (data.options) {
+            const fieldKeys = Object.keys(data.options);
+            const matchingKey = fieldKeys.find(k => k.toLowerCase() === field.toLowerCase());
+            if (matchingKey) {
+              console.log(`[useDropdownOptions] Found field with different casing: "${matchingKey}" (looking for "${field}")`);
+              setDbOptions(data.options[matchingKey]);
+            } else {
+              setDbOptions(null);
+            }
+          } else {
+            setDbOptions(null);
+          }
         }
         setIsLoading(false);
       })

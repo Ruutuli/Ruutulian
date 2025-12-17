@@ -308,13 +308,19 @@ async function migrateColorHexToDb() {
   console.log('Starting color hex code migration to database...');
   console.log(`Color hex map contains ${Object.keys(colorHexMap).length} entries`);
 
-  // Map color fields
-  const colorFields = ['eye_color', 'hair_color', 'skin_tone'];
+  // Map color fields to their color types
+  const colorFieldMap: Record<string, { hasSemicolon: boolean }> = {
+    'eye_color': { hasSemicolon: true },
+    'hair_color': { hasSemicolon: true },
+    'skin_tone': { hasSemicolon: false },
+  };
+
+  let added = 0;
   let updated = 0;
   let errors = 0;
   let skipped = 0;
 
-  for (const field of colorFields) {
+  for (const [field, config] of Object.entries(colorFieldMap)) {
     console.log(`\nProcessing ${field}...`);
     
     // Get all options for this field from database
@@ -329,49 +335,83 @@ async function migrateColorHexToDb() {
       continue;
     }
 
-    if (!existingOptions || existingOptions.length === 0) {
-      console.log(`No options found for ${field}, skipping...`);
-      continue;
+    const existingOptionsMap = new Map<string, { id: string; hex_code: string | null }>();
+    if (existingOptions) {
+      for (const row of existingOptions) {
+        existingOptionsMap.set(row.option, { id: row.id, hex_code: row.hex_code });
+      }
     }
 
-    console.log(`Found ${existingOptions.length} options for ${field}`);
+    console.log(`Found ${existingOptionsMap.size} existing options for ${field}`);
 
-    // Update each option with hex code from colorHexMap
-    for (const row of existingOptions) {
-      const colorName = row.option;
-      const hexCode = colorHexMap[colorName];
+    // Filter colorHexMap entries for this field type
+    const relevantColors = Object.entries(colorHexMap).filter(([colorName]) => {
+      if (config.hasSemicolon) {
+        // For eye_color and hair_color, include entries with semicolons
+        return colorName.includes(';');
+      } else {
+        // For skin_tone, include entries without semicolons
+        return !colorName.includes(';');
+      }
+    });
 
-      if (hexCode && row.hex_code !== hexCode) {
-        console.log(`  Updating "${colorName}" with hex ${hexCode}`);
+    console.log(`Found ${relevantColors.length} color variants to add/update for ${field}`);
+
+    // Process each color variant
+    for (const [colorName, hexCode] of relevantColors) {
+      const existing = existingOptionsMap.get(colorName);
+
+      if (existing) {
+        // Option exists - update hex code if different
+        if (existing.hex_code !== hexCode) {
+          console.log(`  Updating "${colorName}" with hex ${hexCode}`);
+          
+          const { error: updateError } = await supabase
+            .from('dropdown_options')
+            .update({ hex_code: hexCode })
+            .eq('id', existing.id);
+
+          if (updateError) {
+            console.error(`    Error updating ${colorName}:`, updateError);
+            errors++;
+          } else {
+            updated++;
+          }
+        } else {
+          console.log(`  "${colorName}" already has correct hex code`);
+        }
+      } else {
+        // Option doesn't exist - add it with hex code
+        console.log(`  Adding "${colorName}" with hex ${hexCode}`);
         
-        const { error: updateError } = await supabase
+        const { error: insertError } = await supabase
           .from('dropdown_options')
-          .update({ hex_code: hexCode })
-          .eq('id', row.id);
+          .insert({
+            field,
+            option: colorName,
+            hex_code: hexCode,
+            updated_at: new Date().toISOString(),
+          });
 
-        if (updateError) {
-          console.error(`    Error updating ${colorName}:`, updateError);
+        if (insertError) {
+          console.error(`    Error adding ${colorName}:`, insertError);
           errors++;
         } else {
-          updated++;
+          added++;
         }
-      } else if (!hexCode) {
-        console.log(`  No hex code found for "${colorName}" in colorHexMap`);
-        skipped++;
-      } else {
-        console.log(`  "${colorName}" already has correct hex code`);
       }
     }
   }
 
   console.log('\nMigration complete!');
-  console.log(`- Updated: ${updated} options with hex codes`);
+  console.log(`- Added: ${added} new color options with hex codes`);
+  console.log(`- Updated: ${updated} existing options with hex codes`);
   console.log(`- Skipped: ${skipped} options without hex codes in map`);
   if (errors > 0) {
-    console.log(`- Errors: ${errors} failed updates`);
+    console.log(`- Errors: ${errors} failed operations`);
   }
   
-  if (updated > 0) {
+  if (added > 0 || updated > 0) {
     console.log('\nNext step: Run npx tsx scripts/utilities/generate-dropdown-options.ts to update JSON backup');
   }
 }

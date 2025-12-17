@@ -873,6 +873,24 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
                           />
                         </div>
                       )}
+                      {field.type === 'text' && (
+                        <div className="mt-4 pt-4 border-t border-gray-700/50">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={field.multiline || false}
+                              onChange={(e) =>
+                                handleNewTemplateFieldChange(index, {
+                                  multiline: e.target.checked || undefined,
+                                })
+                              }
+                              className="w-4 h-4 rounded border-2 border-gray-500 bg-gray-700 text-purple-600 focus:ring-2 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer checked:bg-purple-600 checked:border-purple-600"
+                              style={{ accentColor: '#9333ea' }}
+                            />
+                            <span className="text-sm text-gray-300 font-medium">Enable multiline entry (textarea)</span>
+                          </label>
+                        </div>
+                      )}
                       <div className="mt-4 pt-4 border-t border-gray-700/50">
                         <button
                           type="button"
@@ -1131,6 +1149,24 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
                             placeholder="Leave empty for unlimited"
                             min="1"
                           />
+                        </div>
+                      )}
+                      {field.type === 'text' && (
+                        <div className="mt-4 pt-4 border-t border-gray-700/50">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={field.multiline || false}
+                              onChange={(e) =>
+                                handleTemplateFieldChange(originalIndex, {
+                                  multiline: e.target.checked || undefined,
+                                })
+                              }
+                              className="w-4 h-4 rounded border-2 border-gray-500 bg-gray-700 text-purple-600 focus:ring-2 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer checked:bg-purple-600 checked:border-purple-600"
+                              style={{ accentColor: '#9333ea' }}
+                            />
+                            <span className="text-sm text-gray-300 font-medium">Enable multiline entry (textarea)</span>
+                          </label>
                         </div>
                       )}
                       <div className="mt-4 pt-4 border-t border-gray-700/50">

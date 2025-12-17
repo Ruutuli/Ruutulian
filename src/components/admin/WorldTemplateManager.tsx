@@ -429,6 +429,23 @@ export function WorldTemplateManager({ world }: WorldTemplateManagerProps) {
                       </button>
                     </div>
                   </div>
+                  {field.type === 'text' && (
+                    <div className="mt-3 pt-3 border-t border-gray-600/50">
+                      <label className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+                        <input
+                          type="checkbox"
+                          checked={field.multiline || false}
+                          onChange={(e) =>
+                            handleFieldChange(selectedTemplate, originalIndex, {
+                              multiline: e.target.checked || undefined,
+                            })
+                          }
+                          className="w-4 h-4 rounded border-2 border-gray-500 bg-gray-700 text-purple-600 focus:ring-2 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer checked:bg-purple-600 checked:border-purple-600"
+                        />
+                        <span className="text-sm text-gray-300 font-medium">Enable multiline entry (textarea)</span>
+                      </label>
+                    </div>
+                  )}
                 </div>
               ))}
 

@@ -87,20 +87,41 @@ export async function GET() {
     // This ensures options are always available even if auth fails
     const supabase = await createClient();
 
-    // Query all options from database
-    const { data, error } = await supabase
-      .from('dropdown_options')
-      .select('field, option, hex_code')
-      .order('field', { ascending: true })
-      .order('option', { ascending: true });
-
-    if (error) {
-      console.error('[API] Error fetching dropdown options:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch dropdown options' },
-        { status: 500 }
-      );
+    // Query all options from database - use range to get all rows
+    // Supabase defaults to 1000 rows, so we need to explicitly request more
+    let allData: any[] = [];
+    let from = 0;
+    const pageSize = 1000;
+    let hasMore = true;
+    
+    while (hasMore) {
+      const { data: pageData, error: pageError } = await supabase
+        .from('dropdown_options')
+        .select('field, option, hex_code')
+        .order('field', { ascending: true })
+        .order('option', { ascending: true })
+        .range(from, from + pageSize - 1);
+      
+      if (pageError) {
+        console.error('[API] Error fetching dropdown options:', pageError);
+        return NextResponse.json(
+          { error: 'Failed to fetch dropdown options' },
+          { status: 500 }
+        );
+      }
+      
+      if (pageData && pageData.length > 0) {
+        allData = [...allData, ...pageData];
+        from += pageSize;
+        hasMore = pageData.length === pageSize; // If we got a full page, there might be more
+      } else {
+        hasMore = false;
+      }
     }
+    
+    const data = allData;
+    
+    console.log(`[API] Fetched ${data.length} total rows from database`);
 
     // Group options by field, and include hex codes for colors
     const options: Record<string, string[]> = {};
@@ -122,6 +143,8 @@ export async function GET() {
         }
       }
     }
+    
+    console.log(`[API] Returning ${Object.keys(options).length} fields with options`);
 
     return NextResponse.json({ options, hexCodes });
   } catch (error) {

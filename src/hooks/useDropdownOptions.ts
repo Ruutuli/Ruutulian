@@ -58,6 +58,16 @@ export function useDropdownOptions(field: DropdownField | undefined): UseDropdow
       .then(data => {
         if (!data) return; // Handled auth error above
         
+        // Debug logging
+        console.log(`[useDropdownOptions] Field: "${field}"`, {
+          hasData: !!data,
+          hasOptions: !!data.options,
+          allFields: data.options ? Object.keys(data.options) : [],
+          fieldExists: data.options && field in data.options,
+          fieldValue: data.options?.[field],
+          fieldValueLength: data.options?.[field]?.length || 0,
+        });
+        
         // Check if field exists (with case-insensitive fallback)
         let fieldData: string[] | undefined = data.options?.[field];
         let hexCodeData: Record<string, string> | undefined = data.hexCodes?.[field];
@@ -67,15 +77,18 @@ export function useDropdownOptions(field: DropdownField | undefined): UseDropdow
           const fieldKeys = Object.keys(data.options);
           const matchingKey = fieldKeys.find(k => k.toLowerCase() === field.toLowerCase());
           if (matchingKey) {
+            console.log(`[useDropdownOptions] Found case-insensitive match: "${matchingKey}" for "${field}"`);
             fieldData = data.options[matchingKey];
             hexCodeData = data.hexCodes?.[matchingKey];
           }
         }
         
         if (fieldData && Array.isArray(fieldData)) {
+          console.log(`[useDropdownOptions] Setting ${fieldData.length} options for "${field}"`);
           setDbOptions(fieldData);
           setDbHexCodes(hexCodeData || {});
         } else {
+          console.warn(`[useDropdownOptions] Field "${field}" not found, using fallback`);
           // Field not found in database, will use fallback
           setDbOptions(null);
           setDbHexCodes(null);

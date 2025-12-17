@@ -478,7 +478,8 @@ export default async function OCDetailPage({
             )}
 
             {/* Abilities Section */}
-            {(oc.abilities || oc.skills || oc.aptitudes || oc.strengths || oc.limits || oc.conditions) && (
+            {((oc.abilities || oc.skills || oc.aptitudes || oc.strengths || oc.limits || oc.conditions) || 
+              hasCategoryFields('Abilities')) && (
               <div className="wiki-card p-4 md:p-6 lg:p-8" suppressHydrationWarning>
                 <h2 id="abilities" className="wiki-section-header scroll-mt-20" suppressHydrationWarning>
                   <i className="fas fa-magic text-indigo-400" aria-hidden="true" suppressHydrationWarning></i>
@@ -537,9 +538,12 @@ export default async function OCDetailPage({
                         Conditions
                       </h3>
                       <Markdown content={oc.conditions} />
+                    </div>
+                  )}
+
+                  {/* Template fields with "Abilities" category */}
+                  {renderCategoryFields('Abilities')}
                 </div>
-              )}
-            </div>
               </div>
             )}
 

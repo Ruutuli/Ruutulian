@@ -110,6 +110,24 @@ function TemplateFieldsSection({
               );
             }
             
+            // If multiline is enabled, use textarea
+            if (field.multiline) {
+              return (
+                <div key={field.key}>
+                  <FormLabel htmlFor={fieldPath}>
+                    {field.label}
+                  </FormLabel>
+                  <FormTextarea
+                    {...register(fieldPath)}
+                    defaultValue={fieldValue || ''}
+                    placeholder={`Enter ${field.label.toLowerCase()}...`}
+                    disabled={isSubmitting}
+                    rows={4}
+                  />
+                </div>
+              );
+            }
+            
             return (
               <div key={field.key}>
                 <FormLabel htmlFor={fieldPath}>
@@ -2034,11 +2052,18 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
             <FormLabel htmlFor="species">
               Species / Race
             </FormLabel>
-            <FormTextarea
-              {...register('species')}
-              rows={2}
-              placeholder="Species or race (supports markdown)"
-              disabled={isSubmitting}
+            <Controller
+              name="species"
+              control={control}
+              render={({ field }) => (
+                <FormAutocomplete
+                  {...field}
+                  optionsSource="species"
+                  placeholder="Type species or race..."
+                  disabled={isSubmitting}
+                  allowCustom={true}
+                />
+              )}
             />
           </div>
         </div>
@@ -2060,22 +2085,36 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
             <FormLabel htmlFor="romantic_orientation">
               Romantic Orientation
             </FormLabel>
-            <FormTextarea
-              {...register('romantic_orientation')}
-              rows={2}
-              placeholder="Romantic orientation (supports markdown)"
-              disabled={isSubmitting}
+            <Controller
+              name="romantic_orientation"
+              control={control}
+              render={({ field }) => (
+                <FormAutocomplete
+                  {...field}
+                  optionsSource="romantic"
+                  placeholder="Type romantic orientation..."
+                  disabled={isSubmitting}
+                  allowCustom={true}
+                />
+              )}
             />
           </div>
           <div>
             <FormLabel htmlFor="sexual_orientation">
               Sexual Orientation
             </FormLabel>
-            <FormTextarea
-              {...register('sexual_orientation')}
-              rows={2}
-              placeholder="Sexual orientation (supports markdown)"
-              disabled={isSubmitting}
+            <Controller
+              name="sexual_orientation"
+              control={control}
+              render={({ field }) => (
+                <FormAutocomplete
+                  {...field}
+                  optionsSource="sexual"
+                  placeholder="Type sexual orientation..."
+                  disabled={isSubmitting}
+                  allowCustom={true}
+                />
+              )}
             />
           </div>
         </div>

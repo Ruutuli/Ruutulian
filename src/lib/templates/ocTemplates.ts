@@ -5,6 +5,7 @@ export type TemplateField = {
   max?: number; // Optional max limit for array fields
   category?: string; // Optional category for sorting/grouping fields
   options?: string; // Field key in dropdown_options table for autocomplete (e.g., "accent", "ethnicity_race", "species")
+  multiline?: boolean; // If true, renders a textarea instead of a single-line input for text fields
 };
 
 export type TemplateDefinition = {

@@ -4,6 +4,7 @@ import { useFieldArray, useFormContext, Controller } from 'react-hook-form';
 import type { WorldFieldDefinition } from '@/types/oc';
 import { validateFieldValue } from './worldFields';
 import { FormAutocomplete } from '@/components/admin/forms/FormAutocomplete';
+import { FormTextarea } from '@/components/admin/forms/FormTextarea';
 
 interface DynamicFieldProps {
   fieldDef: WorldFieldDefinition;
@@ -51,7 +52,29 @@ export function DynamicField({ fieldDef, fieldPath, disabled = false, error }: D
           </div>
         );
       }
-      // Regular text input for fields without options
+      // Multiline textarea for fields with multiline enabled
+      if (fieldDef.multiline) {
+        return (
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              {fieldDef.label}
+              {fieldDef.required && <span className="text-red-400 ml-1">*</span>}
+            </label>
+            {fieldDef.description && (
+              <p className="text-xs text-gray-400 mb-1">{fieldDef.description}</p>
+            )}
+            <FormTextarea
+              {...register(fieldPath)}
+              disabled={disabled}
+              rows={4}
+              placeholder={`Enter ${fieldDef.label.toLowerCase()}...`}
+              error={fieldError}
+            />
+            {fieldError && <p className="mt-1 text-sm text-red-400">{String(fieldError)}</p>}
+          </div>
+        );
+      }
+      // Regular text input for fields without options and without multiline
       return (
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1">

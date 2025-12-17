@@ -78,7 +78,9 @@ export const FormAutocomplete = React.forwardRef<HTMLInputElement, FormAutocompl
       }
       if (optionsSource) {
         // Hook already provides database options or fallback to generated file
-        return dbOptions;
+        const opts = dbOptions || [];
+        console.log(`[FormAutocomplete] optionsSource: "${optionsSource}", availableOptions: ${opts.length}, isLoading: ${isLoading}`);
+        return opts;
       }
       return [];
     }, [options, optionsSource, dbOptions, isLoading]);

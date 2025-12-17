@@ -47,10 +47,20 @@ export function useDropdownOptions(field: DropdownField | undefined): UseDropdow
       .then(data => {
         if (!data) return; // Handled auth error above
         
+        console.log(`[useDropdownOptions] Fetched data for field "${field}":`, {
+          hasOptions: !!data.options,
+          fieldsInData: data.options ? Object.keys(data.options) : [],
+          hasField: data.options && data.options[field] !== undefined,
+          fieldValue: data.options && data.options[field],
+          fieldValueLength: data.options && data.options[field] ? data.options[field].length : 0,
+        });
+        
         if (data.options && data.options[field]) {
+          console.log(`[useDropdownOptions] Setting dbOptions for "${field}":`, data.options[field].length, 'options');
           setDbOptions(data.options[field]);
         } else {
           // Field not found in database, will use fallback
+          console.warn(`[useDropdownOptions] Field "${field}" not found in database response`);
           setDbOptions(null);
         }
         setIsLoading(false);
@@ -66,14 +76,17 @@ export function useDropdownOptions(field: DropdownField | undefined): UseDropdow
   // Return database options if available, otherwise fallback to generated file
   // Always provide fallback immediately so components work while fetching
   const options = useMemo(() => {
-    // If we have database options (not null and not empty), use them
-    if (dbOptions !== null && Array.isArray(dbOptions) && dbOptions.length > 0) {
+    // If we have database options (not null), use them (even if empty array)
+    // This handles the case where field exists in DB but has no options yet
+    if (dbOptions !== null) {
       return dbOptions;
     }
     // Fallback to generated file (always available, even while fetching)
     if (field && csvOptions[field]) {
       return csvOptions[field];
     }
+    // If field is not in csvOptions, return empty array but keep loading state
+    // This allows the component to show loading or wait for database fetch
     return [];
   }, [dbOptions, field]);
 

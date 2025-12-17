@@ -38,7 +38,7 @@ export const FormMultiSelect = forwardRef<HTMLSelectElement, FormMultiSelectProp
 
   // Fetch options from database first, fallback to generated file
   // The hook already handles the fallback, so we can use it directly
-  const { options: dbOptions } = useDropdownOptions(optionsSource);
+  const { options: dbOptions, isLoading } = useDropdownOptions(optionsSource);
 
   // Parse current value (comma-separated string) into array
   const selectedValues = useMemo(() => {
@@ -52,9 +52,16 @@ export const FormMultiSelect = forwardRef<HTMLSelectElement, FormMultiSelectProp
     const baseOptions: Array<{ value: string; label: string }> = [];
     
     if (options) {
+      // Use provided options prop
       baseOptions.push(...options);
     } else if (optionsSource) {
       // Hook already provides database options or fallback to generated file
+      // dbOptions is the result from useDropdownOptions hook
+      console.log(`[FormMultiSelect] Building options for "${optionsSource}":`, {
+        dbOptionsLength: dbOptions.length,
+        isLoading,
+        sampleOptions: dbOptions.slice(0, 5),
+      });
       baseOptions.push(...dbOptions.map((val) => ({
         value: val,
         label: val,
@@ -214,7 +221,11 @@ export const FormMultiSelect = forwardRef<HTMLSelectElement, FormMultiSelectProp
       {/* Options List */}
       <div className="w-full bg-gray-900/60 border border-gray-500/60 rounded-lg overflow-hidden">
         <div className="max-h-[240px] overflow-y-auto">
-          {filteredOptions.length > 0 ? (
+          {isLoading ? (
+            <div className="p-4 text-center text-gray-400 text-sm">
+              Loading options...
+            </div>
+          ) : filteredOptions.length > 0 ? (
             <div className="p-1">
               {filteredOptions.map((option) => {
                 const isSelected = selectedValues.includes(option.value);

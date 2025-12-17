@@ -128,7 +128,7 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
   
   // World fields - auto-detect template from world slug
   const selectedWorldTemplateType = selectedWorldData 
-    ? getTemplateTypeFromWorldSlug(selectedWorldData.slug)
+    ? getTemplateTypeFromWorldSlug(selectedWorldData.slug, selectedWorldData)
     : null;
 
   // ========== WORLD FIELDS MANAGEMENT ==========

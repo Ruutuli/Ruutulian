@@ -37,7 +37,7 @@ export function WorldTemplateManager({ world }: WorldTemplateManagerProps) {
   const [customCategoryFields, setCustomCategoryFields] = useState<Set<number>>(new Set());
 
   // Get the template type for this world
-  const worldTemplateType = getTemplateTypeFromWorldSlug(world.slug);
+  const worldTemplateType = getTemplateTypeFromWorldSlug(world.slug, world);
 
   // Get all unique categories from existing fields across all templates
   const getExistingCategories = (): string[] => {

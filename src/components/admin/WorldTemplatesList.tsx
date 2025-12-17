@@ -33,7 +33,7 @@ export async function WorldTemplatesList() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {worlds.map((world) => {
-          const templateType = getTemplateTypeFromWorldSlug(world.slug);
+          const templateType = getTemplateTypeFromWorldSlug(world.slug, world);
           const template = templates[templateType] || templates.none || { name: 'None', fields: [] };
           const hasCustomizations = world.oc_templates && 
             Object.keys(world.oc_templates as Record<string, any>).length > 0;

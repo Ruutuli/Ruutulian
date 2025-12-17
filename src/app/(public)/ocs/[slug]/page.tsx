@@ -268,6 +268,58 @@ export default async function OCDetailPage({
               </div>
             </div>
 
+            {/* Alternative Versions Notice */}
+            {oc.identity?.versions && oc.identity.versions.length > 1 && (() => {
+              // Filter to get only alternative versions (public, different world, not current OC)
+              const alternativeVersions = oc.identity.versions.filter(
+                (version: any) => 
+                  version.is_public && 
+                  version.id !== oc.id && 
+                  version.world_id !== oc.world_id &&
+                  version.world
+              );
+
+              if (alternativeVersions.length === 0) return null;
+
+              return (
+                <div className="wiki-card p-4 md:p-6 border-2 border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-purple-600/5" suppressHydrationWarning>
+                  <div className="flex items-start gap-3" suppressHydrationWarning>
+                    <i className="fas fa-info-circle text-purple-400 text-xl mt-0.5 flex-shrink-0" aria-hidden="true" suppressHydrationWarning></i>
+                    <div className="flex-1 space-y-2" suppressHydrationWarning>
+                      <p className="text-gray-200 font-medium" suppressHydrationWarning>
+                        Alternative Versions Available:
+                      </p>
+                      <div className="space-y-2" suppressHydrationWarning>
+                        {alternativeVersions.map((version: any) => (
+                          <Link
+                            key={version.id}
+                            href={`/ocs/${version.slug}`}
+                            prefetch={true}
+                            className="block px-4 py-2.5 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 hover:border-purple-500/50 transition-all duration-200 group"
+                            suppressHydrationWarning
+                          >
+                            <span className="text-gray-200" suppressHydrationWarning>
+                              Are you looking for{' '}
+                              <span className="font-semibold text-purple-300 group-hover:text-purple-200" suppressHydrationWarning>
+                                {version.name}
+                              </span>
+                              {version.world && (
+                                <>
+                                  {' '}(<span className="text-blue-300 group-hover:text-blue-200" suppressHydrationWarning>{version.world.name}</span>)
+                                </>
+                              )}
+                              ?
+                            </span>
+                            <i className="fas fa-arrow-right ml-2 text-purple-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-200" aria-hidden="true" suppressHydrationWarning></i>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Table of Contents */}
             <TableOfContents oc={oc} />
 

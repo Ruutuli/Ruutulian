@@ -105,7 +105,7 @@ async function importCsvOptions(csvPath: string) {
       // Handle special cases
       if (dbField === 'positive_traits' || dbField === 'neutral_traits' || dbField === 'negative_traits') {
         // These might be comma-separated, split them
-        const values = value.split(',').map(v => v.trim()).filter((v: string) => v);
+        const values = (value as string).split(',').map((v: string) => v.trim()).filter((v: string) => v);
         for (const val of values) {
           if (!fieldOptions[dbField]) {
             fieldOptions[dbField] = new Set();

@@ -16,6 +16,7 @@ export function getTemplateTypeFromWorldSlug(slug: string): string {
     'pluviophile': 'original',
     'tiderift': 'original',
     'vieulx': 'original',
+    'infinite-nodus': 'original',
     'none': 'none',
     'not-accessible': 'none',
   };

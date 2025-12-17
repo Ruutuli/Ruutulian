@@ -72,6 +72,7 @@ function convertTemplateFieldsToWorldFields(
 
 /**
  * Gets template field definitions from world's oc_templates
+ * Handles key mismatches (e.g., 'dragonball' vs 'dragon-ball-z')
  */
 function getTemplateFieldDefinitions(
   world: World | null | undefined,
@@ -82,7 +83,25 @@ function getTemplateFieldDefinitions(
   }
 
   const templates = world.oc_templates as Record<string, { name?: string; fields?: TemplateField[] }>;
-  const template = templates[templateKey];
+  
+  // Try the primary key first
+  let template = templates[templateKey];
+  
+  // If not found, try alternative keys (for backward compatibility)
+  if (!template) {
+    // Map of template types to possible alternative keys
+    const alternativeKeys: Record<string, string[]> = {
+      'dragonball': ['dragon-ball-z', 'dragon-ball'],
+    };
+    
+    const alternatives = alternativeKeys[templateKey] || [];
+    for (const altKey of alternatives) {
+      if (templates[altKey]) {
+        template = templates[altKey];
+        break;
+      }
+    }
+  }
 
   if (!template?.fields || !Array.isArray(template.fields)) {
     return [];

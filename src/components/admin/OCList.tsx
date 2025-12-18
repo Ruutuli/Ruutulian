@@ -341,15 +341,14 @@ export function OCList({ ocs, templates }: OCListProps) {
                         className="w-full h-full"
                         style={{ 
                           objectFit: oc.icon_url ? 'contain' : 'cover',
-                          objectPosition: 'center'
+                          objectPosition: 'top'
                         }}
                       />
                     ) : (
                       <img
                         src={oc.icon_url || oc.image_url || ''}
                         alt={oc.name}
-                        className={`w-full h-full ${oc.icon_url ? 'object-contain' : 'object-cover'}`}
-                        style={{ objectPosition: 'center' }}
+                        className={`w-full h-full ${oc.icon_url ? 'object-contain object-top' : 'object-cover object-top'}`}
                         onError={(e) => {
                           (e.target as HTMLImageElement).style.display = 'none';
                         }}

@@ -39,32 +39,36 @@ export function OCCard({ oc }: OCCardProps) {
             </div>
           </div>
         )}
-        <div className="relative h-64 w-full overflow-hidden">
+        <div className="relative w-full overflow-hidden bg-gray-900">
           {oc.image_url ? (
             oc.image_url.includes('drive.google.com') ? (
-              <GoogleDriveImage
-                src={oc.image_url}
-                alt={oc.name}
-                className="object-cover object-top w-full h-full"
-                style={{ position: 'absolute', inset: 0 }}
-              />
+              <div className="relative w-full aspect-[4/5] flex items-center justify-center">
+                <GoogleDriveImage
+                  src={oc.image_url}
+                  alt={oc.name}
+                  className="object-contain w-full h-full"
+                  style={{ position: 'absolute', inset: 0 }}
+                />
+              </div>
             ) : (
-              <Image
-                src={convertGoogleDriveUrl(oc.image_url)}
-                alt={oc.name}
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                className="object-cover object-top"
-                unoptimized={isGoogleSitesUrl(oc.image_url)}
-              />
+              <div className="relative w-full aspect-[4/5]">
+                <Image
+                  src={convertGoogleDriveUrl(oc.image_url)}
+                  alt={oc.name}
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  className="object-contain"
+                  unoptimized={isGoogleSitesUrl(oc.image_url)}
+                />
+              </div>
             )
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">
+            <div className="w-full aspect-[4/5] bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">
               <span className="text-gray-500 text-4xl">?</span>
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-3 md:p-4">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
+          <div className="absolute bottom-0 left-0 right-0 p-3 md:p-4 pointer-events-none">
             <h3 className="text-lg md:text-xl font-bold text-white mb-1 truncate">{oc.name}</h3>
             {oc.world && (
               <p className="text-xs md:text-sm text-white/80 truncate">{oc.world.name}</p>

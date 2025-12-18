@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { UseFormRegisterReturn, ControllerRenderProps } from 'react-hook-form';
 import { csvOptions } from '@/lib/utils/csvOptionsData';
 import { useDropdownOptions } from '@/hooks/useDropdownOptions';
+import { useDropdownPosition } from '@/hooks/useDropdownPosition';
 
 interface FormAutocompleteProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value' | 'onBlur' | 'onKeyDown'> {
   register?: UseFormRegisterReturn;
@@ -62,7 +63,6 @@ export const FormAutocomplete = React.forwardRef<HTMLInputElement, FormAutocompl
     const [inputValue, setInputValue] = useState(value || '');
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
-    const [showAbove, setShowAbove] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const suggestionsRef = useRef<HTMLUListElement>(null);
@@ -106,40 +106,12 @@ export const FormAutocomplete = React.forwardRef<HTMLInputElement, FormAutocompl
     }, [inputValue, availableOptions, finalAllowCustom]);
 
     // Calculate dropdown position (above or below)
-    useEffect(() => {
-      if (showSuggestions && inputRef.current) {
-        const updatePosition = () => {
-          if (inputRef.current) {
-            const inputRect = inputRef.current.getBoundingClientRect();
-            const spaceBelow = window.innerHeight - inputRect.bottom;
-            const spaceAbove = inputRect.top;
-            const dropdownHeight = 240; // max-h-60 = 240px
-            
-            // Show above if:
-            // 1. Not enough space below (< dropdownHeight) AND more space above than below, OR
-            // 2. Space above is significantly more than space below (even if both are adequate)
-            if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
-              setShowAbove(true);
-            } else if (spaceAbove > spaceBelow + 100) {
-              // If there's significantly more space above, prefer showing above
-              setShowAbove(true);
-            } else {
-              setShowAbove(false);
-            }
-          }
-        };
-        
-        updatePosition();
-        // Update on scroll and resize
-        window.addEventListener('scroll', updatePosition, true);
-        window.addEventListener('resize', updatePosition);
-        
-        return () => {
-          window.removeEventListener('scroll', updatePosition, true);
-          window.removeEventListener('resize', updatePosition);
-        };
-      }
-    }, [showSuggestions, filteredSuggestions.length]);
+    const showAbove = useDropdownPosition({
+      inputRef,
+      isVisible: showSuggestions,
+      dropdownHeight: 240,
+      dependencies: [filteredSuggestions.length],
+    });
 
     // Sync with external value prop (from Controller field)
     useEffect(() => {

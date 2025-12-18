@@ -3,6 +3,9 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { FilterContainer } from './FilterContainer';
+import { FilterInput } from './FilterInput';
+import { FilterSelect } from './FilterSelect';
 
 interface World {
   id: string;
@@ -45,69 +48,45 @@ export function CharacterFilters() {
     router.push('/ocs');
   };
 
-  const hasActiveFilters = search || worldId || seriesType;
+  const hasActiveFilters = !!(search || worldId || seriesType);
 
   return (
-    <div className="wiki-card p-6 mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-100">Filters</h3>
-        {hasActiveFilters && (
-          <button
-            onClick={clearFilters}
-            className="text-sm text-pink-400 hover:text-pink-300"
-          >
-            Clear all
-          </button>
-        )}
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Search
-          </label>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => updateFilter('search', e.target.value)}
-            placeholder="Name..."
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-pink-500"
-          />
-        </div>
+    <FilterContainer
+      onClear={clearFilters}
+      hasActiveFilters={hasActiveFilters}
+      clearColor="pink"
+    >
+      <FilterInput
+        label="Search"
+        value={search}
+        onChange={(value) => updateFilter('search', value)}
+        placeholder="Name..."
+        focusColor="pink"
+      />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            World
-          </label>
-          <select
-            value={worldId}
-            onChange={(e) => updateFilter('world', e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-pink-500"
-          >
-            <option value="">All Worlds</option>
-            {worlds.map((world) => (
-              <option key={world.id} value={world.id}>
-                {world.name}
-              </option>
-            ))}
-          </select>
-        </div>
+      <FilterSelect
+        label="World"
+        value={worldId}
+        onChange={(value) => updateFilter('world', value)}
+        options={[
+          { value: '', label: 'All Worlds' },
+          { value: 'none', label: 'None' },
+          ...worlds.map((world) => ({ value: world.id, label: world.name })),
+        ]}
+        focusColor="pink"
+      />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Series Type
-          </label>
-          <select
-            value={seriesType}
-            onChange={(e) => updateFilter('series_type', e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-pink-500"
-          >
-            <option value="">All Types</option>
-            <option value="canon">Canon</option>
-            <option value="original">Original</option>
-          </select>
-        </div>
-
-      </div>
-    </div>
+      <FilterSelect
+        label="Series Type"
+        value={seriesType}
+        onChange={(value) => updateFilter('series_type', value)}
+        options={[
+          { value: '', label: 'All Types' },
+          { value: 'canon', label: 'Canon' },
+          { value: 'original', label: 'Original' },
+        ]}
+        focusColor="pink"
+      />
+    </FilterContainer>
   );
 }

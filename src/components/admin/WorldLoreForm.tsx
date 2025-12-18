@@ -11,6 +11,7 @@ import { useWorlds } from '@/lib/hooks/useWorlds';
 import { useOCsByWorld } from '@/lib/hooks/useOCsByWorld';
 import { useFormSubmission } from '@/lib/hooks/useFormSubmission';
 import { slugify } from '@/lib/utils/slugify';
+import { useRelatedItems } from '@/hooks/useRelatedItems';
 import { FieldSetManager } from './FieldSetManager';
 import { WorldFieldsSection } from './WorldFieldsSection';
 import { getWorldLoreFieldDefinitions } from '@/lib/fields/worldFields';
@@ -23,12 +24,7 @@ import { FormTextarea } from './forms/FormTextarea';
 import { FormButton } from './forms/FormButton';
 import { FormMessage } from './forms/FormMessage';
 import { StoryAliasSelector } from './StoryAliasSelector';
-
-// Helper to normalize empty strings to null for optional UUID fields
-const optionalUuid = z.preprocess(
-  (val) => (val === '' || val === null ? null : val),
-  z.string().uuid().nullable().optional()
-);
+import { optionalUuid, optionalUrl } from '@/lib/utils/zodSchemas';
 
 const loreTypes = ['clan', 'organization', 'location', 'religion', 'species', 'technique', 'concept', 'artifact', 'other'] as const;
 
@@ -39,7 +35,7 @@ const worldLoreSchema = z.object({
   lore_type: z.string().min(1, 'Lore type is required'),
   description: z.string().optional(),
   description_markdown: z.string().optional(),
-  banner_image_url: z.string().url().optional().or(z.literal('')),
+  banner_image_url: optionalUrl,
   world_fields: z.any().optional(),
   modular_fields: z.record(z.any()).optional(),
   related_ocs: z.array(z.object({
@@ -106,10 +102,24 @@ export function WorldLoreForm({ lore, worldId }: WorldLoreFormProps) {
   const { register, handleSubmit, formState: { errors }, setValue, watch, trigger } = methods;
   const nameValue = watch('name');
   const watchedWorldId = watch('world_id');
-  const watchedRelatedOCs = watch('related_ocs');
-  const watchedRelatedEvents = watch('related_events');
 
   const { ocs: characters } = useOCsByWorld(watchedWorldId);
+
+  // Manage related OCs
+  const relatedOCs = useRelatedItems(
+    'related_ocs',
+    watch,
+    setValue,
+    () => ({ oc_id: characters[0]?.id || '', role: '' })
+  );
+
+  // Manage related events
+  const relatedEvents = useRelatedItems(
+    'related_events',
+    watch,
+    setValue,
+    () => ({ timeline_event_id: timelineEvents[0]?.id || '' })
+  );
   const { isSubmitting, error, success, submit } = useFormSubmission<WorldLoreFormData>({
     apiRoute: '/api/admin/world-lore',
     entity: lore,
@@ -180,49 +190,6 @@ export function WorldLoreForm({ lore, worldId }: WorldLoreFormProps) {
     console.error('Form validation errors:', errors);
   };
 
-  const addOC = () => {
-    const currentOCs = watchedRelatedOCs || [];
-    if (characters.length > 0) {
-      setValue('related_ocs', [
-        ...currentOCs,
-        { oc_id: characters[0].id, role: '' },
-      ]);
-    }
-  };
-
-  const removeOC = (index: number) => {
-    const currentOCs = watchedRelatedOCs || [];
-    setValue('related_ocs', currentOCs.filter((_, i) => i !== index));
-  };
-
-  const updateOC = (index: number, field: 'oc_id' | 'role', value: string) => {
-    const currentOCs = watchedRelatedOCs || [];
-    const updated = [...currentOCs];
-    updated[index] = { ...updated[index], [field]: value };
-    setValue('related_ocs', updated);
-  };
-
-  const addEvent = () => {
-    const currentEvents = watchedRelatedEvents || [];
-    if (timelineEvents.length > 0) {
-      setValue('related_events', [
-        ...currentEvents,
-        { timeline_event_id: timelineEvents[0].id },
-      ]);
-    }
-  };
-
-  const removeEvent = (index: number) => {
-    const currentEvents = watchedRelatedEvents || [];
-    setValue('related_events', currentEvents.filter((_, i) => i !== index));
-  };
-
-  const updateEvent = (index: number, value: string) => {
-    const currentEvents = watchedRelatedEvents || [];
-    const updated = [...currentEvents];
-    updated[index] = { timeline_event_id: value };
-    setValue('related_events', updated);
-  };
 
   const fieldDefinitions = getWorldLoreFieldDefinitions({
     ...lore,
@@ -349,16 +316,16 @@ export function WorldLoreForm({ lore, worldId }: WorldLoreFormProps) {
                 <FormButton
                   type="button"
                   variant="primary"
-                  onClick={addOC}
+                  onClick={relatedOCs.addItem}
                   className="px-3 py-1 text-sm"
                 >
                   + Add Character
                 </FormButton>
               )}
             </div>
-            {watchedRelatedOCs && watchedRelatedOCs.length > 0 ? (
+            {relatedOCs.items && relatedOCs.items.length > 0 ? (
               <div className="space-y-2">
-                {watchedRelatedOCs.map((rel, index) => {
+                {relatedOCs.items.map((rel, index) => {
                   const characterOptions = characters.map((c) => ({
                     value: c.id,
                     label: c.name,
@@ -368,7 +335,7 @@ export function WorldLoreForm({ lore, worldId }: WorldLoreFormProps) {
                       <div className="flex-1">
                         <FormSelect
                           value={rel.oc_id}
-                          onChange={(e) => updateOC(index, 'oc_id', e.target.value)}
+                          onChange={(e) => relatedOCs.updateItemField(index, 'oc_id', e.target.value)}
                           options={characterOptions}
                           placeholder="Select character"
                         />
@@ -377,14 +344,14 @@ export function WorldLoreForm({ lore, worldId }: WorldLoreFormProps) {
                         <FormInput
                           type="text"
                           value={rel.role || ''}
-                          onChange={(e) => updateOC(index, 'role', e.target.value)}
+                          onChange={(e) => relatedOCs.updateItemField(index, 'role', e.target.value)}
                           placeholder="Role (optional)"
                         />
                       </div>
                       <FormButton
                         type="button"
                         variant="danger"
-                        onClick={() => removeOC(index)}
+                        onClick={() => relatedOCs.removeItem(index)}
                         className="px-3 py-2"
                       >
                         Remove
@@ -411,16 +378,16 @@ export function WorldLoreForm({ lore, worldId }: WorldLoreFormProps) {
                 <FormButton
                   type="button"
                   variant="primary"
-                  onClick={addEvent}
+                  onClick={relatedEvents.addItem}
                   className="px-3 py-1 text-sm"
                 >
                   + Add Event
                 </FormButton>
               )}
             </div>
-            {watchedRelatedEvents && watchedRelatedEvents.length > 0 ? (
+            {relatedEvents.items && relatedEvents.items.length > 0 ? (
               <div className="space-y-2">
-                {watchedRelatedEvents.map((rel, index) => {
+                {relatedEvents.items.map((rel, index) => {
                   const eventOptions = timelineEvents.map((e) => ({
                     value: e.id,
                     label: e.title,
@@ -430,7 +397,7 @@ export function WorldLoreForm({ lore, worldId }: WorldLoreFormProps) {
                       <div className="flex-1">
                         <FormSelect
                           value={rel.timeline_event_id}
-                          onChange={(e) => updateEvent(index, e.target.value)}
+                          onChange={(e) => relatedEvents.updateItemField(index, 'timeline_event_id', e.target.value)}
                           options={eventOptions}
                           placeholder="Select event"
                         />
@@ -438,7 +405,7 @@ export function WorldLoreForm({ lore, worldId }: WorldLoreFormProps) {
                       <FormButton
                         type="button"
                         variant="danger"
-                        onClick={() => removeEvent(index)}
+                        onClick={() => relatedEvents.removeItem(index)}
                         className="px-3 py-2"
                       >
                         Remove

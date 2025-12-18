@@ -12,8 +12,9 @@ interface UseFormSubmissionOptions<T> {
   entity?: { id: string };
   /**
    * Route to navigate to after successful submission
+   * Can be a function that receives the response data and returns a route
    */
-  successRoute: string;
+  successRoute: string | ((responseData: any, isUpdate: boolean) => string);
   /**
    * Optional function to transform data before sending
    */
@@ -30,6 +31,15 @@ interface UseFormSubmissionOptions<T> {
    * Delay in ms before navigation (only used if showSuccessMessage is true)
    */
   successDelay?: number;
+  /**
+   * Optional callback after successful submission (before navigation)
+   * Receives the response data and whether this was an update (true) or create (false)
+   */
+  onSuccess?: (responseData: any, isUpdate: boolean) => void | Promise<void>;
+  /**
+   * Optional callback on error
+   */
+  onError?: (error: Error) => void;
 }
 
 interface UseFormSubmissionResult<T> {
@@ -61,6 +71,8 @@ export function useFormSubmission<T = any>(
     successMessage,
     showSuccessMessage = false,
     successDelay = 1000,
+    onSuccess,
+    onError,
   } = options;
 
   const router = useRouter();
@@ -97,25 +109,42 @@ export function useFormSubmission<T = any>(
       const responseData = await response.json().catch(() => null);
 
       setSuccess(true);
+      const isUpdate = !!entity;
+
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        await onSuccess(responseData, isUpdate);
+      }
+
+      // Determine the route to navigate to
+      const route = typeof successRoute === 'function' 
+        ? successRoute(responseData, isUpdate)
+        : successRoute;
 
       if (showSuccessMessage) {
         // Wait before navigating to show success message
         setTimeout(() => {
           setIsSubmitting(false);
-          router.push(successRoute);
+          router.push(route);
           router.refresh();
         }, successDelay);
       } else {
         // Navigate immediately
         setIsSubmitting(false);
-        router.push(successRoute);
+        router.push(route);
         router.refresh();
       }
 
       return responseData;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save. Please try again.');
+      const error = err instanceof Error ? err : new Error('Failed to save. Please try again.');
+      setError(error.message);
       setIsSubmitting(false);
+      
+      // Call onError callback if provided
+      if (onError && error instanceof Error) {
+        onError(error);
+      }
     }
   };
 

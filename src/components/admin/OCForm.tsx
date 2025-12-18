@@ -25,6 +25,8 @@ import { FormButton } from './forms/FormButton';
 import { FormMessage } from './forms/FormMessage';
 import { FormColorSelect } from './forms/FormColorSelect';
 import { StoryAliasSelector } from './StoryAliasSelector';
+import { optionalUuid, optionalUrl } from '@/lib/utils/zodSchemas';
+import { useDropdownPosition } from '@/hooks/useDropdownPosition';
 
 // Component to render template-specific fields from oc_templates
 // These are saved to modular_fields to match the display logic
@@ -242,7 +244,6 @@ function OCAutocompleteInput({
   const [suggestions, setSuggestions] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [showAbove, setShowAbove] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLUListElement>(null);
@@ -250,40 +251,12 @@ function OCAutocompleteInput({
   const ocIdValue = watch(`${fieldPath}.${index}.oc_id`);
 
   // Calculate dropdown position (above or below)
-  useEffect(() => {
-    if (showSuggestions && inputRef.current) {
-      const updatePosition = () => {
-        if (inputRef.current) {
-          const inputRect = inputRef.current.getBoundingClientRect();
-          const spaceBelow = window.innerHeight - inputRect.bottom;
-          const spaceAbove = inputRect.top;
-          const dropdownHeight = 240; // max-h-60 = 240px
-          
-          // Show above if:
-          // 1. Not enough space below (< dropdownHeight) AND more space above than below, OR
-          // 2. Space above is significantly more than space below (even if both are adequate)
-          if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
-            setShowAbove(true);
-          } else if (spaceAbove > spaceBelow + 100) {
-            // If there's significantly more space above, prefer showing above
-            setShowAbove(true);
-          } else {
-            setShowAbove(false);
-          }
-        }
-      };
-      
-      updatePosition();
-      // Update on scroll and resize
-      window.addEventListener('scroll', updatePosition, true);
-      window.addEventListener('resize', updatePosition);
-      
-      return () => {
-        window.removeEventListener('scroll', updatePosition, true);
-        window.removeEventListener('resize', updatePosition);
-      };
-    }
-  }, [showSuggestions, suggestions.length]);
+  const showAbove = useDropdownPosition({
+    inputRef,
+    isVisible: showSuggestions,
+    dropdownHeight: 240,
+    dependencies: [suggestions.length],
+  });
 
   // Scroll highlighted item into view
   useEffect(() => {
@@ -580,12 +553,6 @@ function RelationshipEntryInput({
   );
 }
 
-// Helper to normalize empty strings to null for optional UUID fields
-const optionalUuid = z.preprocess(
-  (val) => (val === '' || val === null ? null : val),
-  z.string().uuid().nullable().optional()
-);
-
 // Helper to parse relationship data (handles both old string format and new array format)
 function parseRelationshipData(value: string | null | undefined): Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }> {
   if (!value) return [];
@@ -810,8 +777,8 @@ const ocSchema = z.object({
   
   // Media
   gallery: z.array(z.string()).optional(),
-  image_url: z.string().url().optional().or(z.literal('')),
-  icon_url: z.string().url().optional().or(z.literal('')),
+  image_url: optionalUrl,
+  icon_url: optionalUrl,
   seiyuu: z.string().optional(),
   voice_actor: z.string().optional(),
   theme_song: z.string().optional(),

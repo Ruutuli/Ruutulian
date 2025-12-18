@@ -56,7 +56,11 @@ export default async function OCsPage({ searchParams }: OCsPageProps) {
 
   // Apply filters
   if (worldId) {
-    query = query.eq('world_id', worldId);
+    if (worldId === 'none') {
+      query = query.is('world_id', null);
+    } else {
+      query = query.eq('world_id', worldId);
+    }
   }
   if (seriesType) {
     query = query.eq('series_type', seriesType);

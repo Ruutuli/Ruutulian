@@ -9,6 +9,7 @@ import type { TimelineEvent, OC, EventDateData } from '@/types/oc';
 import { useWorlds } from '@/lib/hooks/useWorlds';
 import { useOCsByWorld } from '@/lib/hooks/useOCsByWorld';
 import { useFormSubmission } from '@/lib/hooks/useFormSubmission';
+import { useRelatedItems } from '@/hooks/useRelatedItems';
 import { DateInput } from './DateInput';
 import { CategorySelector } from './CategorySelector';
 import { FormMessage } from './forms/FormMessage';
@@ -18,12 +19,7 @@ import { FormSelect } from './forms/FormSelect';
 import { FormTextarea } from './forms/FormTextarea';
 import { FormButton } from './forms/FormButton';
 import { StoryAliasSelector } from './StoryAliasSelector';
-
-// Helper to normalize empty strings to null for optional UUID fields
-const optionalUuid = z.preprocess(
-  (val) => (val === '' || val === null ? null : val),
-  z.string().uuid().nullable().optional()
-);
+import { optionalUuid, optionalUrl } from '@/lib/utils/zodSchemas';
 
 const eventSchema = z.object({
   world_id: z.string().uuid('Invalid world'),
@@ -38,7 +34,7 @@ const eventSchema = z.object({
   categories: z.array(z.string()).default([]),
   is_key_event: z.boolean().default(false),
   location: z.string().optional(),
-  image_url: z.string().url().optional().or(z.literal('')),
+  image_url: optionalUrl,
   characters: z.array(z.object({
     oc_id: z.string().uuid(),
     role: z.string().optional(),
@@ -59,16 +55,16 @@ export function TimelineEventForm({ event, worldId }: TimelineEventFormProps) {
   const { isSubmitting, error, submit } = useFormSubmission<EventFormData>({
     apiRoute: '/api/admin/timeline-events',
     entity: event,
-    successRoute: event ? `/admin/timeline-events/${event.id}` : '/admin/timeline-events',
+    successRoute: (responseData, isUpdate) => {
+      // After successful creation, navigate to the event detail page
+      if (!isUpdate && responseData?.id) {
+        return `/admin/timeline-events/${responseData.id}`;
+      }
+      return event ? `/admin/timeline-events/${event.id}` : '/admin/timeline-events';
+    },
   });
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    watch,
-    setValue,
-  } = useForm<EventFormData>({
+  const form = useForm<EventFormData>({
     resolver: zodResolver(eventSchema),
     defaultValues: event ? {
       world_id: event.world_id,
@@ -108,12 +104,27 @@ export function TimelineEventForm({ event, worldId }: TimelineEventFormProps) {
     },
   });
 
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    watch,
+    setValue,
+  } = form;
+
   const watchedWorldId = watch('world_id');
   const watchedDateData = watch('date_data');
   const watchedCategories = watch('categories');
-  const watchedCharacters = watch('characters');
 
   const { ocs: characters } = useOCsByWorld(watchedWorldId);
+
+  // Manage related characters
+  const relatedCharacters = useRelatedItems(
+    'characters',
+    watch,
+    setValue,
+    () => ({ oc_id: characters[0]?.id || '', role: '' })
+  );
 
   // Extract year/month/day from date_data for sorting
   useEffect(() => {
@@ -133,39 +144,9 @@ export function TimelineEventForm({ event, worldId }: TimelineEventFormProps) {
   }, [watchedDateData, setValue]);
 
   const onSubmit = async (data: EventFormData) => {
-    try {
-      const savedEvent = await submit(data);
-      // After successful creation, navigate to the event detail page
-      if (!event && savedEvent && savedEvent.id) {
-        router.push(`/admin/timeline-events/${savedEvent.id}`);
-        router.refresh();
-      }
-    } catch (err) {
-      // Error is handled by the hook
-    }
+    await submit(data);
   };
 
-  const addCharacter = () => {
-    const currentChars = watchedCharacters || [];
-    if (characters.length > 0) {
-      setValue('characters', [
-        ...currentChars,
-        { oc_id: characters[0].id, role: '' },
-      ]);
-    }
-  };
-
-  const removeCharacter = (index: number) => {
-    const currentChars = watchedCharacters || [];
-    setValue('characters', currentChars.filter((_, i) => i !== index));
-  };
-
-  const updateCharacter = (index: number, field: 'oc_id' | 'role', value: string) => {
-    const currentChars = watchedCharacters || [];
-    const updated = [...currentChars];
-    updated[index] = { ...updated[index], [field]: value };
-    setValue('characters', updated);
-  };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -299,20 +280,20 @@ export function TimelineEventForm({ event, worldId }: TimelineEventFormProps) {
           {characters.length > 0 && (
             <button
               type="button"
-              onClick={addCharacter}
+              onClick={relatedCharacters.addItem}
               className="px-3 py-1 text-sm bg-gray-700 text-gray-300 rounded hover:bg-gray-600"
             >
               + Add Character
             </button>
           )}
         </div>
-        {watchedCharacters && watchedCharacters.length > 0 ? (
+        {relatedCharacters.items && relatedCharacters.items.length > 0 ? (
           <div className="space-y-2">
-            {watchedCharacters.map((char, index) => (
+            {relatedCharacters.items.map((char, index) => (
               <div key={index} className="flex gap-2">
                 <select
                   value={char.oc_id}
-                  onChange={(e) => updateCharacter(index, 'oc_id', e.target.value)}
+                  onChange={(e) => relatedCharacters.updateItemField(index, 'oc_id', e.target.value)}
                   className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
                 >
                   <option value="">Select character</option>
@@ -325,13 +306,13 @@ export function TimelineEventForm({ event, worldId }: TimelineEventFormProps) {
                 <input
                   type="text"
                   value={char.role || ''}
-                  onChange={(e) => updateCharacter(index, 'role', e.target.value)}
+                  onChange={(e) => relatedCharacters.updateItemField(index, 'role', e.target.value)}
                   placeholder="Role (optional)"
                   className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
                 />
                 <button
                   type="button"
-                  onClick={() => removeCharacter(index)}
+                  onClick={() => relatedCharacters.removeItem(index)}
                   className="px-3 py-2 bg-red-700 text-white rounded hover:bg-red-600"
                 >
                   Remove

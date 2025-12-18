@@ -1,4 +1,31 @@
 /**
+ * Parses a number from a string, handling various formats.
+ * Returns the parsed number or null if parsing fails.
+ */
+function parseNumberFromString(value: string): number | null {
+  const numberMatch = value.match(/^(\d+(?:\.\d+)?)$/);
+  if (numberMatch) {
+    return parseFloat(numberMatch[1]);
+  }
+  return null;
+}
+
+/**
+ * Normalizes a unit string by trimming and checking for unit indicators.
+ */
+function normalizeUnitString(value: string | null | undefined): string {
+  if (!value) return '';
+  return value.trim();
+}
+
+/**
+ * Checks if a string contains a specific unit indicator (case-insensitive).
+ */
+function hasUnit(value: string, unit: string): boolean {
+  return value.toLowerCase().includes(unit.toLowerCase());
+}
+
+/**
  * Converts imperial height to metric (cm)
  * Handles formats like:
  * - "5'10\"" or "5'10" -> 178 cm
@@ -7,13 +34,11 @@
  * - Already in cm (if contains "cm") -> returns as-is
  */
 export function convertHeightToMetric(height: string | null | undefined): string {
-  if (!height) return '';
-
-  const trimmed = height.trim();
+  const trimmed = normalizeUnitString(height);
   if (!trimmed) return '';
 
   // If already in metric, return as-is
-  if (trimmed.toLowerCase().includes('cm')) {
+  if (hasUnit(trimmed, 'cm')) {
     return trimmed;
   }
 
@@ -42,9 +67,8 @@ export function convertHeightToMetric(height: string | null | undefined): string
       }
       // Try parsing just a number (assume inches if reasonable, otherwise assume feet)
       else {
-        const numberMatch = trimmed.match(/^(\d+(?:\.\d+)?)$/);
-        if (numberMatch) {
-          const num = parseFloat(numberMatch[1]);
+        const num = parseNumberFromString(trimmed);
+        if (num !== null) {
           // If number is less than 10, assume feet; otherwise assume inches
           totalInches = num < 10 ? num * 12 : num;
         }
@@ -69,9 +93,7 @@ export function convertHeightToMetric(height: string | null | undefined): string
  * - "178" (assumed cm) -> "5'10\""
  */
 export function convertHeightToImperial(height: string | null | undefined): string {
-  if (!height) return '';
-
-  const trimmed = height.trim();
+  const trimmed = normalizeUnitString(height);
   if (!trimmed) return '';
 
   let cm = 0;
@@ -83,9 +105,8 @@ export function convertHeightToImperial(height: string | null | undefined): stri
   }
   // Try parsing just a number (assume cm if reasonable)
   else {
-    const numberMatch = trimmed.match(/^(\d+(?:\.\d+)?)$/);
-    if (numberMatch) {
-      const num = parseFloat(numberMatch[1]);
+    const num = parseNumberFromString(trimmed);
+    if (num !== null) {
       // If number is reasonable for cm (between 50 and 300), assume cm
       if (num >= 50 && num <= 300) {
         cm = num;
@@ -112,13 +133,11 @@ export function convertHeightToImperial(height: string | null | undefined): stri
  * - Already in kg (if contains "kg") -> returns as-is
  */
 export function convertWeightToMetric(weight: string | null | undefined): string {
-  if (!weight) return '';
-
-  const trimmed = weight.trim();
+  const trimmed = normalizeUnitString(weight);
   if (!trimmed) return '';
 
   // If already in metric, return as-is
-  if (trimmed.toLowerCase().includes('kg')) {
+  if (hasUnit(trimmed, 'kg')) {
     return trimmed;
   }
 
@@ -131,9 +150,8 @@ export function convertWeightToMetric(weight: string | null | undefined): string
   }
 
   // Try parsing just a number (assume pounds if reasonable)
-  const numberMatch = trimmed.match(/^(\d+(?:\.\d+)?)$/);
-  if (numberMatch) {
-    const num = parseFloat(numberMatch[1]);
+  const num = parseNumberFromString(trimmed);
+  if (num !== null) {
     // If number is reasonable for pounds (between 50 and 500), convert
     if (num >= 50 && num <= 500) {
       const kg = Math.round(num * 0.453592);
@@ -153,9 +171,7 @@ export function convertWeightToMetric(weight: string | null | undefined): string
  * - "68" (assumed kg) -> "150 lbs"
  */
 export function convertWeightToImperial(weight: string | null | undefined): string {
-  if (!weight) return '';
-
-  const trimmed = weight.trim();
+  const trimmed = normalizeUnitString(weight);
   if (!trimmed) return '';
 
   let kg = 0;
@@ -167,9 +183,8 @@ export function convertWeightToImperial(weight: string | null | undefined): stri
   }
   // Try parsing just a number (assume kg if reasonable)
   else {
-    const numberMatch = trimmed.match(/^(\d+(?:\.\d+)?)$/);
-    if (numberMatch) {
-      const num = parseFloat(numberMatch[1]);
+    const num = parseNumberFromString(trimmed);
+    if (num !== null) {
       // If number is reasonable for kg (between 20 and 250), assume kg
       if (num >= 20 && num <= 250) {
         kg = num;
@@ -192,18 +207,16 @@ export function convertWeightToImperial(weight: string | null | undefined): stri
  * Always shows both units regardless of input format
  */
 export function formatHeightWithMetric(height: string | null | undefined): string {
-  if (!height) return '';
-
-  const trimmed = height.trim();
+  const trimmed = normalizeUnitString(height);
   if (!trimmed) return '';
 
-  const isMetric = trimmed.toLowerCase().includes('cm');
+  const isMetric = hasUnit(trimmed, 'cm');
   
   if (isMetric) {
     // Input is in metric, convert to imperial
     const imperial = convertHeightToImperial(trimmed);
     // If conversion succeeded, show both; otherwise just show original
-    if (imperial !== trimmed && !imperial.toLowerCase().includes('cm')) {
+    if (imperial !== trimmed && !hasUnit(imperial, 'cm')) {
       return `${trimmed} / ${imperial}`;
     }
     return trimmed;
@@ -211,7 +224,7 @@ export function formatHeightWithMetric(height: string | null | undefined): strin
     // Input is in imperial, convert to metric
     const metric = convertHeightToMetric(trimmed);
     // If conversion succeeded, show both; otherwise just show original
-    if (metric !== trimmed && metric.toLowerCase().includes('cm')) {
+    if (metric !== trimmed && hasUnit(metric, 'cm')) {
       return `${trimmed} / ${metric}`;
     }
     return trimmed;
@@ -224,18 +237,16 @@ export function formatHeightWithMetric(height: string | null | undefined): strin
  * Always shows both units regardless of input format
  */
 export function formatWeightWithMetric(weight: string | null | undefined): string {
-  if (!weight) return '';
-
-  const trimmed = weight.trim();
+  const trimmed = normalizeUnitString(weight);
   if (!trimmed) return '';
 
-  const isMetric = trimmed.toLowerCase().includes('kg');
+  const isMetric = hasUnit(trimmed, 'kg');
   
   if (isMetric) {
     // Input is in metric, convert to imperial
     const imperial = convertWeightToImperial(trimmed);
     // If conversion succeeded, show both; otherwise just show original
-    if (imperial !== trimmed && !imperial.toLowerCase().includes('kg')) {
+    if (imperial !== trimmed && !hasUnit(imperial, 'kg')) {
       return `${trimmed} / ${imperial}`;
     }
     return trimmed;
@@ -243,7 +254,7 @@ export function formatWeightWithMetric(weight: string | null | undefined): strin
     // Input is in imperial, convert to metric
     const metric = convertWeightToMetric(trimmed);
     // If conversion succeeded, show both; otherwise just show original
-    if (metric !== trimmed && metric.toLowerCase().includes('kg')) {
+    if (metric !== trimmed && hasUnit(metric, 'kg')) {
       return `${trimmed} / ${metric}`;
     }
     return trimmed;

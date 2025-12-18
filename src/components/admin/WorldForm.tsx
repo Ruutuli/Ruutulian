@@ -19,12 +19,7 @@ import { FormButton } from './forms/FormButton';
 import { FormMessage } from './forms/FormMessage';
 import { StoryAliasManager } from './StoryAliasManager';
 import { WorldStorySwitcher } from './WorldStorySwitcher';
-
-// Helper to normalize empty strings to undefined for optional fields
-const optionalString = z.preprocess(
-  (val) => (val === '' || val === null ? undefined : val),
-  z.string().optional()
-);
+import { optionalString, optionalUrl } from '@/lib/utils/zodSchemas';
 
 const worldSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -34,14 +29,8 @@ const worldSchema = z.object({
   description_markdown: optionalString,
   primary_color: z.string().regex(/^#[0-9A-F]{6}$/i, 'Invalid hex color'),
   accent_color: z.string().regex(/^#[0-9A-F]{6}$/i, 'Invalid hex color'),
-  header_image_url: z.union([
-    z.string().url(),
-    z.literal(''),
-  ]).optional(),
-  icon_url: z.union([
-    z.string().url(),
-    z.literal(''),
-  ]).optional(),
+  header_image_url: optionalUrl,
+  icon_url: optionalUrl,
   is_public: z.boolean(),
   // Additional world fields
   genre: optionalString,
@@ -73,30 +62,12 @@ const worldSchema = z.object({
   world_rules_limitations: optionalString,
   oc_integration_notes: optionalString,
   // Section image URLs
-  overview_image_url: z.union([
-    z.string().url(),
-    z.literal(''),
-  ]).optional(),
-  society_culture_image_url: z.union([
-    z.string().url(),
-    z.literal(''),
-  ]).optional(),
-  world_building_image_url: z.union([
-    z.string().url(),
-    z.literal(''),
-  ]).optional(),
-  economy_systems_image_url: z.union([
-    z.string().url(),
-    z.literal(''),
-  ]).optional(),
-  additional_info_image_url: z.union([
-    z.string().url(),
-    z.literal(''),
-  ]).optional(),
-  history_image_url: z.union([
-    z.string().url(),
-    z.literal(''),
-  ]).optional(),
+  overview_image_url: optionalUrl,
+  society_culture_image_url: optionalUrl,
+  world_building_image_url: optionalUrl,
+  economy_systems_image_url: optionalUrl,
+  additional_info_image_url: optionalUrl,
+  history_image_url: optionalUrl,
   // History field
   history: optionalString,
   // World field system (definitions - read-only in this form)

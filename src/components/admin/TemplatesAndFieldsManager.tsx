@@ -248,15 +248,15 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to save World Fields');
+        throw new Error(errorData.error || 'Failed to save World Custom Fields');
       }
 
       setSuccess(true);
       router.refresh();
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      console.error('Error saving World Fields:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save World Fields');
+      console.error('Error saving World Custom Fields:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save World Custom Fields');
     } finally {
       setIsSaving(false);
     }
@@ -291,7 +291,7 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
     setWorldFieldSets(newFieldSets);
   };
 
-  // ========== TEMPLATE DEFINITIONS MANAGEMENT ==========
+  // ========== CHARACTER TEMPLATE FIELDS MANAGEMENT ==========
   const handleTemplateFieldChange = (
     index: number,
     field: Partial<TemplateField>
@@ -570,7 +570,7 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
                 : 'text-gray-400 hover:text-gray-300'
             }`}
           >
-            <span className="relative z-10">OC Templates</span>
+            <span className="relative z-10">Character Template Fields</span>
             {activeTab === 'definitions' && (
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500 rounded-t-full" />
             )}
@@ -583,7 +583,7 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
                 : 'text-gray-400 hover:text-gray-300'
             }`}
           >
-            <span className="relative z-10">World Form Fields</span>
+            <span className="relative z-10">World Custom Fields</span>
             {activeTab === 'world-fields' && (
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500 rounded-t-full" />
             )}
@@ -614,7 +614,7 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
         </div>
       )}
 
-      {/* Template Definitions Tab */}
+      {/* Character Template Fields Tab */}
       {activeTab === 'definitions' && (
         <div className="space-y-6">
           <div className="bg-gradient-to-br from-gray-800/60 to-gray-800/40 rounded-xl p-6 border border-gray-700/50 shadow-xl">
@@ -624,10 +624,10 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
                   <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  OC Template Definitions
+                  Character Template Fields
                 </h3>
                 <p className="text-sm text-gray-300 leading-relaxed max-w-2xl">
-                  Create and edit template definitions (e.g., Naruto, Pokémon). These templates add <strong>extra fields to OC forms</strong> when creating/editing characters. For example, Naruto OCs get fields like "chakra nature". Changes will affect all worlds using these templates.
+                  Fields that appear in character forms when creating/editing characters. These templates (e.g., Naruto, Pokémon) add extra fields specific to that template type. For example, Naruto OCs get fields like "chakra nature". Changes will affect all worlds using these templates.
                 </p>
               </div>
               {!isCreatingNew && (
@@ -745,7 +745,7 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
                       <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                       </svg>
-                      Template Fields
+                      Character Template Fields
                     </h5>
                     <button
                       type="button"
@@ -1238,7 +1238,7 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
         </div>
       )}
 
-      {/* World Fields Tab */}
+      {/* World Custom Fields Tab */}
       {activeTab === 'world-fields' && (
         <div className="space-y-6">
           <div className="bg-gradient-to-br from-gray-800/60 to-gray-800/40 rounded-xl p-6 border border-gray-700/50 shadow-xl">
@@ -1247,10 +1247,10 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
                 <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                 </svg>
-                World Form Fields
+                World Custom Fields
               </h3>
               <p className="text-sm text-gray-300 leading-relaxed max-w-3xl">
-                World Form Fields are extra fields that appear in the <strong>World form</strong> when editing or adding worlds. These are for storing additional information about the world itself that doesn't fit in the standard world fields.
+                Custom fields that appear in the world form when editing/adding worlds. These are for storing additional information about the world itself that doesn't fit in the standard world fields.
               </p>
             </div>
 
@@ -1285,7 +1285,7 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
                       This world uses the <span className="text-purple-400">{templates[selectedWorldTemplateType]?.name || selectedWorldTemplateType}</span> template
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
-                      Add extra fields below that will appear in the <strong>World form</strong> when editing this world
+                      Add custom fields below that will appear in the world form when editing this world
                     </p>
                   </div>
                 </div>
@@ -1308,10 +1308,10 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
                           </div>
                           <div>
                             <h4 className="text-lg font-bold text-gray-100 flex items-center gap-2">
-                              World Form Fields
+                              World Custom Fields
                             </h4>
                             <p className="text-xs text-gray-400 mt-1">
-                              Extra fields that appear in the <strong>World form</strong> when editing this world
+                              Custom fields that appear in the world form when editing this world
                             </p>
                           </div>
                         </div>
@@ -1789,7 +1789,7 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
-                            Save World Fields
+                            Save World Custom Fields
                           </>
                         )}
                       </button>

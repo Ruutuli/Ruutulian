@@ -49,7 +49,7 @@ function TemplateFieldsSection({
   
   return (
     <FormSection 
-      title={`${template.name} - Template Fields`} 
+      title={`${template.name} - Character Template Fields`} 
       icon="template" 
       accentColor="content" 
       defaultOpen={true}
@@ -1212,7 +1212,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
     fetchWorlds();
   }, [oc?.world_id, lastSavedWorldId, setValue]);
 
-  // Load world data when worldId changes (for world fields)
+  // Load world data when worldId changes (for world custom fields)
   useEffect(() => {
     async function loadWorld() {
       if (!worldId) {
@@ -1672,11 +1672,11 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
     router.back();
   }, [isDirty, router]);
 
-  // Get effective field definitions from world (for display purposes - includes both world fields and template fields)
+  // Get effective field definitions from world (for display purposes - includes both world custom fields and character template fields)
   const effectiveFieldDefinitions = getEffectiveFieldDefinitions(selectedWorld, oc);
 
-  // Get world field definitions only (from world_fields.field_sets, excludes template fields)
-  // This is used for the World-Specific Fields section to avoid duplication with Template Fields
+  // Get world field definitions only (from world_fields.field_sets, excludes character template fields)
+  // This is used for the World-Specific Fields section to avoid duplication with Character Template Fields
   const worldFieldDefinitions = getWorldFieldDefinitions(selectedWorld, templateType);
 
   // Helper function to get effective template (uses only world's oc_templates)
@@ -2974,7 +2974,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
         />
       )}
 
-      {/* World Fields Section - Inherited from World (only world_fields.field_sets, excludes template fields) */}
+      {/* World Custom Fields Section - Inherited from World (only world_fields.field_sets, excludes character template fields) */}
       {worldFieldDefinitions.length > 0 && (
         <WorldFieldsSection
           fieldDefinitions={worldFieldDefinitions}

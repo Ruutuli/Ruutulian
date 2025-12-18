@@ -225,10 +225,10 @@ export function WorldTemplateManager({ world }: WorldTemplateManagerProps) {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold text-gray-100 mb-2">
-          Template Definitions
+          Character Template Fields
         </h2>
         <p className="text-gray-400 mb-4">
-          Manage template definitions for this world. Templates define the fields available
+          Manage character template fields for this world. These templates define the fields available
           when creating characters. Templates are stored in this world's oc_templates field.
         </p>
         <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-4 mb-4">

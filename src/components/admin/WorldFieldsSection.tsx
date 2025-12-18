@@ -14,14 +14,14 @@ interface WorldFieldsSectionProps {
 }
 
 /**
- * Renders a section of world fields in a form
+ * Renders a section of world custom fields in a form
  * Integrates with react-hook-form
  */
 export function WorldFieldsSection({
   fieldDefinitions,
   fieldPrefix = 'modular_fields',
   disabled = false,
-  title = 'World Fields',
+  title = 'World Custom Fields',
   defaultOpen = false,
   accentColor = 'content',
 }: WorldFieldsSectionProps) {

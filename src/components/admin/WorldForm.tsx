@@ -1214,7 +1214,7 @@ export function WorldForm({ world }: WorldFormProps) {
           fieldDefinitions={fieldDefinitions}
           fieldPrefix="modular_fields"
           disabled={isSubmitting}
-          title="World Fields"
+          title="World Custom Fields"
           defaultOpen={false}
           accentColor="content"
         />

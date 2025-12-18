@@ -21,7 +21,7 @@ export default async function TemplatesPage() {
             Templates & Fields Management
           </h1>
           <p className="text-gray-400 text-lg">
-            Manage template definitions, template fields, and world-specific field sets
+            Manage character template fields and world custom fields
           </p>
         </div>
         <Link

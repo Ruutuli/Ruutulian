@@ -353,7 +353,7 @@ export default async function AdminDashboard() {
           />
           <FeatureTile
             title="Manage Templates & Fields"
-            description="Manage template definitions, template fields, and world-specific field sets"
+            description="Manage character template fields and world custom fields"
             href="/admin/templates"
             icon="fas fa-file-code"
             color="indigo"

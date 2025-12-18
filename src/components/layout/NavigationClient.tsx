@@ -12,6 +12,7 @@ export function NavigationClient({ isAuthenticated }: NavigationClientProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const isMainPage = pathname === '/';
+  const isLoginPage = pathname === '/admin/login' || pathname === '/admin/login/';
 
   const allNavLinks = [
     { href: '/', label: 'Home', prefetch: true },
@@ -28,8 +29,8 @@ export function NavigationClient({ isAuthenticated }: NavigationClientProps) {
     },
   ];
 
-  // Filter out login/admin link on main page (home page area)
-  const navLinks = isMainPage
+  // Filter out login/admin link on main page (home page area) or on login page itself
+  const navLinks = (isMainPage || isLoginPage)
     ? allNavLinks.filter((link) => !(link as any).isAuthLink)
     : allNavLinks;
 

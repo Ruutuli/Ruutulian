@@ -135,10 +135,10 @@ export function TemplatesManager({ initialTemplates }: TemplatesManagerProps) {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold text-gray-100 mb-2">
-          OC Template Definitions
+          Character Template Fields
         </h2>
         <p className="text-gray-400 mb-4">
-          Edit the base template definitions. Changes will affect all worlds using these templates.
+          Edit the base character template field definitions. Changes will affect all worlds using these templates.
         </p>
       </div>
 

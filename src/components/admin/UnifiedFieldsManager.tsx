@@ -162,15 +162,15 @@ export function UnifiedFieldsManager({ worlds: initialWorlds, initialTemplates }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to save World Fields');
+        throw new Error(errorData.error || 'Failed to save World Custom Fields');
       }
 
       setSuccess(true);
       router.refresh();
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      console.error('Error saving World Fields:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save World Fields');
+      console.error('Error saving World Custom Fields:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save World Custom Fields');
     } finally {
       setIsSaving(false);
     }
@@ -303,7 +303,7 @@ export function UnifiedFieldsManager({ worlds: initialWorlds, initialTemplates }
       <div>
         <h2 className="text-2xl font-bold text-gray-100 mb-2">Fields Management</h2>
         <p className="text-gray-400">
-          Manage World Fields (custom fields per world stored in world_fields) and Template Fields (OC template field definitions stored in oc_templates)
+          Manage World Custom Fields (custom fields per world stored in world_fields) and Character Template Fields (character template field definitions stored in oc_templates)
         </p>
       </div>
 
@@ -318,7 +318,7 @@ export function UnifiedFieldsManager({ worlds: initialWorlds, initialTemplates }
                 : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
             }`}
           >
-            World Fields
+            World Custom Fields
           </button>
           <button
             onClick={() => setActiveTab('template')}
@@ -345,13 +345,13 @@ export function UnifiedFieldsManager({ worlds: initialWorlds, initialTemplates }
         </div>
       )}
 
-      {/* World Fields Tab */}
+      {/* World Custom Fields Tab */}
       {activeTab === 'world' && (
         <div className="space-y-6">
           <div className="bg-gray-700/50 rounded-lg p-4 border border-gray-600/50">
-            <h3 className="text-lg font-semibold text-gray-200 mb-2">World Fields</h3>
+            <h3 className="text-lg font-semibold text-gray-200 mb-2">World Custom Fields</h3>
             <p className="text-sm text-gray-400 mb-4">
-              World Fields are custom field sets that can be added to any world. These appear in OC forms when creating/editing characters for that world.
+              World Custom Fields are custom field sets that can be added to any world. These appear in the world form when editing/adding worlds.
             </p>
 
             <div className="mb-4">
@@ -495,7 +495,7 @@ export function UnifiedFieldsManager({ worlds: initialWorlds, initialTemplates }
                   disabled={isSaving}
                   className="w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSaving ? 'Saving...' : 'Save World Fields'}
+                  {isSaving ? 'Saving...' : 'Save World Custom Fields'}
                 </button>
               </div>
             )}
@@ -507,9 +507,9 @@ export function UnifiedFieldsManager({ worlds: initialWorlds, initialTemplates }
       {activeTab === 'template' && (
         <div className="space-y-6">
           <div className="bg-gray-700/50 rounded-lg p-4 border border-gray-600/50">
-            <h3 className="text-lg font-semibold text-gray-200 mb-2">Template Fields</h3>
+            <h3 className="text-lg font-semibold text-gray-200 mb-2">Character Template Fields</h3>
             <p className="text-sm text-gray-400 mb-4">
-              Template Fields define the base structure for OC templates (e.g., Naruto, Pokémon). These are the default fields that appear for all characters using that template.
+              Character Template Fields define the base structure for character templates (e.g., Naruto, Pokémon). These are the default fields that appear for all characters using that template.
             </p>
 
             <div className="mb-4">
@@ -543,7 +543,7 @@ export function UnifiedFieldsManager({ worlds: initialWorlds, initialTemplates }
               {!isLoadingTemplates && Object.keys(templates).filter(t => t !== 'none').length === 0 && (
                 <div className="mt-2 p-3 bg-yellow-900/20 border border-yellow-700/50 rounded-md">
                   <p className="text-sm text-yellow-400 mb-2">
-                    No templates found. You need to create template definitions first before managing their fields.
+                    No templates found. You need to create character template field definitions first before managing their fields.
                   </p>
                   <Link 
                     href="/admin/templates" 

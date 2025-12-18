@@ -32,7 +32,7 @@ export default async function FieldsPage() {
             <span className="truncate">Fields Management</span>
           </h1>
           <p className="text-gray-400 text-sm sm:text-lg">
-            Edit <strong>OC Template Fields</strong> (extra fields for characters) and <strong>World Form Fields</strong> (extra fields for worlds)
+            Edit <strong>Character Template Fields</strong> (fields for characters) and <strong>World Custom Fields</strong> (fields for worlds)
           </p>
         </div>
         <Link

@@ -25,10 +25,10 @@ export default async function WorldTemplatesPage({
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-100 mb-2">
-            Template Management: {world.name}
+            Character Template Fields: {world.name}
           </h1>
           <p className="text-gray-400">
-            Customize OC template fields for this world
+            Customize character template fields for this world
           </p>
         </div>
         <Link

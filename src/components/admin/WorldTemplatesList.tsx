@@ -25,9 +25,9 @@ export async function WorldTemplatesList() {
         <h3 className="text-lg font-semibold text-gray-200 mb-2">How it works</h3>
         <ul className="list-disc list-inside space-y-1 text-gray-300 text-sm">
           <li>Each world has a default template type based on its slug</li>
-          <li>You can customize which template fields appear for each template type per world</li>
-          <li>Template field customizations override the default template fields</li>
-          <li>When creating a character, the customized template fields will be available</li>
+          <li>You can customize which character template fields appear for each template type per world</li>
+          <li>Character template field customizations override the default template fields</li>
+          <li>When creating a character, the customized character template fields will be available</li>
         </ul>
       </div>
 

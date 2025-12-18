@@ -7,7 +7,7 @@ import { Markdown } from '@/lib/utils/markdown';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
 import { getWorldLoreFieldDefinitions, getFieldValue } from '@/lib/fields/worldFields';
 import { TagList } from '@/components/wiki/TagList';
-import { convertGoogleDriveUrl, isGoogleSitesUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl } from '@/lib/utils/googleDriveImage';
 
 interface LoreDetailProps {
   lore: WorldLore;
@@ -23,7 +23,9 @@ export function LoreDetail({ lore }: LoreDetailProps) {
       {lore.banner_image_url && (
         <div className="relative w-full h-64 md:h-80 lg:h-96 overflow-hidden rounded-lg">
           <Image
-            src={convertGoogleDriveUrl(lore.banner_image_url)}
+            src={lore.banner_image_url.includes('drive.google.com')
+              ? getProxyUrl(lore.banner_image_url)
+              : convertGoogleDriveUrl(lore.banner_image_url)}
             alt={`${lore.name} banner`}
             fill
             sizes="100vw"

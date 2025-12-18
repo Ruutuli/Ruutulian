@@ -1,7 +1,7 @@
 import type { World } from '@/types/oc';
 import { Markdown } from '@/lib/utils/markdown';
 import Image from 'next/image';
-import { convertGoogleDriveUrl, isGoogleSitesUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl } from '@/lib/utils/googleDriveImage';
 
 interface WorldDetailsProps {
   world: World;
@@ -36,12 +36,14 @@ function SectionWithImage({
           <div className="float-right ml-6 mb-4 w-full md:w-80 flex-shrink-0">
             <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-gray-700/50">
               <Image
-                src={convertGoogleDriveUrl(imageUrl) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png'}
+                src={imageUrl?.includes('drive.google.com')
+                  ? getProxyUrl(imageUrl)
+                  : (convertGoogleDriveUrl(imageUrl) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png')}
                 alt={title}
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, 320px"
-                unoptimized={imageUrl.includes('drive.google.com') || isGoogleSitesUrl(imageUrl)}
+                unoptimized={imageUrl?.includes('drive.google.com') || isGoogleSitesUrl(imageUrl)}
               />
             </div>
           </div>

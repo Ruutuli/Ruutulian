@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import type { World } from '@/types/oc';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
-import { convertGoogleDriveUrl, isGoogleSitesUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl } from '@/lib/utils/googleDriveImage';
 
 interface WorldHeaderProps {
   world: World;
@@ -17,7 +17,9 @@ export function WorldHeader({ world }: WorldHeaderProps) {
     >
       <div className="relative h-64 md:h-96 w-full">
         <Image
-          src={convertGoogleDriveUrl(world.header_image_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png'}
+          src={world.header_image_url?.includes('drive.google.com')
+            ? getProxyUrl(world.header_image_url)
+            : (convertGoogleDriveUrl(world.header_image_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png')}
           alt={world.name}
           fill
           sizes="100vw"
@@ -30,7 +32,9 @@ export function WorldHeader({ world }: WorldHeaderProps) {
         <div className="flex items-center gap-4 mb-4">
           <div className="relative w-16 h-16 md:w-20 md:h-20 flex-shrink-0">
             <Image
-              src={convertGoogleDriveUrl(world.icon_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png'}
+              src={world.icon_url?.includes('drive.google.com')
+                ? getProxyUrl(world.icon_url)
+                : (convertGoogleDriveUrl(world.icon_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png')}
               alt={world.name}
               fill
               sizes="(max-width: 768px) 64px, 80px"

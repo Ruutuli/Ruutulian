@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { World } from '@/types/oc';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
-import { convertGoogleDriveUrl, isGoogleSitesUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl } from '@/lib/utils/googleDriveImage';
 
 interface WorldCardProps {
   world: World;
@@ -40,7 +40,9 @@ export function WorldCard({ world }: WorldCardProps) {
         )}
         <div className="relative h-48 w-full overflow-hidden flex-shrink-0">
           <Image
-            src={convertGoogleDriveUrl(world.header_image_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png'}
+            src={world.header_image_url?.includes('drive.google.com')
+              ? getProxyUrl(world.header_image_url)
+              : (convertGoogleDriveUrl(world.header_image_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png')}
             alt={world.name}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -55,7 +57,9 @@ export function WorldCard({ world }: WorldCardProps) {
           <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
             <div className="relative w-10 h-10 md:w-12 md:h-12 flex-shrink-0">
               <Image
-                src={convertGoogleDriveUrl(world.icon_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png'}
+                src={world.icon_url?.includes('drive.google.com')
+                  ? getProxyUrl(world.icon_url)
+                  : (convertGoogleDriveUrl(world.icon_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png')}
                 alt={world.name}
                 fill
                 sizes="(max-width: 768px) 40px, 48px"

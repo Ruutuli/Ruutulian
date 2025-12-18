@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { WorldLore } from '@/types/oc';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
-import { convertGoogleDriveUrl, isGoogleSitesUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl } from '@/lib/utils/googleDriveImage';
 import { Markdown } from '@/lib/utils/markdown';
 
 interface LoreCardProps {
@@ -42,7 +42,9 @@ export function LoreCard({ lore }: LoreCardProps) {
         <div className="relative h-48 w-full overflow-hidden">
           {lore.banner_image_url ? (
             <Image
-              src={convertGoogleDriveUrl(lore.banner_image_url)}
+              src={lore.banner_image_url.includes('drive.google.com') 
+                ? getProxyUrl(lore.banner_image_url)
+                : convertGoogleDriveUrl(lore.banner_image_url)}
               alt={lore.name}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"

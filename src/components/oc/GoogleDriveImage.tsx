@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { getGoogleDriveFileId } from '@/lib/utils/googleDriveImage';
+import { useState, useEffect, useMemo } from 'react';
+import { getGoogleDriveFileId, getProxyUrl } from '@/lib/utils/googleDriveImage';
 
 interface GoogleDriveImageProps {
   src: string;
@@ -18,7 +18,14 @@ export function GoogleDriveImage({
   style,
   fallbackSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png'
 }: GoogleDriveImageProps) {
-  const [imageUrl, setImageUrl] = useState<string>(src);
+  // Calculate proxy URL immediately, not in useEffect
+  const imageUrl = useMemo(() => {
+    if (src.includes('drive.google.com')) {
+      return getProxyUrl(src);
+    }
+    return src;
+  }, [src]);
+
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -26,28 +33,17 @@ export function GoogleDriveImage({
     // Reset state when src changes
     setHasError(false);
     setIsLoading(true);
-
-    // If it's a Google Drive URL, use the proxy API
-    if (src.includes('drive.google.com')) {
-      const fileId = getGoogleDriveFileId(src);
-      if (fileId) {
-        // Use the proxy API to bypass CORS
-        const proxyUrl = `/api/images/proxy?fileId=${encodeURIComponent(fileId)}&url=${encodeURIComponent(src)}`;
-        setImageUrl(proxyUrl);
-      } else {
-        // Fallback to original URL if we can't extract file ID
-        setImageUrl(src);
-      }
-    } else {
-      // Not a Google Drive URL, use as-is
-      setImageUrl(src);
-    }
   }, [src]);
 
-  const handleError = () => {
+  const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     setHasError(true);
     setIsLoading(false);
-    console.error('Failed to load image:', src);
+    // Log both the original URL and the proxy URL for debugging
+    console.error('Failed to load image. Original URL:', src);
+    console.error('Proxy URL attempted:', imageUrl);
+    
+    // If the proxy failed, we might need to try a different approach
+    // For now, just show the fallback
   };
 
   const handleLoad = () => {

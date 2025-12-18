@@ -13,7 +13,7 @@ import { Markdown } from '@/lib/utils/markdown';
 import { getEffectiveFieldDefinitions, getFieldValue } from '@/lib/fields/worldFields';
 import type { WorldFieldDefinition } from '@/types/oc';
 import { TagList } from '@/components/wiki/TagList';
-import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, getProxyUrl } from '@/lib/utils/googleDriveImage';
 import { extractColorHex, extractColorName, getColorHex } from '@/lib/utils/colorHexUtils';
 import { SpotifyEmbed } from '@/components/oc/SpotifyEmbed';
 import { formatHeightWithMetric, formatWeightWithMetric } from '@/lib/utils/unitConversion';
@@ -235,7 +235,9 @@ export default async function OCDetailPage({
                     <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-lg blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     <div className="relative w-full h-full">
                       <Image
-                        src={convertGoogleDriveUrl(oc.world.icon_url)}
+                        src={oc.world.icon_url?.includes('drive.google.com')
+                          ? getProxyUrl(oc.world.icon_url)
+                          : convertGoogleDriveUrl(oc.world.icon_url)}
                         alt={oc.world.name}
                         fill
                         sizes="(max-width: 768px) 48px, 56px"

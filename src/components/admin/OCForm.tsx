@@ -27,30 +27,19 @@ import { FormColorSelect } from './forms/FormColorSelect';
 import { StoryAliasSelector } from './StoryAliasSelector';
 import { optionalUuid, optionalUrl } from '@/lib/utils/zodSchemas';
 import { useDropdownPosition } from '@/hooks/useDropdownPosition';
-
-// Helper function to convert Google Drive sharing URLs to direct image URLs
-function convertGoogleDriveUrl(url: string): string {
-  // Pattern: https://drive.google.com/file/d/FILE_ID/view?usp=sharing
-  const drivePattern = /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/;
-  const match = url.match(drivePattern);
-  
-  if (match && match[1]) {
-    // Convert to direct image URL
-    return `https://drive.google.com/uc?export=view&id=${match[1]}`;
-  }
-  
-  return url;
-}
+import { getGoogleDriveImageUrls } from '@/lib/utils/googleDriveImage';
 
 // Component to preview images from URLs
 function ImagePreview({ url, maxHeight = '200px', className = '' }: { url: string; maxHeight?: string; className?: string }) {
   const [imageError, setImageError] = useState(false);
   const [isValidUrl, setIsValidUrl] = useState(false);
-  const [imageUrl, setImageUrl] = useState('');
+  const [currentUrlIndex, setCurrentUrlIndex] = useState(0);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
 
   useEffect(() => {
     // Reset error state when URL changes
     setImageError(false);
+    setCurrentUrlIndex(0);
     // Check if URL is valid
     try {
       const urlObj = new URL(url);
@@ -58,29 +47,52 @@ function ImagePreview({ url, maxHeight = '200px', className = '' }: { url: strin
       setIsValidUrl(isValid);
       
       if (isValid) {
-        // Convert Google Drive URLs to direct image URLs
-        const convertedUrl = convertGoogleDriveUrl(url);
-        setImageUrl(convertedUrl);
+        // Get multiple URL formats for Google Drive images (with fallbacks)
+        if (url.includes('drive.google.com')) {
+          const urls = getGoogleDriveImageUrls(url);
+          setImageUrls(urls);
+        } else {
+          setImageUrls([url]);
+        }
+      } else {
+        setImageUrls([]);
       }
     } catch {
       setIsValidUrl(false);
-      setImageUrl('');
+      setImageUrls([]);
     }
   }, [url]);
 
-  if (!url || !isValidUrl) {
+  if (!url || !isValidUrl || imageUrls.length === 0) {
     return null;
   }
+
+  const currentUrl = imageUrls[currentUrlIndex];
+
+  const handleError = () => {
+    if (currentUrlIndex < imageUrls.length - 1) {
+      // Try next URL format
+      setCurrentUrlIndex(currentUrlIndex + 1);
+      setImageError(false);
+    } else {
+      // All URLs failed
+      setImageError(true);
+    }
+  };
+
+  const handleLoad = () => {
+    setImageError(false);
+  };
 
   return (
     <div className={`mt-2 ${className}`}>
       <img
-        src={imageUrl}
+        src={currentUrl}
         alt="Preview"
         className="rounded-lg border border-gray-600/60 max-w-full"
         style={{ maxHeight }}
-        onError={() => setImageError(true)}
-        onLoad={() => setImageError(false)}
+        onError={handleError}
+        onLoad={handleLoad}
       />
       {imageError && (
         <p className="text-sm text-red-400 mt-1">Failed to load image. Please check the URL.</p>
@@ -2869,20 +2881,22 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           <div className="space-y-2">
             {galleryFields.map((field, index) => (
               <div key={field.id} className="space-y-2">
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <FormInput
-                    {...register(`gallery.${index}`)}
-                    type="url"
-                    placeholder="Image URL"
-                    disabled={isSubmitting}
-                    className="flex-1"
-                  />
+                <div className="flex flex-col sm:flex-row gap-2 items-start">
+                  <div className="flex-1 w-full min-w-0">
+                    <FormInput
+                      {...register(`gallery.${index}`)}
+                      type="url"
+                      placeholder="Image URL"
+                      disabled={isSubmitting}
+                      className="w-full"
+                    />
+                  </div>
                   <FormButton
                     type="button"
                     variant="secondary"
                     onClick={() => removeGallery(index)}
                     disabled={isSubmitting}
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto flex-shrink-0 sm:mt-0"
                   >
                     Remove
                   </FormButton>

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 
 interface NavigationClientProps {
   isAuthenticated: boolean;
@@ -10,10 +9,6 @@ interface NavigationClientProps {
 
 export function NavigationClient({ isAuthenticated }: NavigationClientProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const pathname = usePathname();
-  const isMainPage = pathname === '/';
-  const isLoginPage = pathname === '/admin/login' || pathname === '/admin/login/';
-
   const allNavLinks = [
     { href: '/', label: 'Home', prefetch: true },
     { href: '/worlds', label: 'Worlds', prefetch: true },
@@ -29,10 +24,8 @@ export function NavigationClient({ isAuthenticated }: NavigationClientProps) {
     },
   ];
 
-  // Filter out login/admin link on main page (home page area) or on login page itself
-  const navLinks = (isMainPage || isLoginPage)
-    ? allNavLinks.filter((link) => !(link as any).isAuthLink)
-    : allNavLinks;
+  // Filter out login/admin link on all public pages (never show on main website)
+  const navLinks = allNavLinks.filter((link) => !(link as any).isAuthLink);
 
   const toggleMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);

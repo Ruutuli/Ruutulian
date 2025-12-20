@@ -198,55 +198,13 @@ export default async function AdminDashboard() {
         </div>
       )}
 
-      {/* Quick Actions Bar */}
-      <div className="bg-gray-800 rounded-lg shadow p-4 md:p-6 border border-gray-700">
-        <h2 className="text-lg md:text-xl font-semibold text-gray-100 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-2 md:gap-3">
-          <AdminLink
-            href="/admin/ocs/new"
-            className="px-4 py-3 md:py-2.5 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-all hover:scale-105 shadow-lg flex items-center justify-center gap-2 text-sm md:text-base touch-manipulation min-h-[44px]"
-          >
-            <i className="fas fa-plus"></i>
-            New OC
-          </AdminLink>
-          <AdminLink
-            href="/admin/worlds/new"
-            className="px-4 py-3 md:py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all hover:scale-105 shadow-lg flex items-center justify-center gap-2 text-sm md:text-base touch-manipulation min-h-[44px]"
-          >
-            <i className="fas fa-plus"></i>
-            New World
-          </AdminLink>
-          <AdminLink
-            href="/admin/world-lore/new"
-            className="px-4 py-3 md:py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all hover:scale-105 shadow-lg flex items-center justify-center gap-2 text-sm md:text-base touch-manipulation min-h-[44px]"
-          >
-            <i className="fas fa-plus"></i>
-            New Lore Entry
-          </AdminLink>
-          <AdminLink
-            href="/admin/timelines/new"
-            className="px-4 py-3 md:py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all hover:scale-105 shadow-lg flex items-center justify-center gap-2 text-sm md:text-base touch-manipulation min-h-[44px]"
-          >
-            <i className="fas fa-plus"></i>
-            New Timeline
-          </AdminLink>
-          <AdminLink
-            href="/admin/timeline-events/new"
-            className="px-4 py-3 md:py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all hover:scale-105 shadow-lg flex items-center justify-center gap-2 text-sm md:text-base touch-manipulation min-h-[44px]"
-          >
-            <i className="fas fa-plus"></i>
-            New Timeline Event
-          </AdminLink>
-        </div>
-      </div>
-
-      {/* Feature Tiles - Create Section */}
+      {/* Quick Actions - Create & Manage */}
       <div>
-        <h2 className="text-xl md:text-2xl font-bold text-gray-100 mb-4">Create</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-100 mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           <FeatureTile
             title="New OC"
-            description="Create a new original character for any world"
+            description="Create a new original character"
             href="/admin/ocs/new"
             icon="fas fa-user-plus"
             color="pink"
@@ -254,7 +212,7 @@ export default async function AdminDashboard() {
           />
           <FeatureTile
             title="New World"
-            description="Create a new world or universe setting"
+            description="Create a new world or universe"
             href="/admin/worlds/new"
             icon="fas fa-globe-americas"
             color="purple"
@@ -262,7 +220,7 @@ export default async function AdminDashboard() {
           />
           <FeatureTile
             title="New Lore Entry"
-            description="Add a new lore/codex entry to a world"
+            description="Add a new lore/codex entry"
             href="/admin/world-lore/new"
             icon="fas fa-book-open"
             color="teal"
@@ -270,7 +228,7 @@ export default async function AdminDashboard() {
           />
           <FeatureTile
             title="New Timeline"
-            description="Create a new timeline for a world"
+            description="Create a new timeline"
             href="/admin/timelines/new"
             icon="fas fa-clock"
             color="blue"
@@ -287,10 +245,10 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
-      {/* Feature Tiles - Manage Section */}
+      {/* Browse & Manage */}
       <div>
-        <h2 className="text-xl md:text-2xl font-bold text-gray-100 mb-4">Manage</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-100 mb-4">Browse & Manage</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           <FeatureTile
             title="Browse OCs"
             description="View and manage all original characters"
@@ -375,85 +333,92 @@ export default async function AdminDashboard() {
         <CurrentProjectsEditor />
       </div>
 
-      {/* Guides & Instructions Section */}
-      <div>
-        <h2 className="text-xl md:text-2xl font-bold text-gray-100 mb-4">Guides & Instructions</h2>
-        <div className="bg-gradient-to-r from-pink-900/20 to-purple-900/20 border border-pink-700/50 rounded-lg p-4 md:p-6">
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 mt-1">
-              <i className="fas fa-info-circle text-2xl text-pink-400"></i>
-            </div>
-            <div className="flex-1 space-y-3">
-              <div>
-                <h3 className="text-lg md:text-xl font-semibold text-gray-100 mb-2">
-                  Creating Multiple Versions of the Same OC in Different Worlds
-                </h3>
-                <p className="text-sm md:text-base text-gray-300 mb-4">
-                  If you have an OC that exists in 2 different worlds, you can create separate versions that are linked together as the same character identity.
-                </p>
-              </div>
-              
-              <div className="space-y-3">
-                <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
-                  <h4 className="text-base font-semibold text-gray-100 mb-2 flex items-center gap-2">
-                    <span className="text-pink-400">Step 1:</span> Create the First Version
-                  </h4>
-                  <p className="text-sm text-gray-300">
-                    Create your OC normally by going to <strong className="text-gray-100">Admin → OCs → New OC</strong>. 
-                    Select the first world and fill in all the character details. The system will automatically create an OC Identity for this character.
-                  </p>
-                </div>
-
-                <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
-                  <h4 className="text-base font-semibold text-gray-100 mb-2 flex items-center gap-2">
-                    <span className="text-pink-400">Step 2:</span> Add a Second Version for a Different World
-                  </h4>
-                  <p className="text-sm text-gray-300 mb-2">
-                    To add another version of the same character in a different world:
-                  </p>
-                  <ol className="list-decimal list-inside text-sm text-gray-300 space-y-1 ml-2">
-                    <li>Go to <strong className="text-gray-100">Admin → OCs</strong> and find your character</li>
-                    <li>Click on the version count link (e.g., "1 version") in the Versions column</li>
-                    <li>This opens the <strong className="text-gray-100">Identity Manager</strong> page</li>
-                    <li>Click the <strong className="text-gray-100">"➕ Add New Version"</strong> button</li>
-                    <li>Select a <strong className="text-gray-100">different World/Fandom</strong> than the first version</li>
-                    <li>Fill in the character details for this new version</li>
-                    <li>Click <strong className="text-gray-100">Save</strong></li>
-                  </ol>
-                  <p className="text-sm text-gray-400 mt-2 italic">
-                    Each version has completely separate data (appearance, stats, relationships, etc.) and can exist in different worlds.
-                  </p>
-                </div>
-
-                <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
-                  <h4 className="text-base font-semibold text-gray-100 mb-2 flex items-center gap-2">
-                    <span className="text-pink-400">Step 3:</span> Editing Versions
-                  </h4>
-                  <p className="text-sm text-gray-300">
-                    When editing a character with multiple versions, you'll see a version switcher banner at the top of the edit form. 
-                    You can switch between versions to edit each one separately. Remember: each version's data is completely independent!
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-gray-700/50 mt-4">
-                <AdminLink
-                  href="/admin/ocs"
-                  className="inline-flex items-center gap-2 text-sm md:text-base text-pink-400 hover:text-pink-300 font-medium"
-                >
-                  Go to OCs →
-                  <i className="fas fa-arrow-right"></i>
-                </AdminLink>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Recent Activity */}
       <div>
         <RecentActivity items={recentItems} />
       </div>
+
+      {/* Guides & Instructions Section - Collapsible */}
+      <details className="bg-gray-800/50 rounded-lg border border-gray-700/50">
+        <summary className="cursor-pointer p-4 md:p-6">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-100 inline-flex items-center gap-2">
+            <i className="fas fa-info-circle text-pink-400"></i>
+            Guides & Instructions
+          </h2>
+        </summary>
+        <div className="px-4 md:px-6 pb-4 md:pb-6 pt-2">
+          <div className="bg-gradient-to-r from-pink-900/20 to-purple-900/20 border border-pink-700/50 rounded-lg p-4 md:p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 mt-1">
+                <i className="fas fa-info-circle text-2xl text-pink-400"></i>
+              </div>
+              <div className="flex-1 space-y-3">
+                <div>
+                  <h3 className="text-lg md:text-xl font-semibold text-gray-100 mb-2">
+                    Creating Multiple Versions of the Same OC in Different Worlds
+                  </h3>
+                  <p className="text-sm md:text-base text-gray-300 mb-4">
+                    If you have an OC that exists in 2 different worlds, you can create separate versions that are linked together as the same character identity.
+                  </p>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
+                    <h4 className="text-base font-semibold text-gray-100 mb-2 flex items-center gap-2">
+                      <span className="text-pink-400">Step 1:</span> Create the First Version
+                    </h4>
+                    <p className="text-sm text-gray-300">
+                      Create your OC normally by going to <strong className="text-gray-100">Admin → OCs → New OC</strong>. 
+                      Select the first world and fill in all the character details. The system will automatically create an OC Identity for this character.
+                    </p>
+                  </div>
+
+                  <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
+                    <h4 className="text-base font-semibold text-gray-100 mb-2 flex items-center gap-2">
+                      <span className="text-pink-400">Step 2:</span> Add a Second Version for a Different World
+                    </h4>
+                    <p className="text-sm text-gray-300 mb-2">
+                      To add another version of the same character in a different world:
+                    </p>
+                    <ol className="list-decimal list-inside text-sm text-gray-300 space-y-1 ml-2">
+                      <li>Go to <strong className="text-gray-100">Admin → OCs</strong> and find your character</li>
+                      <li>Click on the version count link (e.g., "1 version") in the Versions column</li>
+                      <li>This opens the <strong className="text-gray-100">Identity Manager</strong> page</li>
+                      <li>Click the <strong className="text-gray-100">"➕ Add New Version"</strong> button</li>
+                      <li>Select a <strong className="text-gray-100">different World/Fandom</strong> than the first version</li>
+                      <li>Fill in the character details for this new version</li>
+                      <li>Click <strong className="text-gray-100">Save</strong></li>
+                    </ol>
+                    <p className="text-sm text-gray-400 mt-2 italic">
+                      Each version has completely separate data (appearance, stats, relationships, etc.) and can exist in different worlds.
+                    </p>
+                  </div>
+
+                  <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
+                    <h4 className="text-base font-semibold text-gray-100 mb-2 flex items-center gap-2">
+                      <span className="text-pink-400">Step 3:</span> Editing Versions
+                    </h4>
+                    <p className="text-sm text-gray-300">
+                      When editing a character with multiple versions, you'll see a version switcher banner at the top of the edit form. 
+                      You can switch between versions to edit each one separately. Remember: each version's data is completely independent!
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-gray-700/50 mt-4">
+                  <AdminLink
+                    href="/admin/ocs"
+                    className="inline-flex items-center gap-2 text-sm md:text-base text-pink-400 hover:text-pink-300 font-medium"
+                  >
+                    Go to OCs →
+                    <i className="fas fa-arrow-right"></i>
+                  </AdminLink>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
     </div>
   );
 }

@@ -28,6 +28,7 @@ import { StoryAliasSelector } from './StoryAliasSelector';
 import { optionalUuid, optionalUrl } from '@/lib/utils/zodSchemas';
 import { useDropdownPosition } from '@/hooks/useDropdownPosition';
 import { getGoogleDriveImageUrls } from '@/lib/utils/googleDriveImage';
+import { slugify } from '@/lib/utils/slugify';
 
 // Component to preview images from URLs
 function ImagePreview({ url, maxHeight = '200px', className = '' }: { url: string; maxHeight?: string; className?: string }) {
@@ -1362,6 +1363,10 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
         setValue('template_type', templateType, { shouldDirty: !oc });
         setValue('series_type', worldToUse.series_type || 'original', { shouldDirty: !oc });
       }
+    } else {
+      // No world selected (None), set template_type to 'none'
+      setValue('template_type', 'none', { shouldDirty: !oc });
+      setValue('story_alias_id', null, { shouldDirty: !oc });
     }
   }, [worldId, worlds, selectedWorld, oc, setValue]);
 
@@ -1379,36 +1384,23 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
     }
   }, [firstName, lastName, setValue]);
 
-  // Auto-generate slug from name (only in create mode)
+  // Auto-generate slug from name (works in both create and edit mode)
   // Include world slug in the slug to ensure uniqueness per world
   useEffect(() => {
-    if (!oc && nameValue && worldId) {
-      const selectedWorld = worlds.find(w => w.id === worldId);
+    if (nameValue) {
+      const selectedWorld = worldId ? worlds.find(w => w.id === worldId) : null;
+      const baseSlug = slugify(nameValue);
+      
       if (selectedWorld) {
-        const baseSlug = nameValue
-          .toLowerCase()
-          .replace(/\s+/g, '-')
-          .replace(/[^\w\-]+/g, '')
-          .replace(/\-\-+/g, '-')
-          .replace(/^-+/, '')
-          .replace(/-+$/, '');
-        
         // Append world slug to ensure uniqueness per world
         const slug = `${baseSlug}-${selectedWorld.slug}`;
         setValue('slug', slug);
+      } else {
+        // No world selected, use base slug
+        setValue('slug', baseSlug);
       }
-    } else if (!oc && nameValue) {
-      // Fallback if no world selected yet
-      const slug = nameValue
-        .toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/[^\w\-]+/g, '')
-        .replace(/\-\-+/g, '-')
-        .replace(/^-+/, '')
-        .replace(/-+$/, '');
-      setValue('slug', slug);
     }
-  }, [nameValue, worldId, worlds, oc, setValue]);
+  }, [nameValue, worldId, worlds, setValue]);
 
   // Auto-calculate star sign from date of birth
   useEffect(() => {
@@ -1933,8 +1925,8 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
             <FormInput
               {...register('slug')}
               error={errors.slug?.message}
-              disabled={isSubmitting || !!oc}
-              helpText={oc ? 'Slug cannot be changed after creation' : undefined}
+              disabled={isSubmitting}
+              helpText="Auto-generated from name. Can be edited manually."
             />
           </div>
 
@@ -1950,7 +1942,10 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
                   {...field}
                   value={field.value || ''}
                   key={`world-select-${worlds.length}-${field.value || 'empty'}`}
-                  options={worlds.map((w) => ({ value: w.id, label: w.name }))}
+                  options={[
+                    { value: '', label: 'None' },
+                    ...worlds.map((w) => ({ value: w.id, label: w.name }))
+                  ]}
                   placeholder="Select a world"
                   error={errors.world_id?.message}
                   disabled={isSubmitting}
@@ -1959,6 +1954,12 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
                     // Convert empty string to null for optional field
                     const value = newWorldId === '' ? null : newWorldId;
                     field.onChange(value);
+                    
+                    // When "None" is selected, also clear template_type and story_alias_id
+                    if (newWorldId === '') {
+                      setValue('template_type', 'none');
+                      setValue('story_alias_id', null);
+                    }
                   }}
                 />
               )}

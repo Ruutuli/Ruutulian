@@ -12,7 +12,6 @@ import { useOCsByWorld } from '@/lib/hooks/useOCsByWorld';
 import { useFormSubmission } from '@/lib/hooks/useFormSubmission';
 import { slugify } from '@/lib/utils/slugify';
 import { useRelatedItems } from '@/hooks/useRelatedItems';
-import { FieldSetManager } from './FieldSetManager';
 import { WorldFieldsSection } from './WorldFieldsSection';
 import { getWorldLoreFieldDefinitions } from '@/lib/fields/worldFields';
 import { FormSection } from './forms/FormSection';
@@ -145,13 +144,7 @@ export function WorldLoreForm({ lore, worldId }: WorldLoreFormProps) {
     }
   }, [nameValue, lore, setValue]);
 
-  // Update field definitions when field sets change
-  useEffect(() => {
-    const fieldDefinitions: WorldFieldDefinitions = {
-      field_sets: fieldSets,
-    };
-    setValue('world_fields', fieldDefinitions);
-  }, [fieldSets, setValue]);
+  // Preserve existing field sets (no editing allowed on this form)
 
   // Set world_id when worldId prop is provided
   useEffect(() => {
@@ -191,10 +184,8 @@ export function WorldLoreForm({ lore, worldId }: WorldLoreFormProps) {
   };
 
 
-  const fieldDefinitions = getWorldLoreFieldDefinitions({
-    ...lore,
-    world_fields: { field_sets: fieldSets },
-  } as WorldLore);
+  // Get field definitions from the world (not from lore's world_fields)
+  const fieldDefinitions = getWorldLoreFieldDefinitions(lore || undefined);
 
   const worldOptions = worlds.map((world) => ({
     value: world.id,
@@ -422,18 +413,6 @@ export function WorldLoreForm({ lore, worldId }: WorldLoreFormProps) {
               </p>
             )}
           </div>
-        </FormSection>
-
-        <FormSection title="World Field Definitions" icon="modular-fields" accentColor="metadata" defaultOpen={false}>
-          <p className="text-sm text-gray-400/80 mb-4">
-            Define custom field sets for this lore entry.
-          </p>
-          <FieldSetManager
-            fieldSets={fieldSets}
-            onChange={setFieldSets}
-            isWorld={false}
-            disabled={isSubmitting}
-          />
         </FormSection>
 
         {/* World Field Values Section */}

@@ -22,3 +22,4 @@ COMMENT ON COLUMN world_lore.banner_image_url IS 'Banner/header image URL displa
 
 
 
+

@@ -42,7 +42,7 @@ export function OCCard({ oc }: OCCardProps) {
         <div className="relative w-full overflow-hidden bg-gray-900">
           {oc.image_url ? (
             oc.image_url.includes('drive.google.com') ? (
-              <div className="relative w-full aspect-[4/5] flex items-center justify-center">
+              <div className="relative w-full aspect-[3/4] flex items-center justify-center">
                 <GoogleDriveImage
                   src={oc.image_url}
                   alt={oc.name}
@@ -51,7 +51,7 @@ export function OCCard({ oc }: OCCardProps) {
                 />
               </div>
             ) : (
-              <div className="relative w-full aspect-[4/5]">
+              <div className="relative w-full aspect-[3/4]">
                 <Image
                   src={convertGoogleDriveUrl(oc.image_url)}
                   alt={oc.name}
@@ -63,15 +63,15 @@ export function OCCard({ oc }: OCCardProps) {
               </div>
             )
           ) : (
-            <div className="w-full aspect-[4/5] bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">
-              <span className="text-gray-500 text-4xl">?</span>
+            <div className="w-full aspect-[3/4] bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">
+              <span className="text-gray-500 text-3xl">?</span>
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
-          <div className="absolute bottom-0 left-0 right-0 p-3 md:p-4 pointer-events-none">
-            <h3 className="text-lg md:text-xl font-bold text-white mb-1 truncate">{oc.name}</h3>
+          <div className="absolute bottom-0 left-0 right-0 p-2 md:p-3 pointer-events-none">
+            <h3 className="text-base md:text-lg font-bold text-white mb-1 truncate">{oc.name}</h3>
             {oc.world && (
-              <p className="text-xs md:text-sm text-white/80 truncate">{oc.world.name}</p>
+              <p className="text-xs text-white/80 truncate">{oc.world.name}</p>
             )}
           </div>
         </div>

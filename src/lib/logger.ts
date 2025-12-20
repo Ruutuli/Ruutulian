@@ -49,7 +49,7 @@ const formatMessage = (level: LogLevel, category: string, message: string, ...ar
       messageColor = colors.green;
       break;
     case 'warn':
-      levelTag = colors.bgYellow + colors.black + ' ⚠ ' + colors.reset;
+      levelTag = colors.bgYellow + colors.black + ' ⚠️ ' + colors.reset;
       messageColor = colors.yellow;
       break;
     case 'error':
@@ -57,11 +57,11 @@ const formatMessage = (level: LogLevel, category: string, message: string, ...ar
       messageColor = colors.red;
       break;
     case 'debug':
-      levelTag = colors.dim + '[DEBUG]' + colors.reset;
+      levelTag = colors.dim + '🔍' + colors.reset;
       messageColor = colors.dim;
       break;
     default: // info
-      levelTag = colors.blue + ' ℹ ' + colors.reset;
+      levelTag = colors.blue + ' ℹ️ ' + colors.reset;
       messageColor = colors.white;
       break;
   }

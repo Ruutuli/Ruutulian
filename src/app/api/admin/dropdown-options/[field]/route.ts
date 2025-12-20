@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { checkAuth } from '@/lib/auth/require-auth';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,7 +45,7 @@ export async function POST(
 
     if (checkError && checkError.code !== 'PGRST116') {
       // PGRST116 is "not found" which is fine
-      console.error('[API] Error checking existing option:', checkError);
+      logger.error('DropdownOptions', 'Error checking existing option', { error: checkError });
       return NextResponse.json(
         { error: 'Failed to check existing option' },
         { status: 500 }
@@ -81,7 +82,7 @@ export async function POST(
       .single();
 
     if (insertError) {
-      console.error('[API] Error inserting option:', insertError);
+      logger.error('DropdownOptions', 'Error inserting option', { error: insertError });
       return NextResponse.json(
         { error: 'Failed to create option' },
         { status: 500 }
@@ -95,7 +96,7 @@ export async function POST(
       created: true,
     });
   } catch (error) {
-    console.error('[API] Fatal error creating option:', error);
+    logger.error('DropdownOptions', 'Fatal error creating option', { error });
     const errorMessage = error instanceof Error ? error.message : 'Failed to create option';
     return NextResponse.json(
       { error: errorMessage },

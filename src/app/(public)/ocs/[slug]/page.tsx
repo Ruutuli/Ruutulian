@@ -17,6 +17,7 @@ import { convertGoogleDriveUrl, getProxyUrl } from '@/lib/utils/googleDriveImage
 import { extractColorHex, extractColorName, getColorHex } from '@/lib/utils/colorHexUtils';
 import { SpotifyEmbed } from '@/components/oc/SpotifyEmbed';
 import { formatHeightWithMetric, formatWeightWithMetric } from '@/lib/utils/unitConversion';
+import { getRelationshipTypeConfig } from '@/lib/relationships/relationshipTypes';
 
 export async function generateMetadata({
   params,
@@ -1128,7 +1129,7 @@ export default async function OCDetailPage({
             {/* Relationships Section */}
             {(() => {
               // Helper to parse relationship data (handles both old string format and new JSON array format)
-              const parseRelationships = (value: string | null | undefined): Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }> => {
+              const parseRelationships = (value: string | null | undefined): Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: string }> => {
                 if (!value) return [];
                 try {
                   const parsed = JSON.parse(value);
@@ -1170,11 +1171,14 @@ export default async function OCDetailPage({
                           Family
                         </h3>
                         <div className="space-y-4">
-                          {family.map((entry, index) => (
+                          {family.map((entry, index) => {
+                            const relTypeConfig = getRelationshipTypeConfig(entry.relationship_type);
+                            return (
                             <div key={index} className="group p-5 bg-gradient-to-br from-gray-800/40 to-gray-800/20 rounded-xl border border-gray-700/60 hover:border-blue-500/40 transition-all duration-300 shadow-md hover:shadow-lg">
                               <div className="flex items-start justify-between gap-4 mb-3">
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-3 mb-2">
+                                  <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                    <i className={`${relTypeConfig.icon} text-lg`} style={{ color: relTypeConfig.color }} aria-hidden="true" suppressHydrationWarning></i>
                                     <h4 className="font-bold text-blue-300 text-xl group-hover:text-blue-200 transition-colors">
                                       {entry.oc_slug ? (
                                         <Link 
@@ -1195,6 +1199,18 @@ export default async function OCDetailPage({
                                         {entry.relationship}
                                       </span>
                                     )}
+                                    {entry.relationship_type && (
+                                      <span 
+                                        className="px-3 py-1 rounded-full text-xs font-medium border whitespace-nowrap"
+                                        style={{ 
+                                          backgroundColor: relTypeConfig.bgColor,
+                                          color: relTypeConfig.color,
+                                          borderColor: relTypeConfig.borderColor
+                                        }}
+                                      >
+                                        {relTypeConfig.label}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -1206,7 +1222,8 @@ export default async function OCDetailPage({
                                 </div>
                               )}
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -1217,11 +1234,14 @@ export default async function OCDetailPage({
                           Friends & Allies
                         </h3>
                         <div className="space-y-4">
-                          {friendsAllies.map((entry, index) => (
+                          {friendsAllies.map((entry, index) => {
+                            const relTypeConfig = getRelationshipTypeConfig(entry.relationship_type);
+                            return (
                             <div key={index} className="group p-5 bg-gradient-to-br from-gray-800/40 to-gray-800/20 rounded-xl border border-gray-700/60 hover:border-green-500/40 transition-all duration-300 shadow-md hover:shadow-lg">
                               <div className="flex items-start justify-between gap-4 mb-3">
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-3 mb-2">
+                                  <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                    <i className={`${relTypeConfig.icon} text-lg`} style={{ color: relTypeConfig.color }} aria-hidden="true" suppressHydrationWarning></i>
                                     <h4 className="font-bold text-green-300 text-xl group-hover:text-green-200 transition-colors">
                                       {entry.oc_slug ? (
                                         <Link 
@@ -1241,6 +1261,18 @@ export default async function OCDetailPage({
                                         {entry.relationship}
                                       </span>
                                     )}
+                                    {entry.relationship_type && (
+                                      <span 
+                                        className="px-3 py-1 rounded-full text-xs font-medium border whitespace-nowrap"
+                                        style={{ 
+                                          backgroundColor: relTypeConfig.bgColor,
+                                          color: relTypeConfig.color,
+                                          borderColor: relTypeConfig.borderColor
+                                        }}
+                                      >
+                                        {relTypeConfig.label}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -1252,7 +1284,8 @@ export default async function OCDetailPage({
                                 </div>
                               )}
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -1263,11 +1296,14 @@ export default async function OCDetailPage({
                           Rivals & Enemies
                         </h3>
                         <div className="space-y-4">
-                          {rivalsEnemies.map((entry, index) => (
+                          {rivalsEnemies.map((entry, index) => {
+                            const relTypeConfig = getRelationshipTypeConfig(entry.relationship_type);
+                            return (
                             <div key={index} className="group p-5 bg-gradient-to-br from-gray-800/40 to-gray-800/20 rounded-xl border border-gray-700/60 hover:border-red-500/40 transition-all duration-300 shadow-md hover:shadow-lg">
                               <div className="flex items-start justify-between gap-4 mb-3">
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-3 mb-2">
+                                  <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                    <i className={`${relTypeConfig.icon} text-lg`} style={{ color: relTypeConfig.color }} aria-hidden="true" suppressHydrationWarning></i>
                                     <h4 className="font-bold text-red-300 text-xl group-hover:text-red-200 transition-colors">
                                       {entry.oc_slug ? (
                                         <Link 
@@ -1287,6 +1323,18 @@ export default async function OCDetailPage({
                                         {entry.relationship}
                                       </span>
                                     )}
+                                    {entry.relationship_type && (
+                                      <span 
+                                        className="px-3 py-1 rounded-full text-xs font-medium border whitespace-nowrap"
+                                        style={{ 
+                                          backgroundColor: relTypeConfig.bgColor,
+                                          color: relTypeConfig.color,
+                                          borderColor: relTypeConfig.borderColor
+                                        }}
+                                      >
+                                        {relTypeConfig.label}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -1298,7 +1346,8 @@ export default async function OCDetailPage({
                                 </div>
                               )}
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -1309,11 +1358,14 @@ export default async function OCDetailPage({
                           Romantic
                         </h3>
                         <div className="space-y-4">
-                          {romantic.map((entry, index) => (
+                          {romantic.map((entry, index) => {
+                            const relTypeConfig = getRelationshipTypeConfig(entry.relationship_type);
+                            return (
                             <div key={index} className="group p-5 bg-gradient-to-br from-gray-800/40 to-gray-800/20 rounded-xl border border-gray-700/60 hover:border-pink-500/40 transition-all duration-300 shadow-md hover:shadow-lg">
                               <div className="flex items-start justify-between gap-4 mb-3">
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-3 mb-2">
+                                  <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                    <i className={`${relTypeConfig.icon} text-lg`} style={{ color: relTypeConfig.color }} aria-hidden="true" suppressHydrationWarning></i>
                                     <h4 className="font-bold text-pink-300 text-xl group-hover:text-pink-200 transition-colors">
                                       {entry.oc_slug ? (
                                         <Link 
@@ -1333,6 +1385,18 @@ export default async function OCDetailPage({
                                         {entry.relationship}
                                       </span>
                                     )}
+                                    {entry.relationship_type && (
+                                      <span 
+                                        className="px-3 py-1 rounded-full text-xs font-medium border whitespace-nowrap"
+                                        style={{ 
+                                          backgroundColor: relTypeConfig.bgColor,
+                                          color: relTypeConfig.color,
+                                          borderColor: relTypeConfig.borderColor
+                                        }}
+                                      >
+                                        {relTypeConfig.label}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -1344,7 +1408,8 @@ export default async function OCDetailPage({
                                 </div>
                               )}
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -1355,11 +1420,14 @@ export default async function OCDetailPage({
                           Other Relationships
                         </h3>
                         <div className="space-y-4">
-                          {otherRelationships.map((entry, index) => (
+                          {otherRelationships.map((entry, index) => {
+                            const relTypeConfig = getRelationshipTypeConfig(entry.relationship_type);
+                            return (
                             <div key={index} className="group p-5 bg-gradient-to-br from-gray-800/40 to-gray-800/20 rounded-xl border border-gray-700/60 hover:border-blue-500/40 transition-all duration-300 shadow-md hover:shadow-lg">
                               <div className="flex items-start justify-between gap-4 mb-3">
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-3 mb-2">
+                                  <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                    <i className={`${relTypeConfig.icon} text-lg`} style={{ color: relTypeConfig.color }} aria-hidden="true" suppressHydrationWarning></i>
                                     <h4 className="font-bold text-blue-300 text-xl group-hover:text-blue-200 transition-colors">
                                       {entry.oc_slug ? (
                                         <Link 
@@ -1380,6 +1448,18 @@ export default async function OCDetailPage({
                                         {entry.relationship}
                                       </span>
                                     )}
+                                    {entry.relationship_type && (
+                                      <span 
+                                        className="px-3 py-1 rounded-full text-xs font-medium border whitespace-nowrap"
+                                        style={{ 
+                                          backgroundColor: relTypeConfig.bgColor,
+                                          color: relTypeConfig.color,
+                                          borderColor: relTypeConfig.borderColor
+                                        }}
+                                      >
+                                        {relTypeConfig.label}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -1391,7 +1471,8 @@ export default async function OCDetailPage({
                                 </div>
                               )}
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}

@@ -66,15 +66,12 @@ export async function PUT(
     const supabase = createAdminClient();
     const { id } = await params;
 
-    logger.debug('World', `Starting update for world ID: ${id}`);
-
     if (!id) {
       logger.error('World', 'Missing world ID');
       return errorResponse('World ID is required');
     }
 
     const body = await request.json();
-    logger.debug('World', 'Received request body', body);
 
     // Check if this is a partial update (only template fields or world fields)
     const isPartialUpdate = Object.keys(body).length === 1 && 
@@ -89,10 +86,7 @@ export async function PUT(
       }
     }
 
-    logger.debug('World', 'Validation passed');
-
     // First, verify the world exists
-    logger.debug('World', 'Checking if world exists...');
     const { data: existingWorld, error: checkError } = await supabase
       .from('worlds')
       .select('id')
@@ -104,10 +98,7 @@ export async function PUT(
       return errorResponse('World not found', 404);
     }
 
-    logger.debug('World', 'World exists, proceeding with update');
-
     // Get the current state before update for comparison
-    logger.debug('World', 'Fetching current world state before update...');
     const { data: beforeUpdate, error: beforeError } = await supabase
       .from('worlds')
       .select('*')
@@ -116,8 +107,6 @@ export async function PUT(
     
     if (beforeError) {
       logger.error('World', 'Error fetching before update', beforeError);
-    } else {
-      logger.debug('World', 'World state BEFORE update', beforeUpdate);
     }
 
     // Fetch templates from database
@@ -139,12 +128,8 @@ export async function PUT(
 
     // If template fields are being updated, sync OC extra_fields
     if (body.oc_templates !== undefined && beforeUpdate) {
-      logger.debug('World', 'Template fields update detected, syncing OC extra_fields...');
       const oldCustomizations = (beforeUpdate.oc_templates as Record<string, { fields: TemplateField[] }>) || {};
       const newCustomizations = body.oc_templates as Record<string, { fields: TemplateField[] }> || {};
-
-      logger.debug('World', 'Old customizations', oldCustomizations);
-      logger.debug('World', 'New customizations', newCustomizations);
 
       // Get all template types that might have changed
       const allTemplateTypes = new Set([
@@ -153,13 +138,9 @@ export async function PUT(
         ...Object.keys(templates),
       ]);
 
-      logger.debug('World', `Checking template types: ${Array.from(allTemplateTypes).join(', ')}`);
-
       for (const templateType of allTemplateTypes) {
         const oldFields = getEffectiveTemplateFields(templateType, oldCustomizations);
         const newFields = getEffectiveTemplateFields(templateType, newCustomizations);
-
-        logger.debug('World', `Template ${templateType}: Old fields: ${oldFields.map(f => f.key).join(', ')}, New fields: ${newFields.map(f => f.key).join(', ')}`);
 
         // Check if fields changed
         const oldFieldKeys = new Set(oldFields.map(f => f.key));
@@ -169,7 +150,6 @@ export async function PUT(
         const addedFields = newFields.filter(f => !oldFieldKeys.has(f.key));
 
         if (removedFields.length > 0 || addedFields.length > 0) {
-          logger.debug('World', `Template ${templateType} changes: Removed: ${removedFields.length > 0 ? removedFields.join(', ') : 'none'}, Added: ${addedFields.length > 0 ? addedFields.map(f => f.key).join(', ') : 'none'}`);
         }
 
         // Always sync OCs to ensure their extra_fields match the new template, even if no changes detected
@@ -185,7 +165,6 @@ export async function PUT(
           if (ocsError) {
             logger.error('World', `Error fetching OCs for template ${templateType}`, ocsError);
           } else if (ocs && ocs.length > 0) {
-            logger.debug('World', `Found ${ocs.length} OC(s) to update for template ${templateType}`);
 
             // Update each OC's extra_fields
             for (const oc of ocs) {
@@ -198,7 +177,6 @@ export async function PUT(
                 if (removedKey in updatedExtraFields) {
                   delete updatedExtraFields[removedKey];
                   hasChanges = true;
-                  logger.debug('World', `Removed field '${removedKey}' from OC ${oc.id}`);
                 }
               }
 
@@ -209,7 +187,6 @@ export async function PUT(
                 if (!validFieldKeys.has(ocFieldKey)) {
                   delete updatedExtraFields[ocFieldKey];
                   hasChanges = true;
-                  logger.debug('World', `Removed stale field '${ocFieldKey}' from OC ${oc.id}`);
                 }
               }
 
@@ -225,7 +202,6 @@ export async function PUT(
                     updatedExtraFields[addedField.key] = '';
                   }
                   hasChanges = true;
-                  logger.debug('World', `Added field '${addedField.key}' to OC ${oc.id} with default value`);
                 }
               }
 
@@ -238,8 +214,6 @@ export async function PUT(
 
                 if (updateOcError) {
                   logger.error('World', `Error updating OC ${oc.id}`, updateOcError);
-                } else {
-                  logger.debug('World', `Successfully updated OC ${oc.id}`);
                 }
               }
             }
@@ -257,10 +231,7 @@ export async function PUT(
       )
     );
     
-    logger.debug('World', `Fields being updated: ${Object.keys(cleanedBody).join(', ')}`);
-
     // Perform the update
-    logger.debug('World', 'Executing database update...');
     
     // Explicitly select all columns to avoid RLS issues
     const { data: updateData, error: updateError } = await supabase
@@ -280,7 +251,6 @@ export async function PUT(
     let updatedWorld = updateData?.[0];
     
     if (!updatedWorld) {
-      logger.debug('World', 'Update returned empty array, fetching separately (possible RLS issue)...');
       const { data: fetchedWorld, error: fetchError } = await supabase
         .from('worlds')
         .select('*')

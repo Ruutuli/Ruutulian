@@ -22,14 +22,6 @@ export async function PUT(
     }
 
     const body = await request.json();
-    
-    // Log incoming request for debugging
-    logger.info('OC', `Received update request for OC ${id}`, {
-      hasName: !!body.name,
-      hasSlug: !!body.slug,
-      hasWorldId: !!body.world_id,
-      totalFields: Object.keys(body).length
-    });
 
     // Validate required fields
     const validationError = validateRequiredFields(body, ['name', 'slug']);
@@ -85,12 +77,6 @@ export async function PUT(
       return errorResponse('OC not found', 404);
     }
 
-    // Log what we're about to update (use info instead of debug so it's always visible)
-    logger.info('OC', `Updating OC ${id}`, { 
-      keys: Object.keys(updateData),
-      fieldCount: Object.keys(updateData).length 
-    });
-
     // Perform the update and check affected rows
     const { data: updateResult, error: updateError } = await supabase
       .from('ocs')
@@ -117,8 +103,6 @@ export async function PUT(
       return errorResponse('No rows were updated. The OC may not exist or the data may be invalid.');
     }
 
-    logger.success('OC', `Update successful for OC ${id}`, { updatedFields: Object.keys(updateData).length });
-
     // Verify the update by fetching the updated row immediately
     const { data: verifyData, error: verifyError } = await supabase
       .from('ocs')
@@ -138,16 +122,6 @@ export async function PUT(
       logger.error('OC', 'OC not found after update', { ocId: id });
       return errorResponse('OC not found after update', 404);
     }
-
-    // Log a sample of updated fields to verify (use logger.info for production visibility)
-    logger.info('OC', 'Verified update - sample fields', {
-      name: verifyData.name,
-      first_name: verifyData.first_name,
-      last_name: verifyData.last_name,
-      species: verifyData.species,
-      age: verifyData.age,
-      world_id: verifyData.world_id,
-    });
 
     // Fetch the updated OC with relationships
     const { data, error: selectError } = await supabase
@@ -219,7 +193,7 @@ export async function DELETE(
       return errorResponse(error.message || 'Failed to delete OC');
     }
 
-    logger.success('OC', `OC ${id} deleted successfully`);
+    logger.success('OC', `Deleted OC ${id}`);
     return successResponse({ success: true });
   } catch (error) {
     logger.error('OC', 'Unexpected error in DELETE handler', error);

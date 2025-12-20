@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '@/lib/auth/require-auth';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,7 @@ export async function GET() {
 
     return NextResponse.json({ worlds: worlds || [] });
   } catch (error) {
-    console.error('Error fetching world fields:', error);
+    logger.error('Fields', 'Failed to fetch world fields', { error });
     return NextResponse.json(
       { error: 'Failed to fetch world fields' },
       { status: 500 }

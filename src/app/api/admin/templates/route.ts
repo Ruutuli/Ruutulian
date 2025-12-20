@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { fetchTemplates } from '@/lib/templates/ocTemplates.server';
 import { checkAuth } from '@/lib/auth/require-auth';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +19,7 @@ export async function GET() {
     const templates = await fetchTemplates();
     return NextResponse.json({ templates });
   } catch (error) {
-    console.error('Error fetching templates:', error);
+    logger.error('Templates', 'Failed to fetch templates', { error });
     return NextResponse.json(
       { error: 'Failed to fetch templates' },
       { status: 500 }

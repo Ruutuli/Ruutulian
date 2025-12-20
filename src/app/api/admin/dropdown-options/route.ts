@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, createClient } from '@/lib/supabase/server';
 import { checkAuth } from '@/lib/auth/require-auth';
+import { logger } from '@/lib/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -10,7 +11,7 @@ export const dynamic = 'force-dynamic';
  * Regenerates the csvOptionsData.ts file from the database
  * This ensures form components have the latest options
  */
-async function regenerateTypeScriptFile(supabase: any, requestId: string) {
+async function regenerateTypeScriptFile(supabase: any) {
   try {
     // Query all options from database (including hex_code for colors)
     const { data, error } = await supabase
@@ -20,7 +21,7 @@ async function regenerateTypeScriptFile(supabase: any, requestId: string) {
       .order('option', { ascending: true });
 
     if (error) {
-      console.error(`[${requestId}] Regeneration fetch error:`, error);
+      logger.error('DropdownOptions', 'Failed to regenerate TypeScript file', { error });
       return false;
     }
 
@@ -76,7 +77,7 @@ ${Object.entries(options).map(([key, values]) =>
 
     return true;
   } catch (error) {
-    console.error(`[${requestId}] Regeneration error:`, error);
+    logger.error('DropdownOptions', 'TypeScript regeneration failed', { error });
     return false;
   }
 }
@@ -103,7 +104,7 @@ export async function GET() {
         .range(from, from + pageSize - 1);
       
       if (pageError) {
-        console.error('[API] Error fetching dropdown options:', pageError);
+        logger.error('DropdownOptions', 'Error fetching dropdown options', { error: pageError });
         return NextResponse.json(
           { error: 'Failed to fetch dropdown options' },
           { status: 500 }
@@ -120,8 +121,6 @@ export async function GET() {
     }
     
     const data = allData;
-    
-    console.log(`[API] Fetched ${data.length} total rows from database`);
 
     // Group options by field, and include hex codes for colors
     const options: Record<string, string[]> = {};
@@ -143,12 +142,10 @@ export async function GET() {
         }
       }
     }
-    
-    console.log(`[API] Returning ${Object.keys(options).length} fields with options`);
 
     return NextResponse.json({ options, hexCodes });
   } catch (error) {
-    console.error('Error fetching dropdown options:', error);
+    logger.error('DropdownOptions', 'Failed to fetch dropdown options', { error });
     return NextResponse.json(
       { error: 'Failed to fetch dropdown options' },
       { status: 500 }
@@ -162,12 +159,9 @@ export async function GET() {
  * Use POST /api/admin/dropdown-options/[field] to create individual options instead.
  */
 export async function PUT(request: NextRequest) {
-  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
   try {
     const user = await checkAuth();
     if (!user) {
-      console.error(`[${requestId}] Unauthorized`);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -176,16 +170,12 @@ export async function PUT(request: NextRequest) {
     const { options, hexCodes } = body;
 
     if (!options || typeof options !== 'object') {
-      console.error(`[${requestId}] Invalid options data - type:`, typeof options, 'value:', options);
+      logger.error('DropdownOptions', 'Invalid options data', { type: typeof options });
       return NextResponse.json(
         { error: 'Invalid options data' },
         { status: 400 }
       );
     }
-
-    const fieldsCount = Object.keys(options).length;
-    const totalOptions = Object.values(options).reduce((sum: number, opts: any) => sum + (Array.isArray(opts) ? opts.length : 0), 0);
-    console.log(`[${requestId}] PUT: ${fieldsCount} fields, ${totalOptions} options`);
 
     const supabase = createAdminClient();
 
@@ -199,7 +189,7 @@ export async function PUT(request: NextRequest) {
 
     const invalidFields = Object.keys(options).filter(field => !validFields.includes(field));
     if (invalidFields.length > 0) {
-      console.error(`[${requestId}] Invalid fields: ${invalidFields.join(', ')}`);
+      logger.error('DropdownOptions', 'Invalid field names', { invalidFields });
       return NextResponse.json(
         { error: `Invalid field names: ${invalidFields.join(', ')}` },
         { status: 400 }
@@ -212,7 +202,7 @@ export async function PUT(request: NextRequest) {
       .select('field, option, hex_code');
 
     if (fetchError) {
-      console.error(`[${requestId}] Error fetching current options:`, fetchError);
+      logger.error('DropdownOptions', 'Failed to fetch current options', { error: fetchError });
       return NextResponse.json(
         { error: 'Failed to fetch current options' },
         { status: 500 }
@@ -244,36 +234,12 @@ export async function PUT(request: NextRequest) {
     
     Object.entries(options).forEach(([field, newValues]) => {
       if (!Array.isArray(newValues)) {
-        console.warn(`[${requestId}] Skipping ${field}: not an array`);
+        logger.warn('DropdownOptions', `Skipping ${field}: not an array`);
         return;
       }
 
       const currentValues = currentOptions[field] || new Set();
       const newSet = new Set(newValues);
-      
-      // Find items that are in new but not in current (case-insensitive)
-      const newItems: string[] = [];
-      const currentValuesLower = new Set(Array.from(currentValues).map(v => v.trim().toLowerCase()));
-      
-      for (const val of newValues) {
-        const trimmed = val.trim();
-        const normalized = trimmed.toLowerCase();
-        if (!currentValuesLower.has(normalized)) {
-          newItems.push(trimmed);
-        }
-      }
-      
-      // Find items that are in current but not in new (case-insensitive)
-      const removedItems: string[] = [];
-      const newValuesLower = new Set(newValues.map(v => v.trim().toLowerCase()));
-      
-      for (const val of currentValues) {
-        const trimmed = val.trim();
-        const normalized = trimmed.toLowerCase();
-        if (!newValuesLower.has(normalized)) {
-          removedItems.push(trimmed);
-        }
-      }
       
       // Check if arrays are different (exact match, case-sensitive)
       const exactNewItems = newValues.filter(val => !currentValues.has(val.trim()));
@@ -294,11 +260,6 @@ export async function PUT(request: NextRequest) {
         hexCodesChanged;
 
       if (isDifferent) {
-        const changes = [];
-        if (exactNewItems.length > 0) changes.push(`+${exactNewItems.length}`);
-        if (exactRemovedItems.length > 0) changes.push(`-${exactRemovedItems.length}`);
-        if (hexCodesChanged) changes.push('hex');
-        console.log(`[${requestId}] ${field}: ${currentValues.size} → ${newSet.size} (${changes.join(', ')})`);
         fieldsToUpdate[field] = newValues;
       }
     });
@@ -310,8 +271,6 @@ export async function PUT(request: NextRequest) {
         updatedFields: [],
       });
     }
-
-    console.log(`[${requestId}] Updating ${Object.keys(fieldsToUpdate).length} fields:`, Object.keys(fieldsToUpdate));
     // Update each field: delete old options, insert new ones
     const updatedFields: string[] = [];
     const errors: string[] = [];
@@ -325,7 +284,7 @@ export async function PUT(request: NextRequest) {
           .eq('field', field);
 
         if (deleteError) {
-          console.error(`[${requestId}] Delete ${field} failed:`, deleteError.message);
+          logger.error('DropdownOptions', `Failed to delete options for ${field}`, { error: deleteError });
           errors.push(`Failed to delete options for ${field}: ${deleteError.message}`);
           continue;
         }
@@ -350,7 +309,7 @@ export async function PUT(request: NextRequest) {
               .select();
 
             if (insertError) {
-              console.error(`[${requestId}] Failed to insert ${field}:`, insertError.message);
+              logger.error('DropdownOptions', `Failed to insert options for ${field}`, { error: insertError });
               errors.push(`Failed to insert options for ${field}: ${insertError.message}`);
               continue;
             }
@@ -359,13 +318,13 @@ export async function PUT(request: NextRequest) {
 
         updatedFields.push(field);
       } catch (error) {
-        console.error(`[${requestId}] Error updating ${field}:`, error instanceof Error ? error.message : error);
+        logger.error('DropdownOptions', `Error updating ${field}`, { error });
         errors.push(`Failed to update ${field}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
 
     if (errors.length > 0) {
-      console.error(`[${requestId}] ${updatedFields.length} updated, ${errors.length} failed`);
+      logger.error('DropdownOptions', 'Some fields failed to update', { updatedFields: updatedFields.length, failed: errors.length });
       return NextResponse.json(
         {
           error: 'Some fields failed to update',
@@ -376,12 +335,12 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    console.log(`[${requestId}] ✓ Updated ${updatedFields.length} fields`);
+    logger.success('DropdownOptions', `Updated ${updatedFields.length} field(s)`, { fields: updatedFields });
     
     // Regenerate TypeScript file so form components have the latest options
     // Do this asynchronously so it doesn't block the response
-    regenerateTypeScriptFile(supabase, requestId).catch(err => {
-      console.warn(`[${requestId}] TypeScript regeneration failed:`, err);
+    regenerateTypeScriptFile(supabase).catch(err => {
+      logger.warn('DropdownOptions', 'TypeScript regeneration failed', { error: err });
     });
 
     return NextResponse.json({ 
@@ -390,7 +349,7 @@ export async function PUT(request: NextRequest) {
       updatedFields,
     });
   } catch (error) {
-    console.error(`[${requestId}] Fatal error:`, error instanceof Error ? error.message : error);
+    logger.error('DropdownOptions', 'Fatal error saving options', { error });
     const errorMessage = error instanceof Error ? error.message : 'Failed to save dropdown options';
     return NextResponse.json(
       { error: errorMessage },

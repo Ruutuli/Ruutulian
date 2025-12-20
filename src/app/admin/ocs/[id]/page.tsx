@@ -41,18 +41,18 @@ function findReverseRelationships(
   currentOCSlug: string,
   allOCs: Array<{ id: string; name: string; slug: string; family?: string | null; friends_allies?: string | null; rivals_enemies?: string | null; romantic?: string | null; other_relationships?: string | null }>
 ): {
-  family: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }>;
-  friends_allies: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }>;
-  rivals_enemies: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }>;
-  romantic: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }>;
-  other_relationships: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }>;
+  family: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: string }>;
+  friends_allies: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: string }>;
+  rivals_enemies: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: string }>;
+  romantic: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: string }>;
+  other_relationships: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: string }>;
 } {
   const reverseRelationships = {
-    family: [] as Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }>,
-    friends_allies: [] as Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }>,
-    rivals_enemies: [] as Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }>,
-    romantic: [] as Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }>,
-    other_relationships: [] as Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }>,
+    family: [] as Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: string }>,
+    friends_allies: [] as Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: string }>,
+    rivals_enemies: [] as Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: string }>,
+    romantic: [] as Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: string }>,
+    other_relationships: [] as Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: string }>,
   };
 
   const relationshipTypes = ['family', 'friends_allies', 'rivals_enemies', 'romantic', 'other_relationships'] as const;

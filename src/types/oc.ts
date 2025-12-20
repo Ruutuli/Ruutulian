@@ -1,5 +1,28 @@
 export type SeriesType = 'canon' | 'original';
 
+export type RelationshipType =
+  | 'lovers'
+  | 'crush'
+  | 'close_friend'
+  | 'friend'
+  | 'acquaintance'
+  | 'dislike'
+  | 'hate'
+  | 'neutral'
+  | 'family'
+  | 'rival'
+  | 'admire'
+  | 'other';
+
+export interface RelationshipEntry {
+  name: string;
+  relationship?: string;
+  description?: string;
+  oc_id?: string;
+  oc_slug?: string;
+  relationship_type?: RelationshipType;
+}
+
 export type TemplateType =
   | 'naruto'
   | 'ff7'

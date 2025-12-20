@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { fetchTemplates } from '@/lib/templates/ocTemplates.server';
 import { checkAuth } from '@/lib/auth/require-auth';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/admin/templates/[key]
@@ -35,7 +36,7 @@ export async function GET(
       }
     });
   } catch (error) {
-    console.error('Error fetching template:', error);
+    logger.error('Templates', 'Failed to fetch template', { error });
     return NextResponse.json(
       { error: 'Failed to fetch template' },
       { status: 500 }

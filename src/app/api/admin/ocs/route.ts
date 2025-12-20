@@ -14,14 +14,6 @@ export async function POST(request: Request) {
     const supabase = createAdminClient();
 
     const body = await request.json();
-    
-    // Log incoming request for debugging
-    logger.info('OC', 'Received create request', {
-      hasName: !!body.name,
-      hasSlug: !!body.slug,
-      hasWorldId: !!body.world_id,
-      totalFields: Object.keys(body).length
-    });
 
     // Validate required fields
     const validationError = validateRequiredFields(body, ['name', 'slug']);

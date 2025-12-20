@@ -9,6 +9,7 @@ import { WorldStorySelector } from '@/components/world/WorldStorySelector';
 import { OCCard } from '@/components/oc/OCCard';
 import { TimelineList } from '@/components/timeline/TimelineList';
 import { LoreCard } from '@/components/lore/LoreCard';
+import { WorldRelationships } from '@/components/world/WorldRelationships';
 import Link from 'next/link';
 
 export async function generateMetadata({
@@ -253,17 +254,23 @@ export default async function WorldDetailPage({
       <WorldDetails world={displayWorld} />
 
       {ocs && ocs.length > 0 && (
-        <section className="mt-12">
-          <h2 className="wiki-section-header">
-            <i className="fas fa-users text-blue-400"></i>
-            Characters
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {ocs.map((oc) => (
-              <OCCard key={oc.id} oc={oc} />
-            ))}
-          </div>
-        </section>
+        <>
+          <section className="mt-12">
+            <h2 className="wiki-section-header">
+              <i className="fas fa-users text-blue-400"></i>
+              Characters
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+              {ocs.map((oc) => (
+                <OCCard key={oc.id} oc={oc} />
+              ))}
+            </div>
+          </section>
+
+          <section className="mt-12">
+            <WorldRelationships ocs={ocs} />
+          </section>
+        </>
       )}
 
       {timelines && timelines.length > 0 && (

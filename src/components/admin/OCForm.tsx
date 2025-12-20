@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { OC, TemplateType, World } from '@/types/oc';
+import type { OC, TemplateType, World, RelationshipType } from '@/types/oc';
+import { RELATIONSHIP_TYPES } from '@/lib/relationships/relationshipTypes';
 import { getTemplates, type TemplateField, type TemplateDefinition } from '@/lib/templates/ocTemplates';
 import { createClient } from '@/lib/supabase/client';
 import { getTemplateTypeFromWorldSlug } from '@/lib/templates/worldTemplateMap';
@@ -514,7 +515,7 @@ function RelationshipEntryInput({
   register: any;
   setValue: any;
   watch: any;
-  defaultValue: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }>;
+  defaultValue: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: RelationshipType }>;
   isSubmitting: boolean;
   label: string;
   enableOCAutocomplete?: boolean;
@@ -552,7 +553,7 @@ function RelationshipEntryInput({
         {fields.map((item, index) => (
           <div key={item.id} className="p-3 sm:p-4 border border-gray-600/60 rounded-lg bg-gray-800/30 space-y-3">
             <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-2">
-              <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <FormLabel htmlFor={`${fieldPath}.${index}.name`} required>
                     Name {enableOCAutocomplete && <span className="text-xs text-gray-400">(search existing OCs)</span>}
@@ -579,6 +580,58 @@ function RelationshipEntryInput({
                       disabled={isSubmitting}
                     />
                   )}
+                </div>
+                <div>
+                  <FormLabel htmlFor={`${fieldPath}.${index}.relationship_type`}>
+                    Relationship Type
+                  </FormLabel>
+                  <Controller
+                    name={`${fieldPath}.${index}.relationship_type`}
+                    control={control}
+                    render={({ field }) => (
+                      <div className="relative">
+                        <select
+                          {...field}
+                          value={field.value || ''}
+                          disabled={isSubmitting}
+                          className="w-full px-4 py-2.5 bg-gray-900/60 border border-gray-500/60 rounded-lg text-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500/70 focus:border-purple-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed appearance-none pr-10"
+                        >
+                          <option value="">Select type...</option>
+                          {RELATIONSHIP_TYPES.map((type) => (
+                            <option key={type.value} value={type.value} className="bg-gray-800">
+                              {type.label}
+                            </option>
+                          ))}
+                        </select>
+                        {field.value && (() => {
+                          const config = RELATIONSHIP_TYPES.find(t => t.value === field.value);
+                          return config ? (
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                              <i className={`${config.icon}`} style={{ color: config.color }}></i>
+                            </div>
+                          ) : null;
+                        })()}
+                        {!field.value && (
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <svg
+                              className="w-5 h-5 text-gray-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 9l-7 7-7-7"
+                              />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  />
                 </div>
                 <div>
                   <FormLabel htmlFor={`${fieldPath}.${index}.relationship`}>
@@ -617,7 +670,7 @@ function RelationshipEntryInput({
         <FormButton
           type="button"
           variant="secondary"
-          onClick={() => append({ name: '', relationship: '', description: '', oc_id: '', oc_slug: '' })}
+          onClick={() => append({ name: '', relationship: '', description: '', oc_id: '', oc_slug: '', relationship_type: undefined })}
           disabled={isSubmitting}
         >
           <i className="fas fa-plus mr-2"></i>
@@ -629,7 +682,7 @@ function RelationshipEntryInput({
 }
 
 // Helper to parse relationship data (handles both old string format and new array format)
-function parseRelationshipData(value: string | null | undefined): Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }> {
+function parseRelationshipData(value: string | null | undefined): Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: RelationshipType }> {
   if (!value) return [];
   
   // Try to parse as JSON array first (new format)
@@ -642,6 +695,7 @@ function parseRelationshipData(value: string | null | undefined): Array<{ name: 
         description: item.description || undefined,
         oc_id: item.oc_id?.trim() || undefined, // Don't use empty strings
         oc_slug: item.oc_slug?.trim() || undefined,
+        relationship_type: item.relationship_type || undefined,
       }));
     }
   } catch {
@@ -753,6 +807,7 @@ const ocSchema = z.object({
           ...item,
           oc_id: item.oc_id?.trim() || undefined, // Convert empty strings to undefined
           oc_slug: item.oc_slug?.trim() || undefined,
+          relationship_type: item.relationship_type || undefined,
         }));
     },
     z.array(z.object({
@@ -761,6 +816,7 @@ const ocSchema = z.object({
       description: z.string().optional(),
       oc_id: z.string().uuid().optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
       oc_slug: z.string().optional(),
+      relationship_type: z.enum(['lovers', 'crush', 'close_friend', 'friend', 'acquaintance', 'dislike', 'hate', 'neutral', 'family', 'rival', 'admire', 'other']).optional(),
     })).optional()
   ),
   friends_allies: z.preprocess(
@@ -772,6 +828,7 @@ const ocSchema = z.object({
           ...item,
           oc_id: item.oc_id?.trim() || undefined,
           oc_slug: item.oc_slug?.trim() || undefined,
+          relationship_type: item.relationship_type || undefined,
         }));
     },
     z.array(z.object({
@@ -780,6 +837,7 @@ const ocSchema = z.object({
       description: z.string().optional(),
       oc_id: z.string().uuid().optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
       oc_slug: z.string().optional(),
+      relationship_type: z.enum(['lovers', 'crush', 'close_friend', 'friend', 'acquaintance', 'dislike', 'hate', 'neutral', 'family', 'rival', 'admire', 'other']).optional(),
     })).optional()
   ),
   rivals_enemies: z.preprocess(
@@ -791,6 +849,7 @@ const ocSchema = z.object({
           ...item,
           oc_id: item.oc_id?.trim() || undefined,
           oc_slug: item.oc_slug?.trim() || undefined,
+          relationship_type: item.relationship_type || undefined,
         }));
     },
     z.array(z.object({
@@ -799,6 +858,7 @@ const ocSchema = z.object({
       description: z.string().optional(),
       oc_id: z.string().uuid().optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
       oc_slug: z.string().optional(),
+      relationship_type: z.enum(['lovers', 'crush', 'close_friend', 'friend', 'acquaintance', 'dislike', 'hate', 'neutral', 'family', 'rival', 'admire', 'other']).optional(),
     })).optional()
   ),
   romantic: z.preprocess(
@@ -810,6 +870,7 @@ const ocSchema = z.object({
           ...item,
           oc_id: item.oc_id?.trim() || undefined,
           oc_slug: item.oc_slug?.trim() || undefined,
+          relationship_type: item.relationship_type || undefined,
         }));
     },
     z.array(z.object({
@@ -818,6 +879,7 @@ const ocSchema = z.object({
       description: z.string().optional(),
       oc_id: z.string().uuid().optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
       oc_slug: z.string().optional(),
+      relationship_type: z.enum(['lovers', 'crush', 'close_friend', 'friend', 'acquaintance', 'dislike', 'hate', 'neutral', 'family', 'rival', 'admire', 'other']).optional(),
     })).optional()
   ),
   other_relationships: z.preprocess(
@@ -829,6 +891,7 @@ const ocSchema = z.object({
           ...item,
           oc_id: item.oc_id?.trim() || undefined,
           oc_slug: item.oc_slug?.trim() || undefined,
+          relationship_type: item.relationship_type || undefined,
         }));
     },
     z.array(z.object({
@@ -837,6 +900,7 @@ const ocSchema = z.object({
       description: z.string().optional(),
       oc_id: z.string().uuid().optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
       oc_slug: z.string().optional(),
+      relationship_type: z.enum(['lovers', 'crush', 'close_friend', 'friend', 'acquaintance', 'dislike', 'hate', 'neutral', 'family', 'rival', 'admire', 'other']).optional(),
     })).optional()
   ),
   
@@ -872,11 +936,11 @@ const ocSchema = z.object({
 type OCFormData = z.infer<typeof ocSchema>;
 
 interface ReverseRelationships {
-  family: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }>;
-  friends_allies: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }>;
-  rivals_enemies: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }>;
-  romantic: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }>;
-  other_relationships: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }>;
+  family: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: RelationshipType }>;
+  friends_allies: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: RelationshipType }>;
+  rivals_enemies: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: RelationshipType }>;
+  romantic: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: RelationshipType }>;
+  other_relationships: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: RelationshipType }>;
 }
 
 interface OCFormProps {
@@ -887,9 +951,9 @@ interface OCFormProps {
 
 // Helper function to merge relationships, avoiding duplicates
 function mergeRelationships(
-  existing: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }>,
-  reverse: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }>
-): Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string }> {
+  existing: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: RelationshipType }>,
+  reverse: Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: RelationshipType }>
+): Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: RelationshipType }> {
   const merged = [...existing];
   const existingIds = new Set(
     existing
@@ -1625,6 +1689,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           description: item.description || undefined,
           oc_id: item.oc_id?.trim() || undefined,
           oc_slug: item.oc_slug?.trim() || undefined,
+          relationship_type: item.relationship_type || undefined,
         })).filter((item: any) => item.name?.trim())) : null,
         friends_allies: data.friends_allies && data.friends_allies.length > 0 ? JSON.stringify(data.friends_allies.map((item: any) => ({
           name: item.name,
@@ -1632,6 +1697,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           description: item.description || undefined,
           oc_id: item.oc_id?.trim() || undefined,
           oc_slug: item.oc_slug?.trim() || undefined,
+          relationship_type: item.relationship_type || undefined,
         })).filter((item: any) => item.name?.trim())) : null,
         rivals_enemies: data.rivals_enemies && data.rivals_enemies.length > 0 ? JSON.stringify(data.rivals_enemies.map((item: any) => ({
           name: item.name,
@@ -1639,6 +1705,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           description: item.description || undefined,
           oc_id: item.oc_id?.trim() || undefined,
           oc_slug: item.oc_slug?.trim() || undefined,
+          relationship_type: item.relationship_type || undefined,
         })).filter((item: any) => item.name?.trim())) : null,
         romantic: data.romantic && data.romantic.length > 0 ? JSON.stringify(data.romantic.map((item: any) => ({
           name: item.name,
@@ -1646,6 +1713,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           description: item.description || undefined,
           oc_id: item.oc_id?.trim() || undefined,
           oc_slug: item.oc_slug?.trim() || undefined,
+          relationship_type: item.relationship_type || undefined,
         })).filter((item: any) => item.name?.trim())) : null,
         other_relationships: data.other_relationships && data.other_relationships.length > 0 ? JSON.stringify(data.other_relationships.map((item: any) => ({
           name: item.name,
@@ -1653,6 +1721,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           description: item.description || undefined,
           oc_id: item.oc_id?.trim() || undefined,
           oc_slug: item.oc_slug?.trim() || undefined,
+          relationship_type: item.relationship_type || undefined,
         })).filter((item: any) => item.name?.trim())) : null,
         // History
         origin: data.origin || null,

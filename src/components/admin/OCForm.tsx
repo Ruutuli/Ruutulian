@@ -29,6 +29,7 @@ import { optionalUuid, optionalUrl } from '@/lib/utils/zodSchemas';
 import { useDropdownPosition } from '@/hooks/useDropdownPosition';
 import { getGoogleDriveImageUrls } from '@/lib/utils/googleDriveImage';
 import { slugify } from '@/lib/utils/slugify';
+import { autoCreateOptions, autoCreateTemplateOptions, autoCreateWorldFieldOptions } from '@/lib/utils/autoCreateOptions';
 
 // Component to preview images from URLs
 function ImagePreview({ url, maxHeight = '200px', className = '' }: { url: string; maxHeight?: string; className?: string }) {
@@ -1491,6 +1492,40 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
     setSuccess(false);
 
     try {
+      // Auto-create dropdown options for custom values before form submission
+      try {
+        // Create options for standard form fields
+        const createdOptions = await autoCreateOptions(data);
+        
+        // Create options for template fields (if template is selected)
+        if (data.template_type && data.template_type !== 'none' && selectedWorld?.oc_templates) {
+          const worldTemplates = selectedWorld.oc_templates as Record<string, { name?: string; fields?: TemplateField[] }>;
+          const template = worldTemplates[data.template_type];
+          if (template?.fields && data.modular_fields) {
+            const templateFields = template.fields.filter(f => f.options);
+            if (templateFields.length > 0) {
+              await autoCreateTemplateOptions(data.modular_fields, templateFields);
+            }
+          }
+        }
+        
+        // Create options for world custom fields
+        if (selectedWorld && data.modular_fields) {
+          const worldFieldDefinitions = getWorldFieldDefinitions(selectedWorld);
+          const fieldsWithOptions = worldFieldDefinitions.filter(f => f.options);
+          if (fieldsWithOptions.length > 0) {
+            await autoCreateWorldFieldOptions(data.modular_fields, fieldsWithOptions);
+          }
+        }
+        
+        if (createdOptions.length > 0) {
+          console.log('[OCForm] Auto-created options:', createdOptions);
+        }
+      } catch (error) {
+        // Log but don't block form submission if option creation fails
+        console.warn('[OCForm] Failed to auto-create some options:', error);
+      }
+
       // Validate slug uniqueness per world (only when creating)
       if (!oc) {
         const supabase = createClient();

@@ -18,7 +18,6 @@ export function AdminNav({ userEmail }: AdminNavProps) {
     { href: '/admin/timelines', label: 'Timelines' },
     { href: '/admin/world-lore', label: 'Lore' },
     { href: '/admin/fields', label: 'Fields' },
-    { href: '/admin/dropdown-options', label: 'Options' },
     { href: '/admin/stats', label: 'Stats' },
   ];
 

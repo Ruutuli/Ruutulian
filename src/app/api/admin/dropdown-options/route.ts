@@ -156,6 +156,11 @@ export async function GET() {
   }
 }
 
+/**
+ * @deprecated This endpoint is deprecated. Options are now auto-created when users enter custom values in forms.
+ * The standalone dropdown options admin page has been removed.
+ * Use POST /api/admin/dropdown-options/[field] to create individual options instead.
+ */
 export async function PUT(request: NextRequest) {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   

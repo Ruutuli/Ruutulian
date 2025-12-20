@@ -20,6 +20,7 @@ import { FormMessage } from './forms/FormMessage';
 import { StoryAliasManager } from './StoryAliasManager';
 import { WorldStorySwitcher } from './WorldStorySwitcher';
 import { optionalString, optionalUrl } from '@/lib/utils/zodSchemas';
+import { autoCreateWorldFieldOptions } from '@/lib/utils/autoCreateOptions';
 
 const worldSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -444,6 +445,21 @@ export function WorldForm({ world }: WorldFormProps) {
   const [isCustomSubmitting, setIsCustomSubmitting] = useState(false);
 
   const onSubmit = async (data: WorldFormData) => {
+    // Auto-create dropdown options for custom values before form submission
+    try {
+      // Create options for world custom fields
+      if (world && data.modular_fields) {
+        const worldFieldDefinitions = fieldDefinitions;
+        const fieldsWithOptions = worldFieldDefinitions.filter(f => f.options);
+        if (fieldsWithOptions.length > 0) {
+          await autoCreateWorldFieldOptions(data.modular_fields, fieldsWithOptions);
+        }
+      }
+    } catch (error) {
+      // Log but don't block form submission if option creation fails
+      console.warn('[WorldForm] Failed to auto-create some options:', error);
+    }
+
     if (world && selectedStoryAliasId) {
       // Custom handling for story data
       setIsCustomSubmitting(true);

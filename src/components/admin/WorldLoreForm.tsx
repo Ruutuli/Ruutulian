@@ -24,6 +24,7 @@ import { FormButton } from './forms/FormButton';
 import { FormMessage } from './forms/FormMessage';
 import { StoryAliasSelector } from './StoryAliasSelector';
 import { optionalUuid, optionalUrl } from '@/lib/utils/zodSchemas';
+import { autoCreateWorldFieldOptions } from '@/lib/utils/autoCreateOptions';
 
 const loreTypes = ['clan', 'organization', 'location', 'religion', 'species', 'technique', 'concept', 'artifact', 'other'] as const;
 
@@ -176,6 +177,20 @@ export function WorldLoreForm({ lore, worldId }: WorldLoreFormProps) {
   }, [watchedWorldId]);
 
   const onSubmit = async (data: WorldLoreFormData) => {
+    // Auto-create dropdown options for custom values before form submission
+    try {
+      // Create options for world custom fields
+      if (data.modular_fields && fieldDefinitions.length > 0) {
+        const fieldsWithOptions = fieldDefinitions.filter(f => f.options);
+        if (fieldsWithOptions.length > 0) {
+          await autoCreateWorldFieldOptions(data.modular_fields, fieldsWithOptions);
+        }
+      }
+    } catch (error) {
+      // Log but don't block form submission if option creation fails
+      console.warn('[WorldLoreForm] Failed to auto-create some options:', error);
+    }
+
     await submit(data);
   };
 

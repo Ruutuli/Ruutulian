@@ -12,7 +12,7 @@ export default async function AdminWorldsPage() {
 
   const { data: worlds } = await supabase
     .from('worlds')
-    .select('id, name, slug, series_type, is_public, story_aliases(id)')
+    .select('id, name, slug, series_type, is_public, header_image_url, icon_url, updated_at, story_aliases(id)')
     .order('name', { ascending: true });
 
   // Transform the data to include story count
@@ -22,6 +22,9 @@ export default async function AdminWorldsPage() {
     slug: world.slug,
     series_type: world.series_type,
     is_public: world.is_public,
+    header_image_url: world.header_image_url,
+    icon_url: world.icon_url,
+    updated_at: world.updated_at,
     story_count: Array.isArray(world.story_aliases) ? world.story_aliases.length : 0,
   })) || [];
 

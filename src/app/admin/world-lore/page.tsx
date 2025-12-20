@@ -41,18 +41,6 @@ export default async function AdminWorldLorePage({
 
   const { data: loreEntries } = await query.order('name', { ascending: true });
 
-  // Filter by search on client side
-  let filteredEntries = loreEntries || [];
-  if (search) {
-    const searchLower = search.toLowerCase();
-    filteredEntries = filteredEntries.filter(
-      (entry) =>
-        entry.name.toLowerCase().includes(searchLower) ||
-        entry.description?.toLowerCase().includes(searchLower) ||
-        entry.description_markdown?.toLowerCase().includes(searchLower)
-    );
-  }
-
   // Get worlds for filters
   const { data: worlds } = await supabase
     .from('worlds')
@@ -72,7 +60,7 @@ export default async function AdminWorldLorePage({
       </div>
 
       <WorldLoreList
-        loreEntries={filteredEntries}
+        loreEntries={loreEntries || []}
         worlds={worlds || []}
         initialFilters={{
           worldId,

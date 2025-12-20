@@ -7,26 +7,35 @@ export default async function AdminTimelinesPage() {
 
   const { data: timelines } = await supabase
     .from('timelines')
-    .select('id, name, world:worlds(name)')
+    .select('id, name, updated_at, world:worlds(name)')
     .order('name', { ascending: true });
 
-  // Transform the data to ensure world is a single object or null
-  const transformedTimelines = timelines?.map((timeline) => {
-    const world = timeline.world as { name: string } | { name: string }[] | null;
-    let worldValue: { name: string } | null = null;
-    
-    if (Array.isArray(world) && world.length > 0) {
-      worldValue = { name: world[0].name };
-    } else if (world && !Array.isArray(world)) {
-      worldValue = { name: world.name };
-    }
-    
-    return {
-      id: timeline.id,
-      name: timeline.name,
-      world: worldValue,
-    };
-  }) || [];
+  // Get event counts for each timeline
+  const timelinesWithEventCounts = await Promise.all(
+    (timelines || []).map(async (timeline) => {
+      const { count } = await supabase
+        .from('timeline_event_timelines')
+        .select('*', { count: 'exact', head: true })
+        .eq('timeline_id', timeline.id);
+
+      const world = timeline.world as { name: string } | { name: string }[] | null;
+      let worldValue: { name: string } | null = null;
+      
+      if (Array.isArray(world) && world.length > 0) {
+        worldValue = { name: world[0].name };
+      } else if (world && !Array.isArray(world)) {
+        worldValue = { name: world.name };
+      }
+      
+      return {
+        id: timeline.id,
+        name: timeline.name,
+        updated_at: timeline.updated_at,
+        world: worldValue,
+        event_count: count || 0,
+      };
+    })
+  );
 
   return (
     <div>
@@ -40,7 +49,7 @@ export default async function AdminTimelinesPage() {
         </Link>
       </div>
 
-      <TimelinesList timelines={transformedTimelines} />
+      <TimelinesList timelines={timelinesWithEventCounts} />
     </div>
   );
 }

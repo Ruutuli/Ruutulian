@@ -1,166 +1,175 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { TimelineCard } from './TimelineCard';
+import { FilterContainer } from '@/components/filters/FilterContainer';
+import { FilterSelect } from '@/components/filters/FilterSelect';
 
 interface Timeline {
   id: string;
   name: string;
   world: { name: string } | null;
+  event_count?: number;
+  updated_at?: string;
 }
 
 interface TimelinesListProps {
   timelines: Timeline[];
 }
 
+type SortOption = 'name' | 'world' | 'updated';
+
 export function TimelinesList({ timelines }: TimelinesListProps) {
-  const router = useRouter();
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('name');
+  const [worldFilter, setWorldFilter] = useState<string>('');
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone and will completely remove this timeline from the database.`)) {
-      return;
-    }
+  // Filter and sort timelines
+  const filteredAndSortedTimelines = useMemo(() => {
+    let filtered = timelines;
 
-    setDeletingId(id);
-    try {
-      const response = await fetch(`/api/admin/timelines/${id}`, {
-        method: 'DELETE',
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((timeline) => {
+        const name = timeline.name?.toLowerCase() || '';
+        const worldName = timeline.world?.name?.toLowerCase() || '';
+
+        return (
+          name.includes(query) ||
+          worldName.includes(query)
+        );
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to delete timeline');
-      }
-
-      router.refresh();
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to delete timeline');
-    } finally {
-      setDeletingId(null);
     }
+
+    // Apply world filter
+    if (worldFilter) {
+      filtered = filtered.filter(timeline => 
+        timeline.world?.name === worldFilter
+      );
+    }
+
+    // Apply sorting
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'world':
+          const aWorld = a.world?.name || '';
+          const bWorld = b.world?.name || '';
+          return aWorld.localeCompare(bWorld);
+        case 'updated':
+          const aUpdated = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+          const bUpdated = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+          return bUpdated - aUpdated;
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [timelines, searchQuery, sortBy, worldFilter]);
+
+  // Get unique worlds for filter
+  const uniqueWorlds = useMemo(() => {
+    const worlds = new Set<string>();
+    timelines.forEach(timeline => {
+      if (timeline.world?.name) {
+        worlds.add(timeline.world.name);
+      }
+    });
+    return Array.from(worlds).sort();
+  }, [timelines]);
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setWorldFilter('');
   };
 
-  if (!timelines || timelines.length === 0) {
-    return (
-      <div className="bg-gray-700/90 rounded-lg shadow-lg p-12 text-center border border-gray-600/70">
-        <p className="text-gray-400 mb-4">No timelines yet.</p>
-        <Link
-          href="/admin/timelines/new"
-          className="text-blue-400 hover:text-blue-300"
-        >
-          Create your first timeline →
-        </Link>
-      </div>
-    );
-  }
+  const hasActiveFilters = !!(searchQuery || worldFilter);
 
   return (
     <>
-      {/* Desktop Table View */}
-      <div className="hidden md:block bg-gray-700/90 rounded-lg shadow-lg overflow-hidden border border-gray-600/70">
-        <table className="min-w-full divide-y divide-gray-700">
-          <thead className="bg-gray-600/80">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-200 uppercase tracking-wider">
-                Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-200 uppercase tracking-wider">
-                World
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-200 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-gray-700/50 divide-y divide-gray-600/50">
-            {timelines.map((timeline) => (
-              <tr key={timeline.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-100">{timeline.name}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                  {timeline.world ? (timeline.world as any).name : '—'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <Link
-                    href={`/admin/timelines/${timeline.id}`}
-                    className="text-blue-400 hover:text-blue-300 mr-4"
-                  >
-                    Edit
-                  </Link>
-                  <Link
-                    href={`/admin/timelines/${timeline.id}/events`}
-                    className="text-blue-400 hover:text-blue-300 mr-4"
-                  >
-                    Events
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(timeline.id, timeline.name)}
-                    disabled={deletingId === timeline.id}
-                    className="text-red-400 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {deletingId === timeline.id ? 'Deleting...' : 'Delete'}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Search and Filters */}
+      <div className="mb-6 space-y-4">
+        <div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by name or world..."
+            className="w-full px-4 py-2 bg-gray-700/90 border border-gray-600/70 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+
+        <FilterContainer
+          onClear={clearFilters}
+          hasActiveFilters={hasActiveFilters}
+          clearColor="purple"
+        >
+          <FilterSelect
+            label="World"
+            value={worldFilter}
+            onChange={(value) => setWorldFilter(value)}
+            options={[
+              { value: '', label: 'All Worlds' },
+              ...uniqueWorlds.map((world) => ({ value: world, label: world })),
+            ]}
+            focusColor="purple"
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Sort by
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="name">Name</option>
+              <option value="world">World</option>
+              <option value="updated">Last Updated</option>
+            </select>
+          </div>
+        </FilterContainer>
+
+        <div className="text-sm text-gray-400">
+          Showing {filteredAndSortedTimelines.length} of {timelines.length} timelines
+        </div>
       </div>
 
-      {/* Mobile Card View */}
-      <div className="md:hidden space-y-4">
-        {timelines.map((timeline) => (
-          <div
-            key={timeline.id}
-            className="bg-gray-700/90 rounded-lg shadow-lg border border-gray-600/70 p-4"
+      {/* Cards Grid */}
+      {filteredAndSortedTimelines.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredAndSortedTimelines.map((timeline) => (
+            <TimelineCard key={timeline.id} timeline={timeline} />
+          ))}
+        </div>
+      ) : searchQuery || worldFilter ? (
+        <div className="bg-gray-700/90 rounded-lg shadow-lg p-12 text-center border border-gray-600/70">
+          <p className="text-gray-400 mb-4">
+            No timelines found matching your criteria.
+          </p>
+          <button
+            onClick={clearFilters}
+            className="text-blue-400 hover:text-blue-300"
           >
-            <div className="mb-3">
-              <div className="text-base font-medium text-gray-100 mb-2">{timeline.name}</div>
-              <div className="text-sm text-gray-400">
-                <span className="text-gray-500">World: </span>
-                {timeline.world ? (timeline.world as any).name : '—'}
-              </div>
-            </div>
-            <div className="pt-3 border-t border-gray-600/50 flex gap-4">
-              <Link
-                href={`/admin/timelines/${timeline.id}`}
-                className="text-blue-400 hover:text-blue-300 text-sm font-medium"
-              >
-                Edit →
-              </Link>
-              <Link
-                href={`/admin/timelines/${timeline.id}/events`}
-                className="text-blue-400 hover:text-blue-300 text-sm font-medium"
-              >
-                Events →
-              </Link>
-              <button
-                onClick={() => handleDelete(timeline.id, timeline.name)}
-                disabled={deletingId === timeline.id}
-                className="text-red-400 hover:text-red-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {deletingId === timeline.id ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+            Clear filters
+          </button>
+        </div>
+      ) : (
+        <div className="bg-gray-700/90 rounded-lg shadow-lg p-12 text-center border border-gray-600/70">
+          <p className="text-gray-400 mb-4">No timelines yet.</p>
+          <Link
+            href="/admin/timelines/new"
+            className="text-blue-400 hover:text-blue-300"
+          >
+            Create your first timeline →
+          </Link>
+        </div>
+      )}
     </>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

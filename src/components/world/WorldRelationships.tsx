@@ -2,8 +2,10 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { OC } from '@/types/oc';
 import { getRelationshipTypeConfig, RELATIONSHIP_TYPES } from '@/lib/relationships/relationshipTypes';
+import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
 
 interface RelationshipEntry {
   name: string;
@@ -28,6 +30,7 @@ interface RelationshipNode {
   x: number;
   y: number;
   isExternal?: boolean; // True if character is not in database
+  image_url?: string; // Image URL for the relationship/character
 }
 
 interface RelationshipEdge {
@@ -59,6 +62,8 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const svgRef = useRef<SVGSVGElement>(null);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const wheelHandlerRef = useRef<((e: WheelEvent) => void) | null>(null);
 
   // Build relationship graph
   const { nodes, edges, allRelationships, viewBox } = useMemo(() => {
@@ -75,6 +80,9 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
     }> = [];
 
     // Create nodes for all OCs in database
+    // Also track relationship image URLs for each OC
+    const ocImageUrls = new Map<string, string>();
+    
     ocs.forEach((oc) => {
       nodeMap.set(oc.id, {
         id: oc.id,
@@ -83,6 +91,7 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
         x: 0,
         y: 0,
         isExternal: false,
+        image_url: oc.image_url || undefined,
       });
     });
 
@@ -127,6 +136,14 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
               relationship_type: entry.relationship_type,
               image_url: entry.image_url,
             });
+            
+            // Store relationship image_url for the target OC if available
+            if (entry.oc_id && entry.image_url) {
+              const targetNode = nodeMap.get(entry.oc_id);
+              if (targetNode && !targetNode.image_url) {
+                targetNode.image_url = entry.image_url;
+              }
+            }
           } else {
             // External relationship (not linked to an OC in database)
             // Create a unique ID for external characters based on name
@@ -141,7 +158,14 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
                 x: 0,
                 y: 0,
                 isExternal: true,
+                image_url: entry.image_url || undefined,
               });
+            } else {
+              // Update image_url if this relationship has one and the node doesn't
+              const existingNode = externalNodeMap.get(externalId);
+              if (existingNode && entry.image_url && !existingNode.image_url) {
+                existingNode.image_url = entry.image_url;
+              }
             }
             
             // Create edge to external character
@@ -165,6 +189,7 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
               type: category,
               relationship: entry.relationship,
               relationship_type: entry.relationship_type,
+              image_url: entry.image_url,
             });
           }
         });
@@ -245,11 +270,63 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
     setIsDragging(false);
   };
 
-  const handleWheel = (e: React.WheelEvent<SVGSVGElement>) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setZoom((prev) => Math.max(0.5, Math.min(3, prev * delta)));
-  };
+  // Set up wheel listener for zoom when in chart mode
+  useEffect(() => {
+    const container = chartContainerRef.current;
+    
+    // Only set up listener when in chart view mode
+    if (viewMode !== 'chart') {
+      // Clean up if switching away from chart mode
+      if (wheelHandlerRef.current && container) {
+        container.removeEventListener('wheel', wheelHandlerRef.current);
+        wheelHandlerRef.current = null;
+      }
+      return;
+    }
+    
+    // Wait for container to be available
+    if (!container) {
+      // Use requestAnimationFrame to check again after render
+      const rafId = requestAnimationFrame(() => {
+        const retryContainer = chartContainerRef.current;
+        if (retryContainer && viewMode === 'chart' && !wheelHandlerRef.current) {
+          const handleWheelNative = (e: WheelEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            setZoom((prev) => Math.max(0.5, Math.min(3, prev * delta)));
+          };
+          wheelHandlerRef.current = handleWheelNative;
+          retryContainer.addEventListener('wheel', handleWheelNative, { passive: false });
+        }
+      });
+      return () => cancelAnimationFrame(rafId);
+    }
+    
+    // Clean up existing listener if any
+    if (wheelHandlerRef.current) {
+      container.removeEventListener('wheel', wheelHandlerRef.current);
+      wheelHandlerRef.current = null;
+    }
+    
+    // Set up new listener
+    const handleWheelNative = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const delta = e.deltaY > 0 ? 0.9 : 1.1;
+      setZoom((prev) => Math.max(0.5, Math.min(3, prev * delta)));
+    };
+    
+    wheelHandlerRef.current = handleWheelNative;
+    container.addEventListener('wheel', handleWheelNative, { passive: false });
+    
+    return () => {
+      if (container && wheelHandlerRef.current) {
+        container.removeEventListener('wheel', wheelHandlerRef.current);
+        wheelHandlerRef.current = null;
+      }
+    };
+  }, [viewMode]);
 
   const resetView = () => {
     setPan({ x: 0, y: 0 });
@@ -306,7 +383,21 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
                     href={`/ocs/${oc.slug}`}
                     className="hover:text-purple-400 transition-colors flex items-center gap-1.5"
                   >
-                    <i className="fas fa-user text-purple-400 text-xs"></i>
+                    {oc.image_url && (
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-gray-600/50">
+                        <Image
+                          src={convertGoogleDriveUrl(oc.image_url)}
+                          alt={oc.name}
+                          width={40}
+                          height={40}
+                          className="w-full h-full object-cover"
+                          unoptimized
+                        />
+                      </div>
+                    )}
+                    {!oc.image_url && (
+                      <i className="fas fa-user text-purple-400 text-xs"></i>
+                    )}
                     {oc.name}
                   </Link>
                   <span className="text-xs text-gray-500 font-normal">({ocRelationships.length})</span>
@@ -321,6 +412,18 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
                         className="group flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-br from-gray-800/60 to-gray-800/40 rounded-md border border-gray-700/40 hover:border-gray-600/60 transition-all text-xs"
                         title={rel.relationship || `${rel.to.name} - ${relTypeConfig.label}`}
                       >
+                        {rel.image_url && (
+                          <div className="flex-shrink-0 w-6 h-6 rounded-full overflow-hidden border border-gray-600/50">
+                            <Image
+                              src={convertGoogleDriveUrl(rel.image_url)}
+                              alt={rel.to.name}
+                              width={24}
+                              height={24}
+                              className="w-full h-full object-cover"
+                              unoptimized
+                            />
+                          </div>
+                        )}
                         <i
                           className={`${relTypeConfig.icon} text-xs flex-shrink-0`}
                           style={{ color: relTypeConfig.color }}
@@ -407,6 +510,7 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
               </div>
 
               <div 
+                ref={chartContainerRef}
                 className="absolute inset-0 overflow-hidden"
                 onMouseDown={(e) => {
                   if (e.button === 0) {
@@ -424,11 +528,6 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
                 }}
                 onMouseUp={() => setIsDragging(false)}
                 onMouseLeave={() => setIsDragging(false)}
-                onWheel={(e) => {
-                  e.preventDefault();
-                  const delta = e.deltaY > 0 ? 0.9 : 1.1;
-                  setZoom((prev) => Math.max(0.5, Math.min(3, prev * delta)));
-                }}
                 style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
               >
                 <svg 
@@ -546,8 +645,32 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
                           transform: `scale(${node.x === 0 && node.y === 0 ? 0 : 1})`,
                         } : {}}
                       />
-                      {/* External indicator icon */}
-                      {isExternal && (
+                      {/* Relationship image - circular clip inside the node */}
+                      {node.image_url && (
+                        <>
+                          <defs>
+                            <clipPath id={`image-clip-${node.id}`}>
+                              <circle
+                                cx={node.x}
+                                cy={node.y}
+                                r={isExternal ? 18 : 21}
+                              />
+                            </clipPath>
+                          </defs>
+                          <image
+                            href={convertGoogleDriveUrl(node.image_url)}
+                            x={node.x - (isExternal ? 18 : 21)}
+                            y={node.y - (isExternal ? 18 : 21)}
+                            width={(isExternal ? 18 : 21) * 2}
+                            height={(isExternal ? 18 : 21) * 2}
+                            clipPath={`url(#image-clip-${node.id})`}
+                            className="pointer-events-none"
+                            preserveAspectRatio="xMidYMid slice"
+                          />
+                        </>
+                      )}
+                      {/* External indicator icon - only show if no image */}
+                      {isExternal && !node.image_url && (
                         <text
                           x={node.x}
                           y={node.y + 5}

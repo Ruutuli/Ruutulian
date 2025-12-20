@@ -1719,6 +1719,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           oc_id: item.oc_id?.trim() || undefined,
           oc_slug: item.oc_slug?.trim() || undefined,
           relationship_type: item.relationship_type || undefined,
+          image_url: item.image_url?.trim() || undefined,
         })).filter((item: any) => item.name?.trim())) : null,
         friends_allies: data.friends_allies && data.friends_allies.length > 0 ? JSON.stringify(data.friends_allies.map((item: any) => ({
           name: item.name,
@@ -1727,6 +1728,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           oc_id: item.oc_id?.trim() || undefined,
           oc_slug: item.oc_slug?.trim() || undefined,
           relationship_type: item.relationship_type || undefined,
+          image_url: item.image_url?.trim() || undefined,
         })).filter((item: any) => item.name?.trim())) : null,
         rivals_enemies: data.rivals_enemies && data.rivals_enemies.length > 0 ? JSON.stringify(data.rivals_enemies.map((item: any) => ({
           name: item.name,
@@ -1735,6 +1737,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           oc_id: item.oc_id?.trim() || undefined,
           oc_slug: item.oc_slug?.trim() || undefined,
           relationship_type: item.relationship_type || undefined,
+          image_url: item.image_url?.trim() || undefined,
         })).filter((item: any) => item.name?.trim())) : null,
         romantic: data.romantic && data.romantic.length > 0 ? JSON.stringify(data.romantic.map((item: any) => ({
           name: item.name,
@@ -1743,6 +1746,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           oc_id: item.oc_id?.trim() || undefined,
           oc_slug: item.oc_slug?.trim() || undefined,
           relationship_type: item.relationship_type || undefined,
+          image_url: item.image_url?.trim() || undefined,
         })).filter((item: any) => item.name?.trim())) : null,
         other_relationships: data.other_relationships && data.other_relationships.length > 0 ? JSON.stringify(data.other_relationships.map((item: any) => ({
           name: item.name,
@@ -1751,6 +1755,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           oc_id: item.oc_id?.trim() || undefined,
           oc_slug: item.oc_slug?.trim() || undefined,
           relationship_type: item.relationship_type || undefined,
+          image_url: item.image_url?.trim() || undefined,
         })).filter((item: any) => item.name?.trim())) : null,
         // History
         origin: data.origin || null,

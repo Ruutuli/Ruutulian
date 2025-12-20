@@ -1129,7 +1129,7 @@ export default async function OCDetailPage({
             {/* Relationships Section */}
             {(() => {
               // Helper to parse relationship data (handles both old string format and new JSON array format)
-              const parseRelationships = (value: string | null | undefined): Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: string }> => {
+              const parseRelationships = (value: string | null | undefined): Array<{ name: string; relationship?: string; description?: string; oc_id?: string; oc_slug?: string; relationship_type?: string; image_url?: string }> => {
                 if (!value) return [];
                 try {
                   const parsed = JSON.parse(value);
@@ -1178,6 +1178,18 @@ export default async function OCDetailPage({
                               <div className="flex items-start justify-between gap-4 mb-3">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                    {entry.image_url && (
+                                      <div className="flex-shrink-0 w-[100px] h-[100px] rounded-full overflow-hidden border-2 border-gray-600/50">
+                                        <Image
+                                          src={convertGoogleDriveUrl(entry.image_url)}
+                                          alt={entry.name}
+                                          width={100}
+                                          height={100}
+                                          className="w-full h-full object-cover"
+                                          unoptimized
+                                        />
+                                      </div>
+                                    )}
                                     <i className={`${relTypeConfig.icon} text-lg`} style={{ color: relTypeConfig.color }} aria-hidden="true" suppressHydrationWarning></i>
                                     <h4 className="font-bold text-blue-300 text-xl group-hover:text-blue-200 transition-colors">
                                       {entry.oc_slug ? (
@@ -1241,6 +1253,18 @@ export default async function OCDetailPage({
                               <div className="flex items-start justify-between gap-4 mb-3">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                    {entry.image_url && (
+                                      <div className="flex-shrink-0 w-[100px] h-[100px] rounded-full overflow-hidden border-2 border-gray-600/50">
+                                        <Image
+                                          src={convertGoogleDriveUrl(entry.image_url)}
+                                          alt={entry.name}
+                                          width={100}
+                                          height={100}
+                                          className="w-full h-full object-cover"
+                                          unoptimized
+                                        />
+                                      </div>
+                                    )}
                                     <i className={`${relTypeConfig.icon} text-lg`} style={{ color: relTypeConfig.color }} aria-hidden="true" suppressHydrationWarning></i>
                                     <h4 className="font-bold text-green-300 text-xl group-hover:text-green-200 transition-colors">
                                       {entry.oc_slug ? (
@@ -1303,6 +1327,18 @@ export default async function OCDetailPage({
                               <div className="flex items-start justify-between gap-4 mb-3">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                    {entry.image_url && (
+                                      <div className="flex-shrink-0 w-[100px] h-[100px] rounded-full overflow-hidden border-2 border-gray-600/50">
+                                        <Image
+                                          src={convertGoogleDriveUrl(entry.image_url)}
+                                          alt={entry.name}
+                                          width={100}
+                                          height={100}
+                                          className="w-full h-full object-cover"
+                                          unoptimized
+                                        />
+                                      </div>
+                                    )}
                                     <i className={`${relTypeConfig.icon} text-lg`} style={{ color: relTypeConfig.color }} aria-hidden="true" suppressHydrationWarning></i>
                                     <h4 className="font-bold text-red-300 text-xl group-hover:text-red-200 transition-colors">
                                       {entry.oc_slug ? (
@@ -1365,6 +1401,18 @@ export default async function OCDetailPage({
                               <div className="flex items-start justify-between gap-4 mb-3">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                    {entry.image_url && (
+                                      <div className="flex-shrink-0 w-[100px] h-[100px] rounded-full overflow-hidden border-2 border-gray-600/50">
+                                        <Image
+                                          src={convertGoogleDriveUrl(entry.image_url)}
+                                          alt={entry.name}
+                                          width={100}
+                                          height={100}
+                                          className="w-full h-full object-cover"
+                                          unoptimized
+                                        />
+                                      </div>
+                                    )}
                                     <i className={`${relTypeConfig.icon} text-lg`} style={{ color: relTypeConfig.color }} aria-hidden="true" suppressHydrationWarning></i>
                                     <h4 className="font-bold text-pink-300 text-xl group-hover:text-pink-200 transition-colors">
                                       {entry.oc_slug ? (
@@ -1427,6 +1475,18 @@ export default async function OCDetailPage({
                               <div className="flex items-start justify-between gap-4 mb-3">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                    {entry.image_url && (
+                                      <div className="flex-shrink-0 w-[100px] h-[100px] rounded-full overflow-hidden border-2 border-gray-600/50">
+                                        <Image
+                                          src={convertGoogleDriveUrl(entry.image_url)}
+                                          alt={entry.name}
+                                          width={100}
+                                          height={100}
+                                          className="w-full h-full object-cover"
+                                          unoptimized
+                                        />
+                                      </div>
+                                    )}
                                     <i className={`${relTypeConfig.icon} text-lg`} style={{ color: relTypeConfig.color }} aria-hidden="true" suppressHydrationWarning></i>
                                     <h4 className="font-bold text-blue-300 text-xl group-hover:text-blue-200 transition-colors">
                                       {entry.oc_slug ? (

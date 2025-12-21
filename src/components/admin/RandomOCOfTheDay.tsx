@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import type { OC } from '@/types/oc';
 
@@ -174,7 +174,12 @@ interface RandomOCOfTheDayProps {
 }
 
 // Function to select a random OC from the pool
-function selectRandomOC(progressItems: OCProgressItem[], useDateSeed: boolean = false): OCProgressItem {
+function selectRandomOC(progressItems: OCProgressItem[], useDateSeed: boolean = false): OCProgressItem | null {
+  // Safety check: if no items, return null
+  if (!progressItems || progressItems.length === 0) {
+    return null;
+  }
+  
   // Prefer OCs with lower completion (prioritize ones that need work)
   // But still allow some randomness
   const sortedByProgress = [...progressItems].sort((a, b) => a.percentage - b.percentage);
@@ -183,6 +188,11 @@ function selectRandomOC(progressItems: OCProgressItem[], useDateSeed: boolean = 
   const needsWork = sortedByProgress.filter(item => item.percentage < 80);
   const pool = needsWork.length > 0 ? needsWork : sortedByProgress;
   
+  // Safety check: ensure pool is not empty
+  if (pool.length === 0) {
+    return sortedByProgress[0] || null;
+  }
+  
   // Use date-based seed for initial selection, or random for reshuffle
   const seed = useDateSeed ? getDaySeed() : Date.now() + Math.random();
   const random = seededRandom(seed);
@@ -190,8 +200,17 @@ function selectRandomOC(progressItems: OCProgressItem[], useDateSeed: boolean = 
   // Pick a random OC from the pool (weighted towards lower completion)
   // Use first 30% of the pool (lowest completion) with higher probability
   const lowCompletionPool = pool.slice(0, Math.max(1, Math.floor(pool.length * 0.3)));
-  const randomIndex = Math.floor(random() * (random() < 0.7 ? lowCompletionPool.length : pool.length));
-  return random() < 0.7 ? lowCompletionPool[randomIndex] : pool[randomIndex];
+  const useLowPool = random() < 0.7;
+  const targetPool = useLowPool ? lowCompletionPool : pool;
+  const randomIndex = Math.floor(random() * targetPool.length);
+  
+  // Safety check: ensure index is valid
+  if (randomIndex >= 0 && randomIndex < targetPool.length) {
+    return targetPool[randomIndex];
+  }
+  
+  // Fallback to first item if something goes wrong
+  return pool[0] || sortedByProgress[0] || null;
 }
 
 export function RandomOCOfTheDay({ ocs }: RandomOCOfTheDayProps) {
@@ -203,12 +222,33 @@ export function RandomOCOfTheDay({ ocs }: RandomOCOfTheDayProps) {
   const progressItems = useMemo(() => ocs.map(calculateOCProgress), [ocs]);
   
   // Initialize with date-based seed, then allow reshuffling
-  const [selectedItem, setSelectedItem] = useState(() => selectRandomOC(progressItems, true));
+  const [selectedItem, setSelectedItem] = useState<OCProgressItem | null>(() => {
+    const item = selectRandomOC(progressItems, true);
+    return item;
+  });
+  
+  // Ensure we have a selected item (fallback if initialization failed)
+  useEffect(() => {
+    if (!selectedItem && progressItems.length > 0) {
+      const fallbackItem = selectRandomOC(progressItems, true);
+      if (fallbackItem) {
+        setSelectedItem(fallbackItem);
+      }
+    }
+  }, [selectedItem, progressItems]);
   
   // Reshuffle function
   const handleReshuffle = useCallback(() => {
-    setSelectedItem(selectRandomOC(progressItems, false));
+    const newItem = selectRandomOC(progressItems, false);
+    if (newItem) {
+      setSelectedItem(newItem);
+    }
   }, [progressItems]);
+  
+  // If no item is selected, don't render
+  if (!selectedItem) {
+    return null;
+  }
 
   const getProgressColor = (percentage: number): string => {
     if (percentage >= 80) return 'bg-green-500';

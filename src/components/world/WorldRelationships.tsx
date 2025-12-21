@@ -40,6 +40,7 @@ interface RelationshipEdge {
   relationship?: string;
   relationship_type?: string;
   color: string;
+  isBidirectional?: boolean; // True if both characters have each other in their relationships
 }
 
 function parseRelationships(value: string | null | undefined): RelationshipEntry[] {
@@ -53,6 +54,166 @@ function parseRelationships(value: string | null | undefined): RelationshipEntry
     return [];
   }
   return [];
+}
+
+// Calculate indirect relationships by finding paths in the relationship graph
+// This doesn't parse relationship labels - it just finds connections through the graph
+function calculateIndirectRelationships(
+  ocs: OC[],
+  directRelationships: Array<{
+    from: OC;
+    to: { name: string; oc_id?: string; oc_slug?: string };
+    type: string;
+    relationship?: string;
+    relationship_type?: string;
+    image_url?: string;
+  }>,
+  nodeMap: Map<string, RelationshipNode>
+): Array<{
+  from: OC;
+  to: { name: string; oc_id?: string; oc_slug?: string };
+  type: string;
+  relationship?: string;
+  relationship_type?: string;
+  image_url?: string;
+  isIndirect?: boolean;
+}> {
+  const indirectRelationships: Array<{
+    from: OC;
+    to: { name: string; oc_id?: string; oc_slug?: string };
+    type: string;
+    relationship?: string;
+    relationship_type?: string;
+    image_url?: string;
+    isIndirect?: boolean;
+  }> = [];
+
+  // Build a graph: map from OC ID to array of connected OC IDs
+  const relationshipGraph = new Map<string, Set<string>>();
+  const relationshipDetails = new Map<string, {
+    from: OC;
+    to: { name: string; oc_id?: string; oc_slug?: string };
+    type: string;
+    relationship?: string;
+    relationship_type?: string;
+    image_url?: string;
+  }>();
+
+  // Initialize graph for all OCs
+  ocs.forEach(oc => {
+    relationshipGraph.set(oc.id, new Set());
+  });
+
+  // Build the graph from direct relationships
+  directRelationships.forEach(rel => {
+    if (rel.from.id && rel.to.oc_id) {
+      // Check if both nodes exist in our graph
+      const fromExists = relationshipGraph.has(rel.from.id);
+      const toExists = relationshipGraph.has(rel.to.oc_id);
+      
+      if (fromExists && toExists) {
+        // Add edge in both directions (relationships are bidirectional for graph traversal)
+        relationshipGraph.get(rel.from.id)!.add(rel.to.oc_id);
+        relationshipGraph.get(rel.to.oc_id)!.add(rel.from.id);
+        
+        // Store relationship details
+        const key = `${rel.from.id}-${rel.to.oc_id}`;
+        const reverseKey = `${rel.to.oc_id}-${rel.from.id}`;
+        relationshipDetails.set(key, rel);
+        relationshipDetails.set(reverseKey, rel);
+      }
+    }
+  });
+
+  // Helper to find OC by ID
+  const findOC = (id: string): OC | undefined => {
+    return ocs.find(oc => oc.id === id);
+  };
+
+  // For each OC, find all characters reachable through 2 hops (indirect relationships)
+  ocs.forEach(oc => {
+    const directConnections = relationshipGraph.get(oc.id) || new Set();
+    const visited = new Set<string>([oc.id]);
+    const indirectConnections = new Set<string>();
+
+    // For each direct connection, find their connections (2-hop paths)
+    directConnections.forEach(intermediateId => {
+      visited.add(intermediateId);
+      const intermediateConnections = relationshipGraph.get(intermediateId) || new Set();
+      
+      intermediateConnections.forEach(targetId => {
+        // Skip if:
+        // - It's the original OC
+        // - It's already a direct connection
+        // - We've already processed this indirect connection
+        if (targetId === oc.id) return;
+        if (directConnections.has(targetId)) return;
+        if (indirectConnections.has(targetId)) return;
+        
+        indirectConnections.add(targetId);
+      });
+    });
+
+    // Create indirect relationships for all found connections
+    indirectConnections.forEach(targetId => {
+      const targetOC = findOC(targetId);
+      if (!targetOC) return;
+
+      // Find the intermediate connection to get relationship details
+      let foundIntermediate: string | null = null;
+      directConnections.forEach(intermediateId => {
+        const intermediateConnections = relationshipGraph.get(intermediateId) || new Set();
+        if (intermediateConnections.has(targetId)) {
+          foundIntermediate = intermediateId;
+        }
+      });
+
+      if (foundIntermediate) {
+        // Get relationship details from the intermediate connection
+        // Check both directions since relationships can be stored either way
+        const targetRel = directRelationships.find(
+          rel => (rel.from.id === foundIntermediate && rel.to.oc_id === targetId) ||
+                 (rel.from.id === targetId && rel.to.oc_id === foundIntermediate)
+        );
+
+        if (targetRel) {
+          // Get the target OC details
+          const targetOC = findOC(targetId);
+          if (!targetOC) return;
+
+          // Determine the target name - if the relationship goes from intermediate to target,
+          // use targetRel.to.name, otherwise use targetRel.from.name
+          let targetName: string;
+          if (targetRel.from.id === foundIntermediate && targetRel.to.oc_id === targetId) {
+            targetName = targetRel.to.name;
+          } else {
+            targetName = targetRel.from.name;
+          }
+
+          // Use the relationship type from the target relationship
+          // or default to 'other' if not available
+          const relationshipType = targetRel.relationship_type || 'other';
+          const category = targetRel.type || 'other_relationships';
+
+          indirectRelationships.push({
+            from: oc,
+            to: {
+              name: targetName,
+              oc_id: targetId,
+              oc_slug: targetOC.slug || undefined,
+            },
+            type: category,
+            relationship: undefined, // Don't label indirect relationships
+            relationship_type: relationshipType,
+            image_url: targetRel.image_url || targetOC.image_url || undefined,
+            isIndirect: true,
+          });
+        }
+      }
+    });
+  });
+
+  return indirectRelationships;
 }
 
 export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
@@ -95,6 +256,30 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
       });
     });
 
+    // First pass: collect all relationships to detect mutual ones
+    const relationshipPairs = new Map<string, Set<string>>();
+    ocs.forEach((oc) => {
+      const allRelTypes = [
+        { data: oc.family, category: 'family' },
+        { data: oc.friends_allies, category: 'friends_allies' },
+        { data: oc.rivals_enemies, category: 'rivals_enemies' },
+        { data: oc.romantic, category: 'romantic' },
+        { data: oc.other_relationships, category: 'other_relationships' },
+      ];
+
+      allRelTypes.forEach(({ data, category }) => {
+        const entries = parseRelationships(data);
+        entries.forEach((entry) => {
+          if (entry.oc_id && nodeMap.has(entry.oc_id)) {
+            if (!relationshipPairs.has(oc.id)) {
+              relationshipPairs.set(oc.id, new Set());
+            }
+            relationshipPairs.get(oc.id)!.add(entry.oc_id);
+          }
+        });
+      });
+    });
+
     // Parse relationships and create edges/nodes
     ocs.forEach((oc) => {
       const allRelTypes = [
@@ -113,6 +298,9 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
             const edgeKey = `${oc.id}-${entry.oc_id}`;
             const reverseKey = `${entry.oc_id}-${oc.id}`;
             
+            // Check if this is a mutual relationship (both characters have each other)
+            const isBidirectional = relationshipPairs.get(entry.oc_id)?.has(oc.id) || false;
+            
             // Create edge (allow both directions to show bidirectional relationships)
             const relTypeConfig = getRelationshipTypeConfig(entry.relationship_type);
             const existingEdge = edgeMap.get(edgeKey) || edgeMap.get(reverseKey);
@@ -125,7 +313,11 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
                 relationship: entry.relationship,
                 relationship_type: entry.relationship_type,
                 color: relTypeConfig.color,
+                isBidirectional: isBidirectional,
               });
+            } else if (isBidirectional && !existingEdge.isBidirectional) {
+              // Update existing edge to mark it as bidirectional
+              existingEdge.isBidirectional = true;
             }
             
             relationships.push({
@@ -194,6 +386,44 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
           }
         });
       });
+    });
+
+    // Calculate indirect relationships
+    const indirectRelationships = calculateIndirectRelationships(ocs, relationships, nodeMap);
+    
+    // Add indirect relationships to edges and relationships array
+    indirectRelationships.forEach((indirectRel) => {
+      if (indirectRel.to.oc_id && nodeMap.has(indirectRel.to.oc_id)) {
+        const edgeKey = `${indirectRel.from.id}-${indirectRel.to.oc_id}`;
+        const reverseKey = `${indirectRel.to.oc_id}-${indirectRel.from.id}`;
+        
+        // Check if a direct relationship already exists
+        const existingDirectEdge = edgeMap.get(edgeKey) || edgeMap.get(reverseKey);
+        
+        // Only add indirect edge if there's no direct relationship
+        // (we want to show indirect paths, but not duplicate direct ones)
+        if (!existingDirectEdge) {
+          const relTypeConfig = getRelationshipTypeConfig(indirectRel.relationship_type);
+          edgeMap.set(edgeKey, {
+            from: indirectRel.from.id,
+            to: indirectRel.to.oc_id,
+            type: indirectRel.type,
+            relationship: indirectRel.relationship,
+            relationship_type: indirectRel.relationship_type,
+            color: relTypeConfig.color,
+          });
+        }
+        
+        // Always add to relationships array for the list view
+        relationships.push({
+          from: indirectRel.from,
+          to: indirectRel.to,
+          type: indirectRel.type,
+          relationship: indirectRel.relationship,
+          relationship_type: indirectRel.relationship_type,
+          image_url: indirectRel.image_url,
+        });
+      }
     });
 
     // Combine database and external nodes
@@ -595,6 +825,9 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
                     // Use the relationship type color, fallback to edge.color if needed
                     const lineColor = relTypeConfig.color || edge.color;
 
+                    // For bidirectional relationships, don't show arrow (or show on both ends)
+                    const isBidirectional = edge.isBidirectional || false;
+
                     return (
                       <line
                         key={`edge-${edge.from}-${edge.to}-${index}`}
@@ -605,7 +838,8 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
                         stroke={lineColor}
                         strokeWidth={4}
                         strokeOpacity={0.8}
-                        markerEnd={`url(#${markerId})`}
+                        markerEnd={isBidirectional ? undefined : `url(#${markerId})`}
+                        markerStart={isBidirectional ? undefined : undefined}
                         className="transition-all hover:opacity-100 hover:stroke-width-[5]"
                       />
                     );

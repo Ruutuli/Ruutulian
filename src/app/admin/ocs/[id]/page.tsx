@@ -69,29 +69,33 @@ function findReverseRelationships(
         const parsed = JSON.parse(relationshipData);
         if (Array.isArray(parsed)) {
           // Check if this OC has the current OC in this relationship type
+          // Match by oc_id, oc_slug, or name (case-insensitive for name)
           const hasCurrentOC = parsed.some((item: any) => 
             item?.oc_id === currentOCId || 
             item?.oc_slug === currentOCSlug ||
-            item?.name === currentOCName
+            (item?.name && currentOCName && item.name.toLowerCase().trim() === currentOCName.toLowerCase().trim())
           );
 
           if (hasCurrentOC) {
             // Find the relationship entry for the current OC
+            // Match by oc_id, oc_slug, or name (case-insensitive for name)
             const relationshipEntry = parsed.find((item: any) => 
               item?.oc_id === currentOCId || 
               item?.oc_slug === currentOCSlug ||
-              item?.name === currentOCName
+              (item?.name && currentOCName && item.name.toLowerCase().trim() === currentOCName.toLowerCase().trim())
             );
 
             if (relationshipEntry) {
               // Add reverse relationship: the other OC should appear in current OC's relationships
+              // Only fill in name and oc_id/oc_slug - leave relationship, description, and relationship_type blank
+              // so the user can fill them in from their perspective
               reverseRelationships[relType].push({
                 name: otherOC.name,
-                relationship: relationshipEntry.relationship || undefined,
-                description: relationshipEntry.description || undefined,
+                relationship: undefined, // Leave blank for user to fill
+                description: undefined, // Leave blank for user to fill
                 oc_id: otherOC.id,
                 oc_slug: otherOC.slug,
-                relationship_type: relationshipEntry.relationship_type as RelationshipType | undefined,
+                relationship_type: undefined, // Leave blank for user to fill
                 image_url: relationshipEntry.image_url || undefined,
               });
             }
@@ -158,6 +162,24 @@ export default async function EditOCPage({
         romantic: [],
         other_relationships: [],
       };
+
+  // Debug: Log reverse relationships (remove in production if needed)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('=== Reverse Relationships Debug ===');
+    console.log('Current OC:', oc.name, '(ID:', oc.id, ', Slug:', oc.slug, ')');
+    console.log('Total OCs checked:', allOCs?.length || 0);
+    console.log('Reverse relationships found:', {
+      family: reverseRelationships.family.length,
+      friends_allies: reverseRelationships.friends_allies.length,
+      rivals_enemies: reverseRelationships.rivals_enemies.length,
+      romantic: reverseRelationships.romantic.length,
+      other_relationships: reverseRelationships.other_relationships.length,
+    });
+    if (reverseRelationships.family.length > 0) {
+      console.log('Family reverse relationships:', reverseRelationships.family);
+    }
+    console.log('===================================');
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6">

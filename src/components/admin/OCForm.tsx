@@ -298,6 +298,216 @@ function ArrayFieldInput({
   );
 }
 
+// Name Autocomplete component for first_name and last_name fields
+function NameAutocompleteInput({
+  fieldName,
+  setValue,
+  watch,
+  isSubmitting,
+  currentOCId,
+}: {
+  fieldName: 'first_name' | 'last_name';
+  setValue: any;
+  watch: any;
+  isSubmitting: boolean;
+  currentOCId?: string;
+}) {
+  const [inputValue, setInputValue] = useState('');
+  const [suggestions, setSuggestions] = useState<Array<{ id: string; name: string; icon_url?: string | null }>>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLUListElement>(null);
+  const fieldValue = watch(fieldName);
+
+  // Calculate dropdown position (above or below)
+  const showAbove = useDropdownPosition({
+    inputRef,
+    isVisible: showSuggestions,
+    dropdownHeight: 240,
+    dependencies: [suggestions.length],
+  });
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (highlightedIndex >= 0 && suggestionsRef.current) {
+      const highlightedElement = suggestionsRef.current.children[highlightedIndex] as HTMLElement;
+      if (highlightedElement) {
+        highlightedElement.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [highlightedIndex]);
+
+  // Sync input value with form value
+  useEffect(() => {
+    if (fieldValue !== inputValue) {
+      setInputValue(fieldValue || '');
+    }
+  }, [fieldValue]);
+
+  // Fetch OCs from database when input changes
+  useEffect(() => {
+    const fetchOCs = async () => {
+      if (!inputValue.trim() || inputValue.length < 2) {
+        setSuggestions([]);
+        return;
+      }
+
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('ocs')
+          .select('id, name, icon_url')
+          .neq('id', currentOCId || '') // Exclude current OC
+          .ilike('name', `%${inputValue}%`)
+          .order('name', { ascending: true })
+          .limit(15);
+
+        if (error) {
+          console.error('Error fetching OCs:', error);
+          setSuggestions([]);
+        } else {
+          setSuggestions(data || []);
+        }
+      } catch (err) {
+        console.error('Error fetching OCs:', err);
+        setSuggestions([]);
+      }
+    };
+
+    const debounceTimer = setTimeout(fetchOCs, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [inputValue, currentOCId]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    setShowSuggestions(true);
+    setHighlightedIndex(-1);
+    setValue(fieldName, newValue);
+  };
+
+  const handleSelectOC = (oc: { id: string; name: string; icon_url?: string | null }) => {
+    // Parse name into first_name and last_name
+    const nameParts = oc.name.trim().split(/\s+/);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+    // Set the appropriate field based on which input this is
+    if (fieldName === 'first_name') {
+      setValue('first_name', firstName);
+      // If single name, leave last_name empty; otherwise set it
+      if (lastName) {
+        setValue('last_name', lastName);
+      } else {
+        // Single name character - ensure last_name is empty
+        setValue('last_name', '');
+      }
+    } else {
+      // If selecting from last_name field, only set last_name
+      // (first_name should already be set or user will set it)
+      setValue('last_name', lastName || firstName);
+    }
+
+    // Populate icon_url only if available and not empty
+    if (oc.icon_url && oc.icon_url.trim()) {
+      setValue('icon_url', oc.icon_url.trim());
+    }
+
+    setInputValue(fieldName === 'first_name' ? firstName : (lastName || firstName));
+    setShowSuggestions(false);
+    inputRef.current?.focus();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setHighlightedIndex(prev => prev < suggestions.length - 1 ? prev + 1 : prev);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setHighlightedIndex(prev => prev > 0 ? prev - 1 : -1);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
+          handleSelectOC(suggestions[highlightedIndex]);
+        }
+        break;
+      case 'Escape':
+        setShowSuggestions(false);
+        setHighlightedIndex(-1);
+        break;
+    }
+  };
+
+  const handleBlur = () => {
+    setTimeout(() => {
+      setShowSuggestions(false);
+    }, 200);
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        ref={inputRef}
+        type="text"
+        value={inputValue}
+        onChange={handleInputChange}
+        onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
+        onFocus={() => {
+          if (inputValue.length >= 2) {
+            setShowSuggestions(true);
+          }
+        }}
+        disabled={isSubmitting}
+        placeholder={fieldName === 'first_name' ? 'Type first name...' : 'Type last name...'}
+        className="w-full px-4 py-2.5 bg-gray-900/60 border border-gray-500/60 rounded-lg text-gray-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/70 focus:border-purple-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        autoComplete="off"
+      />
+      {showSuggestions && suggestions.length > 0 && (
+        <ul
+          ref={suggestionsRef}
+          className={`absolute z-[99999] w-full max-h-60 overflow-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg ${
+            showAbove ? 'bottom-full mb-1' : 'top-full mt-1'
+          }`}
+        >
+          {suggestions.map((oc, idx) => (
+            <li
+              key={oc.id}
+              onClick={() => handleSelectOC(oc)}
+              onMouseEnter={() => setHighlightedIndex(idx)}
+              className={`px-4 py-2 cursor-pointer transition-colors ${
+                idx === highlightedIndex
+                  ? 'bg-purple-600/50 text-white'
+                  : 'text-gray-200 hover:bg-gray-700'
+              }`}
+            >
+              {oc.name}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 // OC Autocomplete component for relationship entries
 function OCAutocompleteInput({
   fieldPath,
@@ -307,6 +517,7 @@ function OCAutocompleteInput({
   watch,
   isSubmitting,
   currentOCId,
+  reverseRelationships,
 }: {
   fieldPath: string;
   index: number;
@@ -315,9 +526,10 @@ function OCAutocompleteInput({
   watch: any;
   isSubmitting: boolean;
   currentOCId?: string;
+  reverseRelationships?: ReverseRelationships;
 }) {
   const [inputValue, setInputValue] = useState('');
-  const [suggestions, setSuggestions] = useState<Array<{ id: string; name: string; slug: string }>>([]);
+  const [suggestions, setSuggestions] = useState<Array<{ id: string; name: string; slug: string; isLinked?: boolean }>>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -325,6 +537,25 @@ function OCAutocompleteInput({
   const suggestionsRef = useRef<HTMLUListElement>(null);
   const nameValue = watch(`${fieldPath}.${index}.name`);
   const ocIdValue = watch(`${fieldPath}.${index}.oc_id`);
+
+  // Get all characters that already link to the current character
+  const getLinkedCharacterIds = useCallback(() => {
+    if (!reverseRelationships || !currentOCId) return new Set<string>();
+    const linkedIds = new Set<string>();
+    const allRelationships = [
+      ...reverseRelationships.family,
+      ...reverseRelationships.friends_allies,
+      ...reverseRelationships.rivals_enemies,
+      ...reverseRelationships.romantic,
+      ...reverseRelationships.other_relationships,
+    ];
+    allRelationships.forEach(rel => {
+      if (rel.oc_id) {
+        linkedIds.add(rel.oc_id);
+      }
+    });
+    return linkedIds;
+  }, [reverseRelationships, currentOCId]);
 
   // Calculate dropdown position (above or below)
   const showAbove = useDropdownPosition({
@@ -367,13 +598,27 @@ function OCAutocompleteInput({
           .neq('id', currentOCId || '') // Exclude current OC
           .ilike('name', `%${inputValue}%`)
           .order('name', { ascending: true })
-          .limit(10);
+          .limit(15);
 
         if (error) {
           console.error('Error fetching OCs:', error);
           setSuggestions([]);
         } else {
-          setSuggestions(data || []);
+          const linkedIds = getLinkedCharacterIds();
+          // Mark linked characters and sort: linked ones first
+          const suggestionsWithLinked = (data || []).map(oc => ({
+            ...oc,
+            isLinked: linkedIds.has(oc.id),
+          }));
+          
+          // Sort: linked characters first, then by name
+          suggestionsWithLinked.sort((a, b) => {
+            if (a.isLinked && !b.isLinked) return -1;
+            if (!a.isLinked && b.isLinked) return 1;
+            return a.name.localeCompare(b.name);
+          });
+
+          setSuggestions(suggestionsWithLinked);
         }
       } catch (err) {
         console.error('Error fetching OCs:', err);
@@ -383,7 +628,7 @@ function OCAutocompleteInput({
 
     const debounceTimer = setTimeout(fetchOCs, 300);
     return () => clearTimeout(debounceTimer);
-  }, [inputValue, currentOCId]);
+  }, [inputValue, currentOCId, getLinkedCharacterIds]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -482,13 +727,19 @@ function OCAutocompleteInput({
               key={oc.id}
               onClick={() => handleSelectOC(oc)}
               onMouseEnter={() => setHighlightedIndex(idx)}
-              className={`px-4 py-2 cursor-pointer transition-colors ${
+              className={`px-4 py-2 cursor-pointer transition-colors flex items-center justify-between ${
                 idx === highlightedIndex
                   ? 'bg-purple-600/50 text-white'
                   : 'text-gray-200 hover:bg-gray-700'
               }`}
             >
-              {oc.name}
+              <span>{oc.name}</span>
+              {oc.isLinked && (
+                <span className="ml-2 text-xs text-green-400 flex items-center gap-1">
+                  <i className="fas fa-link"></i>
+                  <span>Linked</span>
+                </span>
+              )}
             </li>
           ))}
         </ul>
@@ -509,6 +760,7 @@ function RelationshipEntryInput({
   label,
   enableOCAutocomplete = false,
   currentOCId,
+  reverseRelationships,
 }: {
   fieldPath: string;
   control: any;
@@ -520,30 +772,68 @@ function RelationshipEntryInput({
   label: string;
   enableOCAutocomplete?: boolean;
   currentOCId?: string;
+  reverseRelationships?: ReverseRelationships;
 }) {
   const { fields, append, remove } = useFieldArray({
     control,
     name: fieldPath,
   });
   
-  // Initialize fields if they're empty but we have default values
+  // Initialize fields from default values
+  // This runs when the component mounts and when defaultValue changes
   useEffect(() => {
-    if (fields.length === 0 && defaultValue && defaultValue.length > 0) {
-      defaultValue.forEach((val) => {
-        if (val && val.name) {
-          append({ 
-            name: val.name || '', 
-            relationship: val.relationship || '', 
-            description: val.description || '',
-            oc_id: val.oc_id || '',
-            oc_slug: val.oc_slug || '',
-            image_url: val.image_url || '',
-          });
+    if (!defaultValue || defaultValue.length === 0) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`RelationshipEntryInput [${fieldPath}]: No default values to initialize`);
+      }
+      return;
+    }
+    
+    // Get current values from the form to avoid duplicates
+    const currentValues = fields.map((field: any, idx: number) => {
+      const name = watch(`${fieldPath}.${idx}.name`);
+      const ocId = watch(`${fieldPath}.${idx}.oc_id`);
+      return { name, ocId };
+    }).filter(v => v.name);
+    
+    const existingNames = new Set(currentValues.map(v => v.name?.toLowerCase().trim()).filter(Boolean));
+    const existingIds = new Set(currentValues.map(v => v.ocId).filter(Boolean));
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`RelationshipEntryInput [${fieldPath}]: Initializing with`, defaultValue.length, 'items. Current fields:', fields.length);
+    }
+    
+    // Add any default values that aren't already in the form
+    let addedCount = 0;
+    defaultValue.forEach((val) => {
+      if (!val || !val.name) return;
+      
+      const valNameLower = val.name.toLowerCase().trim();
+      const alreadyExists = 
+        (val.oc_id && existingIds.has(val.oc_id)) ||
+        (!val.oc_id && existingNames.has(valNameLower));
+      
+      if (!alreadyExists) {
+        append({ 
+          name: val.name || '', 
+          relationship: val.relationship || '', 
+          description: val.description || '',
+          oc_id: val.oc_id || '',
+          oc_slug: val.oc_slug || '',
+          image_url: val.image_url || '',
+        });
+        addedCount++;
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`RelationshipEntryInput [${fieldPath}]: Added`, val.name, val.oc_id ? `(linked: ${val.oc_id})` : '(unlinked)');
         }
-      });
+      }
+    });
+    
+    if (process.env.NODE_ENV === 'development' && addedCount > 0) {
+      console.log(`RelationshipEntryInput [${fieldPath}]: Added ${addedCount} new relationship(s)`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+  }, [defaultValue]); // Re-run when defaultValue changes
   
   return (
     <div>
@@ -569,6 +859,7 @@ function RelationshipEntryInput({
                         watch={watch}
                         isSubmitting={isSubmitting}
                         currentOCId={currentOCId}
+                        reverseRelationships={reverseRelationships}
                       />
                       {/* Hidden fields for OC link */}
                       <input type="hidden" {...register(`${fieldPath}.${index}.oc_id`)} />
@@ -1212,22 +1503,32 @@ function getDefaultValues(oc?: OC, reverseRelationships?: ReverseRelationships):
     skin_tone: oc.skin_tone ?? '',
     features: oc.features ?? '',
     appearance_summary: oc.appearance_summary ?? '',
-    // Relationships - parse from string or array format and merge with reverse relationships
-    family: reverseRelationships 
-      ? mergeRelationships(parseRelationshipData(oc.family), reverseRelationships.family)
-      : parseRelationshipData(oc.family),
-    friends_allies: reverseRelationships
-      ? mergeRelationships(parseRelationshipData(oc.friends_allies), reverseRelationships.friends_allies)
-      : parseRelationshipData(oc.friends_allies),
-    rivals_enemies: reverseRelationships
-      ? mergeRelationships(parseRelationshipData(oc.rivals_enemies), reverseRelationships.rivals_enemies)
-      : parseRelationshipData(oc.rivals_enemies),
-    romantic: reverseRelationships
-      ? mergeRelationships(parseRelationshipData(oc.romantic), reverseRelationships.romantic)
-      : parseRelationshipData(oc.romantic),
-    other_relationships: reverseRelationships
-      ? mergeRelationships(parseRelationshipData(oc.other_relationships), reverseRelationships.other_relationships)
-      : parseRelationshipData(oc.other_relationships),
+    // Relationships - combine all into one unified section
+    // Merge all relationship categories into other_relationships for unified display
+    family: [],
+    friends_allies: [],
+    rivals_enemies: [],
+    romantic: [],
+    other_relationships: (() => {
+      const family = reverseRelationships 
+        ? mergeRelationships(parseRelationshipData(oc.family), reverseRelationships.family)
+        : parseRelationshipData(oc.family);
+      const friends_allies = reverseRelationships
+        ? mergeRelationships(parseRelationshipData(oc.friends_allies), reverseRelationships.friends_allies)
+        : parseRelationshipData(oc.friends_allies);
+      const rivals_enemies = reverseRelationships
+        ? mergeRelationships(parseRelationshipData(oc.rivals_enemies), reverseRelationships.rivals_enemies)
+        : parseRelationshipData(oc.rivals_enemies);
+      const romantic = reverseRelationships
+        ? mergeRelationships(parseRelationshipData(oc.romantic), reverseRelationships.romantic)
+        : parseRelationshipData(oc.romantic);
+      const other_relationships = reverseRelationships
+        ? mergeRelationships(parseRelationshipData(oc.other_relationships), reverseRelationships.other_relationships)
+        : parseRelationshipData(oc.other_relationships);
+      
+      // Combine all relationships into one array
+      return [...family, ...friends_allies, ...rivals_enemies, ...romantic, ...other_relationships];
+    })(),
     // History
     origin: oc.origin ?? '',
     formative_years: oc.formative_years ?? '',
@@ -1268,9 +1569,21 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
+  const defaultValues = getDefaultValues(oc, reverseRelationships);
+  
+  // Debug: Log default values including relationships
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && oc) {
+      console.log('OC Form Default Values for', oc.name, ':', {
+        other_relationships: defaultValues.other_relationships,
+        reverseRelationships: reverseRelationships,
+      });
+    }
+  }, [oc?.name, defaultValues.other_relationships, reverseRelationships]);
+
   const methods = useForm<OCFormData>({
     resolver: zodResolver(ocSchema),
-    defaultValues: getDefaultValues(oc, reverseRelationships),
+    defaultValues,
   });
 
   const {
@@ -1322,7 +1635,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
   // Reset form when OC prop changes
   useEffect(() => {
     if (oc) {
-      const defaultValues = getDefaultValues(oc);
+      const defaultValues = getDefaultValues(oc, reverseRelationships);
       reset(defaultValues);
       // Ensure world_id is set if it exists - use a small delay to ensure worlds list is loaded
       if (oc.world_id) {
@@ -1335,7 +1648,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
         return () => clearTimeout(timeout);
       }
     }
-  }, [oc?.id, oc?.world_id, reset, setValue]);
+  }, [oc?.id, oc?.world_id, reset, setValue, reverseRelationships]);
 
   // Fetch templates
   useEffect(() => {
@@ -1711,43 +2024,12 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
         skin_tone: data.skin_tone || null,
         features: data.features || null,
         appearance_summary: data.appearance_summary || null,
-        // Relationships - convert arrays to JSON strings, cleaning up empty values
-        family: data.family && data.family.length > 0 ? JSON.stringify(data.family.map((item: any) => ({
-          name: item.name,
-          relationship: item.relationship || undefined,
-          description: item.description || undefined,
-          oc_id: item.oc_id?.trim() || undefined,
-          oc_slug: item.oc_slug?.trim() || undefined,
-          relationship_type: item.relationship_type || undefined,
-          image_url: item.image_url?.trim() || undefined,
-        })).filter((item: any) => item.name?.trim())) : null,
-        friends_allies: data.friends_allies && data.friends_allies.length > 0 ? JSON.stringify(data.friends_allies.map((item: any) => ({
-          name: item.name,
-          relationship: item.relationship || undefined,
-          description: item.description || undefined,
-          oc_id: item.oc_id?.trim() || undefined,
-          oc_slug: item.oc_slug?.trim() || undefined,
-          relationship_type: item.relationship_type || undefined,
-          image_url: item.image_url?.trim() || undefined,
-        })).filter((item: any) => item.name?.trim())) : null,
-        rivals_enemies: data.rivals_enemies && data.rivals_enemies.length > 0 ? JSON.stringify(data.rivals_enemies.map((item: any) => ({
-          name: item.name,
-          relationship: item.relationship || undefined,
-          description: item.description || undefined,
-          oc_id: item.oc_id?.trim() || undefined,
-          oc_slug: item.oc_slug?.trim() || undefined,
-          relationship_type: item.relationship_type || undefined,
-          image_url: item.image_url?.trim() || undefined,
-        })).filter((item: any) => item.name?.trim())) : null,
-        romantic: data.romantic && data.romantic.length > 0 ? JSON.stringify(data.romantic.map((item: any) => ({
-          name: item.name,
-          relationship: item.relationship || undefined,
-          description: item.description || undefined,
-          oc_id: item.oc_id?.trim() || undefined,
-          oc_slug: item.oc_slug?.trim() || undefined,
-          relationship_type: item.relationship_type || undefined,
-          image_url: item.image_url?.trim() || undefined,
-        })).filter((item: any) => item.name?.trim())) : null,
+        // Relationships - all relationships are now saved to other_relationships
+        // Clear the old category-specific fields since we're using relationship_type instead
+        family: null,
+        friends_allies: null,
+        rivals_enemies: null,
+        romantic: null,
         other_relationships: data.other_relationships && data.other_relationships.length > 0 ? JSON.stringify(data.other_relationships.map((item: any) => ({
           name: item.name,
           relationship: item.relationship || undefined,
@@ -2011,23 +2293,31 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
             <FormLabel htmlFor="first_name" required>
               First Name
             </FormLabel>
-            <FormInput
-              {...register('first_name')}
-              placeholder="First name"
-              error={errors.first_name?.message}
-              disabled={isSubmitting}
+            <NameAutocompleteInput
+              fieldName="first_name"
+              setValue={setValue}
+              watch={watch}
+              isSubmitting={isSubmitting}
+              currentOCId={oc?.id}
             />
+            {errors.first_name?.message && (
+              <p className="mt-1 text-sm text-red-400">{errors.first_name.message}</p>
+            )}
           </div>
           <div>
             <FormLabel htmlFor="last_name">
               Last Name
             </FormLabel>
-            <FormInput
-              {...register('last_name')}
-              placeholder="Last name"
-              error={errors.last_name?.message}
-              disabled={isSubmitting}
+            <NameAutocompleteInput
+              fieldName="last_name"
+              setValue={setValue}
+              watch={watch}
+              isSubmitting={isSubmitting}
+              currentOCId={oc?.id}
             />
+            {errors.last_name?.message && (
+              <p className="mt-1 text-sm text-red-400">{errors.last_name.message}</p>
+            )}
           </div>
         </div>
 
@@ -2878,52 +3168,6 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
 
       <FormSection title="Relationships" icon="relationships" accentColor="relationships" defaultOpen={false}>
         <RelationshipEntryInput
-          fieldPath="family"
-          control={control}
-          register={register}
-          setValue={setValue}
-          watch={watch}
-          defaultValue={watch('family') || []}
-          isSubmitting={isSubmitting}
-          label="Family"
-          enableOCAutocomplete={true}
-          currentOCId={oc?.id}
-        />
-
-        <RelationshipEntryInput
-          fieldPath="friends_allies"
-          control={control}
-          register={register}
-          setValue={setValue}
-          watch={watch}
-          defaultValue={watch('friends_allies') || []}
-          isSubmitting={isSubmitting}
-          label="Friends & Allies"
-        />
-
-        <RelationshipEntryInput
-          fieldPath="rivals_enemies"
-          control={control}
-          register={register}
-          setValue={setValue}
-          watch={watch}
-          defaultValue={watch('rivals_enemies') || []}
-          isSubmitting={isSubmitting}
-          label="Rivals & Enemies"
-        />
-
-        <RelationshipEntryInput
-          fieldPath="romantic"
-          control={control}
-          register={register}
-          setValue={setValue}
-          watch={watch}
-          defaultValue={watch('romantic') || []}
-          isSubmitting={isSubmitting}
-          label="Romantic"
-        />
-
-        <RelationshipEntryInput
           fieldPath="other_relationships"
           control={control}
           register={register}
@@ -2931,7 +3175,10 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           watch={watch}
           defaultValue={watch('other_relationships') || []}
           isSubmitting={isSubmitting}
-          label="Other Relationships"
+          label="Relationships"
+          enableOCAutocomplete={true}
+          currentOCId={oc?.id}
+          reverseRelationships={reverseRelationships}
         />
       </FormSection>
 

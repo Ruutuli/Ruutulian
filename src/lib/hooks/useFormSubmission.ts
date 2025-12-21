@@ -129,9 +129,32 @@ export function useFormSubmission<T = any>(
         }
       }
 
-      // Check shouldNavigateRef if provided
+      // Check shouldNavigateRef if provided and determine route
+      let navigateToRoute = null;
       if (shouldNavigateRef) {
         shouldNavigate = shouldNavigateRef.current;
+        // If shouldNavigateRef is true and we're updating, navigate to list (parent route)
+        // Otherwise use the normal successRoute
+        if (shouldNavigateRef.current && isUpdate) {
+          // Determine the normal route first
+          const normalRoute = typeof successRoute === 'function' 
+            ? successRoute(responseData, isUpdate)
+            : successRoute;
+          // If route contains an ID (like /admin/worlds/123), go to parent (/admin/worlds)
+          const routeParts = normalRoute.split('/');
+          if (routeParts.length > 3) {
+            // Check if last part looks like a UUID or ID
+            const lastPart = routeParts[routeParts.length - 1];
+            if (lastPart.match(/^[0-9a-f-]{36}$/i) || lastPart.match(/^\d+$/)) {
+              // It's a UUID or numeric ID, go to parent
+              navigateToRoute = routeParts.slice(0, -1).join('/');
+            } else {
+              navigateToRoute = normalRoute;
+            }
+          } else {
+            navigateToRoute = normalRoute;
+          }
+        }
         // Reset the ref after checking
         shouldNavigateRef.current = false;
       }
@@ -139,9 +162,9 @@ export function useFormSubmission<T = any>(
       // Only navigate if shouldNavigate is true
       if (shouldNavigate) {
         // Determine the route to navigate to
-        const route = typeof successRoute === 'function' 
+        const route = navigateToRoute || (typeof successRoute === 'function' 
           ? successRoute(responseData, isUpdate)
-          : successRoute;
+          : successRoute);
 
         if (showSuccessMessage) {
           // Wait before navigating to show success message

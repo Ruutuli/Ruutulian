@@ -203,8 +203,52 @@ export function WorldDetails({ world }: WorldDetailsProps) {
         </SectionWithImage>
       )}
 
+      {/* Races & Species Section - Separate from World Building */}
+      {(world.races && world.races.length > 0) && (
+        <div className="wiki-card p-6 md:p-8">
+          <h2 className="wiki-section-header">
+            <i className="fas fa-users text-purple-400"></i>
+            Races & Species
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            {world.races.map((race) => (
+              <div 
+                key={race.id} 
+                className="border border-gray-700/50 rounded-lg overflow-hidden bg-gray-800/30 hover:bg-gray-800/50 transition-colors shadow-lg"
+              >
+                {race.picture_url && (
+                  <div className="relative w-full h-48 md:h-56 overflow-hidden bg-gray-900">
+                    <Image
+                      src={race.picture_url.includes('drive.google.com')
+                        ? getProxyUrl(race.picture_url)
+                        : (convertGoogleDriveUrl(race.picture_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png')}
+                      alt={race.name}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      unoptimized={race.picture_url.includes('drive.google.com') || isGoogleSitesUrl(race.picture_url)}
+                    />
+                  </div>
+                )}
+                <div className="p-5">
+                  <h4 className="text-xl font-bold text-gray-100 mb-3">{race.name}</h4>
+                  {race.info && (
+                    <div className="text-gray-300 prose prose-invert max-w-none prose-sm">
+                      <Markdown content={race.info} />
+                    </div>
+                  )}
+                  {!race.info && (
+                    <p className="text-gray-400 italic text-sm">No additional information available.</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* World Building Section */}
-      {((world.races && world.races.length > 0) || world.races_species || world.power_systems || world.power_source || world.important_factions || world.notable_figures || world.central_conflicts || world.world_rules_limitations || world.oc_integration_notes) && (
+      {(world.races_species || world.power_systems || world.power_source || world.important_factions || world.notable_figures || world.central_conflicts || world.world_rules_limitations || world.oc_integration_notes) && (
         <SectionWithImage
           title="World Building"
           icon="fas fa-cube"
@@ -212,48 +256,6 @@ export function WorldDetails({ world }: WorldDetailsProps) {
           imageUrl={world.world_building_image_url || null}
         >
           <div className="space-y-4 text-gray-300 prose max-w-none">
-            {world.races && world.races.length > 0 && (
-              <div>
-                <h3 className="text-lg font-bold text-gray-100 mb-4 flex items-center gap-2">
-                  <i className="fas fa-users text-sm"></i>
-                  Races & Species
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {world.races.map((race) => (
-                    <div 
-                      key={race.id} 
-                      className="border border-gray-700/50 rounded-lg overflow-hidden bg-gray-800/30 hover:bg-gray-800/50 transition-colors shadow-lg"
-                    >
-                      {race.picture_url && (
-                        <div className="relative w-full h-48 md:h-56 overflow-hidden bg-gray-900">
-                          <Image
-                            src={race.picture_url.includes('drive.google.com')
-                              ? getProxyUrl(race.picture_url)
-                              : (convertGoogleDriveUrl(race.picture_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png')}
-                            alt={race.name}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 768px) 100vw, 50vw"
-                            unoptimized={race.picture_url.includes('drive.google.com') || isGoogleSitesUrl(race.picture_url)}
-                          />
-                        </div>
-                      )}
-                      <div className="p-5">
-                        <h4 className="text-xl font-bold text-gray-100 mb-3">{race.name}</h4>
-                        {race.info && (
-                          <div className="text-gray-300 prose prose-invert max-w-none prose-sm">
-                            <Markdown content={race.info} />
-                          </div>
-                        )}
-                        {!race.info && (
-                          <p className="text-gray-400 italic text-sm">No additional information available.</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
             {world.races_species && (
               <div>
                 <h3 className="text-lg font-bold text-gray-100 mb-2 flex items-center gap-2">

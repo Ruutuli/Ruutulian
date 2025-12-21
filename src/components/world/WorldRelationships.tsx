@@ -442,25 +442,115 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
     const dbNodes = Array.from(nodeMap.values());
     const externalNodes = Array.from(externalNodeMap.values());
     
-    // Use a fixed coordinate system that fits in viewBox
+    // Build adjacency list for force-directed layout using edgeMap
+    const adjacencyList = new Map<string, Set<string>>();
+    allNodes.forEach(node => {
+      adjacencyList.set(node.id, new Set());
+    });
+    
+    // Use edgeMap to build adjacency list
+    edgeMap.forEach(edge => {
+      adjacencyList.get(edge.from)?.add(edge.to);
+      adjacencyList.get(edge.to)?.add(edge.from);
+    });
+    
+    // Force-directed layout parameters
     const padding = 120;
     const centerX = 400;
     const centerY = 300;
+    const layoutWidth = 800;
+    const layoutHeight = 600;
+    const k = Math.sqrt((layoutWidth * layoutHeight) / allNodes.length); // Optimal distance between nodes
+    const iterations = 100;
+    const alpha = 1.0; // Initial temperature
+    const alphaDecay = 0.02;
     
-    // Position database characters in inner circle
-    const innerRadius = Math.min(200, Math.max(120, dbNodes.length * 20));
-    dbNodes.forEach((node, index) => {
-      const angle = (2 * Math.PI * index) / Math.max(1, dbNodes.length) - Math.PI / 2; // Start from top
-      node.x = centerX + innerRadius * Math.cos(angle);
-      node.y = centerY + innerRadius * Math.sin(angle);
+    // Initialize positions in a circle
+    const initialRadius = Math.min(150, Math.max(80, allNodes.length * 15));
+    allNodes.forEach((node, index) => {
+      const angle = (2 * Math.PI * index) / Math.max(1, allNodes.length) - Math.PI / 2;
+      node.x = centerX + initialRadius * Math.cos(angle);
+      node.y = centerY + initialRadius * Math.sin(angle);
     });
     
-    // Position external characters in outer circle
-    const outerRadius = innerRadius + 150;
-    externalNodes.forEach((node, index) => {
-      const angle = (2 * Math.PI * index) / Math.max(1, externalNodes.length) - Math.PI / 2;
-      node.x = centerX + outerRadius * Math.cos(angle);
-      node.y = centerY + outerRadius * Math.sin(angle);
+    // Force-directed layout simulation
+    let currentAlpha = alpha;
+    for (let iteration = 0; iteration < iterations; iteration++) {
+      // Repulsion forces (push all nodes apart)
+      const forces = new Map<string, { x: number; y: number }>();
+      allNodes.forEach(node => {
+        forces.set(node.id, { x: 0, y: 0 });
+      });
+      
+      // Calculate repulsion between all pairs of nodes
+      for (let i = 0; i < allNodes.length; i++) {
+        for (let j = i + 1; j < allNodes.length; j++) {
+          const nodeA = allNodes[i];
+          const nodeB = allNodes[j];
+          const dx = nodeB.x - nodeA.x;
+          const dy = nodeB.y - nodeA.y;
+          const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+          const force = (k * k) / distance;
+          const fx = (dx / distance) * force;
+          const fy = (dy / distance) * force;
+          
+          const forceA = forces.get(nodeA.id)!;
+          const forceB = forces.get(nodeB.id)!;
+          forceA.x -= fx;
+          forceA.y -= fy;
+          forceB.x += fx;
+          forceB.y += fy;
+        }
+      }
+      
+      // Attraction forces (pull connected nodes together)
+      edgeMap.forEach(edge => {
+        const nodeA = allNodes.find(n => n.id === edge.from);
+        const nodeB = allNodes.find(n => n.id === edge.to);
+        if (!nodeA || !nodeB) return;
+        
+        const dx = nodeB.x - nodeA.x;
+        const dy = nodeB.y - nodeA.y;
+        const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+        const force = (distance * distance) / k;
+        const fx = (dx / distance) * force;
+        const fy = (dy / distance) * force;
+        
+        const forceA = forces.get(nodeA.id)!;
+        const forceB = forces.get(nodeB.id)!;
+        forceA.x += fx;
+        forceA.y += fy;
+        forceB.x -= fx;
+        forceB.y -= fy;
+      });
+      
+      // Apply forces with cooling
+      allNodes.forEach(node => {
+        const force = forces.get(node.id)!;
+        const magnitude = Math.sqrt(force.x * force.x + force.y * force.y);
+        if (magnitude > 0) {
+          const limitedForce = Math.min(magnitude, currentAlpha * 10);
+          node.x += (force.x / magnitude) * limitedForce;
+          node.y += (force.y / magnitude) * limitedForce;
+        }
+        
+        // Keep nodes within bounds
+        const margin = 50;
+        node.x = Math.max(margin, Math.min(layoutWidth - margin, node.x));
+        node.y = Math.max(margin, Math.min(layoutHeight - margin, node.y));
+      });
+      
+      currentAlpha *= (1 - alphaDecay);
+    }
+    
+    // Center the layout
+    const avgX = allNodes.reduce((sum, n) => sum + n.x, 0) / allNodes.length;
+    const avgY = allNodes.reduce((sum, n) => sum + n.y, 0) / allNodes.length;
+    const offsetX = centerX - avgX;
+    const offsetY = centerY - avgY;
+    allNodes.forEach(node => {
+      node.x += offsetX;
+      node.y += offsetY;
     });
 
     // Calculate bounding box for viewBox
@@ -828,20 +918,54 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
                     // For bidirectional relationships, don't show arrow (or show on both ends)
                     const isBidirectional = edge.isBidirectional || false;
 
+                    // Calculate curve control point to make edges more distinct
+                    // Use a quadratic bezier curve with control point offset from center
+                    const midX = (fromNode.x + toNode.x) / 2;
+                    const midY = (fromNode.y + toNode.y) / 2;
+                    const dx = toNode.x - fromNode.x;
+                    const dy = toNode.y - fromNode.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    // Perpendicular offset
+                    const offsetX = -dy / distance * 30;
+                    const offsetY = dx / distance * 30;
+                    const controlX = midX + offsetX;
+                    const controlY = midY + offsetY;
+
+                    // Create curved path for better visual distinction
+                    const pathId = `edge-path-${edge.from}-${edge.to}-${index}`;
+                    const pathData = `M ${fromNode.x} ${fromNode.y} Q ${controlX} ${controlY} ${toNode.x} ${toNode.y}`;
+
                     return (
-                      <line
-                        key={`edge-${edge.from}-${edge.to}-${index}`}
-                        x1={fromNode.x}
-                        y1={fromNode.y}
-                        x2={toNode.x}
-                        y2={toNode.y}
-                        stroke={lineColor}
-                        strokeWidth={4}
-                        strokeOpacity={0.8}
-                        markerEnd={isBidirectional ? undefined : `url(#${markerId})`}
-                        markerStart={isBidirectional ? undefined : undefined}
-                        className="transition-all hover:opacity-100 hover:stroke-width-[5]"
-                      />
+                      <g key={`edge-${edge.from}-${edge.to}-${index}`} className="edge-group">
+                        {/* Invisible wider path for easier hovering */}
+                        <path
+                          d={pathData}
+                          fill="none"
+                          stroke="transparent"
+                          strokeWidth={20}
+                          className="cursor-pointer"
+                          style={{ pointerEvents: 'stroke' }}
+                        />
+                        {/* Visible curved edge */}
+                        <path
+                          id={pathId}
+                          d={pathData}
+                          fill="none"
+                          stroke={lineColor}
+                          strokeWidth={4}
+                          strokeOpacity={0.8}
+                          markerEnd={isBidirectional ? undefined : `url(#${markerId})`}
+                          className="transition-all hover:opacity-100 hover:stroke-width-[6]"
+                          style={{ 
+                            filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.3))',
+                          }}
+                        />
+                        {/* Tooltip on hover */}
+                        <title>
+                          {fromNode.name} → {toNode.name}
+                          {edge.relationship && ` (${edge.relationship})`}
+                        </title>
+                      </g>
                     );
                   })
                 ) : (

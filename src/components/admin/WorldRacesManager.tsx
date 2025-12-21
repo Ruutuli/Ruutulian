@@ -211,9 +211,7 @@ export function WorldRacesManager({ worldId, storyAliasId, draftRaces, onDraftRa
           setFormData({ 
             name: '', 
             info: '', 
-            picture_url: '', 
-            lifespan_development: '', 
-            appearance_dress: '' 
+            picture_url: ''
           });
           setSuccess('Race updated!');
         }

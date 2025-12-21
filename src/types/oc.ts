@@ -137,6 +137,20 @@ export interface WorldStoryData {
   story_alias?: StoryAlias | null;
 }
 
+export interface WorldRace {
+  id: string;
+  world_id: string;
+  story_alias_id?: string | null;
+  name: string;
+  info?: string | null;
+  picture_url?: string | null;
+  lifespan_development?: string | null;
+  appearance_dress?: string | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface World {
   id: string;
   name: string;
@@ -199,6 +213,8 @@ export interface World {
   story_aliases?: StoryAlias[];
   // Story-specific world data
   story_data?: WorldStoryData[];
+  // Races
+  races?: WorldRace[];
 }
 
 export interface OC {

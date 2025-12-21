@@ -34,6 +34,19 @@ export async function GET(
           description,
           created_at,
           updated_at
+        ),
+        races:world_races(
+          id,
+          world_id,
+          story_alias_id,
+          name,
+          info,
+          picture_url,
+          lifespan_development,
+          appearance_dress,
+          position,
+          created_at,
+          updated_at
         )
       `)
       .eq('id', id)

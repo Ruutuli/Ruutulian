@@ -19,6 +19,7 @@ import { FormButton } from './forms/FormButton';
 import { FormMessage } from './forms/FormMessage';
 import { StoryAliasManager } from './StoryAliasManager';
 import { WorldStorySwitcher } from './WorldStorySwitcher';
+import { WorldRacesManager } from './WorldRacesManager';
 import { optionalString, optionalUrl } from '@/lib/utils/zodSchemas';
 import { autoCreateWorldFieldOptions } from '@/lib/utils/autoCreateOptions';
 
@@ -922,16 +923,26 @@ export function WorldForm({ world }: WorldFormProps) {
         defaultOpen={false}
         description="Core world mechanics and important elements: races/species, power systems, factions, notable figures, conflicts, world rules, and guidance for OC integration. Essential for understanding how the world works and what characters can do."
       >
+        {world && (
+          <div className="mb-6">
+            <WorldRacesManager 
+              worldId={world.id} 
+              storyAliasId={selectedStoryAliasId}
+            />
+          </div>
+        )}
+        
         <div>
           <FormLabel htmlFor="races_species">
-            Races/Species
+            Races/Species (Legacy Text Field)
           </FormLabel>
           <FormTextarea
             {...register('races_species')}
             rows={3}
-            placeholder="Different races, species, or types of beings that exist. Describe their characteristics, relationships, and roles."
+            placeholder="Legacy text field for races. Use the structured races manager above for better organization."
             disabled={isSubmitting}
           />
+          <p className="mt-1 text-xs text-gray-400">This field is kept for backward compatibility. Use the races manager above for structured race information.</p>
         </div>
 
         <div>

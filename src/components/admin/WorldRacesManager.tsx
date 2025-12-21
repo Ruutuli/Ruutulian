@@ -537,6 +537,7 @@ export function WorldRacesManager({ worldId, storyAliasId, draftRaces, onDraftRa
                 <RaceItem
                   key={raceId}
                   race={race}
+                  raceId={raceId}
                   isEditing={editingId === raceId}
                   isDeleting={isDeleting === raceId}
                   canMoveUp={index > 0}
@@ -567,6 +568,7 @@ export function WorldRacesManager({ worldId, storyAliasId, draftRaces, onDraftRa
 
 interface RaceItemProps {
   race: WorldRace | Omit<WorldRace, 'id' | 'world_id' | 'created_at' | 'updated_at'>;
+  raceId: string;
   isEditing: boolean;
   isDeleting: boolean;
   canMoveUp: boolean;
@@ -582,6 +584,7 @@ interface RaceItemProps {
 
 function RaceItem({
   race,
+  raceId,
   isEditing,
   isDeleting,
   canMoveUp,
@@ -598,7 +601,7 @@ function RaceItem({
     return null; // Edit form is shown separately
   }
 
-  const showDeleteConfirm = deleteConfirmId === race.id;
+  const showDeleteConfirm = deleteConfirmId === raceId;
 
   return (
     <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">

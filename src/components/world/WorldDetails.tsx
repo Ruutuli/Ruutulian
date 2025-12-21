@@ -214,36 +214,43 @@ export function WorldDetails({ world }: WorldDetailsProps) {
           <div className="space-y-4 text-gray-300 prose max-w-none">
             {world.races && world.races.length > 0 && (
               <div>
-                <h3 className="text-lg font-bold text-gray-100 mb-2 flex items-center gap-2">
+                <h3 className="text-lg font-bold text-gray-100 mb-4 flex items-center gap-2">
                   <i className="fas fa-users text-sm"></i>
                   Races & Species
                 </h3>
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {world.races.map((race) => (
-                    <div key={race.id} className="border border-gray-700/50 rounded-lg p-4 bg-gray-800/30">
-                      <div className="flex gap-4">
-                        {race.picture_url && (
-                          <div className="flex-shrink-0 w-32 h-32 relative rounded-lg overflow-hidden border border-gray-700/50">
-                            <Image
-                              src={race.picture_url.includes('drive.google.com')
-                                ? getProxyUrl(race.picture_url)
-                                : (convertGoogleDriveUrl(race.picture_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png')}
-                              alt={race.name}
-                              fill
-                              className="object-cover"
-                              sizes="128px"
-                              unoptimized={race.picture_url.includes('drive.google.com') || isGoogleSitesUrl(race.picture_url)}
-                            />
+                    <div 
+                      key={race.id} 
+                      className="border border-gray-700/50 rounded-lg overflow-hidden bg-gray-800/30 hover:bg-gray-800/50 transition-colors shadow-lg"
+                    >
+                      {race.picture_url && (
+                        <div className="relative w-full h-48 md:h-56 overflow-hidden bg-gray-900">
+                          <Image
+                            src={race.picture_url.includes('drive.google.com')
+                              ? getProxyUrl(race.picture_url)
+                              : (convertGoogleDriveUrl(race.picture_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png')}
+                            alt={race.name}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 100vw, 50vw"
+                            unoptimized={race.picture_url.includes('drive.google.com') || isGoogleSitesUrl(race.picture_url)}
+                            onError={(e) => {
+                              console.error('Failed to load race image:', race.picture_url);
+                            }}
+                          />
+                        </div>
+                      )}
+                      <div className="p-5">
+                        <h4 className="text-xl font-bold text-gray-100 mb-3">{race.name}</h4>
+                        {race.info && (
+                          <div className="text-gray-300 prose prose-invert max-w-none prose-sm">
+                            <Markdown content={race.info} />
                           </div>
                         )}
-                        <div className="flex-1">
-                          <h4 className="text-lg font-semibold text-gray-100 mb-2">{race.name}</h4>
-                          {race.info && (
-                            <div className="text-gray-300 whitespace-pre-wrap">
-                              <Markdown content={race.info} />
-                            </div>
-                          )}
-                        </div>
+                        {!race.info && (
+                          <p className="text-gray-400 italic text-sm">No additional information available.</p>
+                        )}
                       </div>
                     </div>
                   ))}

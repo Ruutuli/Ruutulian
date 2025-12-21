@@ -210,39 +210,46 @@ export function WorldDetails({ world }: WorldDetailsProps) {
             <i className="fas fa-users text-purple-400"></i>
             Races & Species
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            {world.races.map((race) => (
-              <div 
-                key={race.id} 
-                className="border border-gray-700/50 rounded-lg overflow-hidden bg-gray-800/30 hover:bg-gray-800/50 transition-colors shadow-lg"
-              >
-                {race.picture_url && (
-                  <div className="relative w-full h-48 md:h-56 overflow-hidden bg-gray-900">
-                    <Image
-                      src={race.picture_url.includes('drive.google.com')
-                        ? getProxyUrl(race.picture_url)
-                        : (convertGoogleDriveUrl(race.picture_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png')}
-                      alt={race.name}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, 50vw"
-                      unoptimized={race.picture_url.includes('drive.google.com') || isGoogleSitesUrl(race.picture_url)}
-                    />
-                  </div>
-                )}
-                <div className="p-5">
-                  <h4 className="text-xl font-bold text-gray-100 mb-3">{race.name}</h4>
-                  {race.info && (
-                    <div className="text-gray-300 prose prose-invert max-w-none prose-sm">
-                      <Markdown content={race.info} />
+          <div className="space-y-8 mt-6">
+            {world.races.map((race, index) => {
+              const isEven = index % 2 === 0;
+              const imageOnLeft = isEven;
+              
+              return (
+                <div 
+                  key={race.id} 
+                  className="border border-gray-700/50 rounded-lg overflow-hidden bg-gray-800/30 hover:bg-gray-800/50 transition-colors"
+                >
+                  <div className={`flex flex-col ${imageOnLeft ? 'md:flex-row' : 'md:flex-row-reverse'} gap-6 p-6`}>
+                    {race.picture_url && (
+                      <div className={`flex-shrink-0 w-full md:w-64 h-64 relative rounded-lg overflow-hidden border border-gray-700/50 bg-gray-900`}>
+                        <Image
+                          src={race.picture_url.includes('drive.google.com')
+                            ? getProxyUrl(race.picture_url)
+                            : (convertGoogleDriveUrl(race.picture_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png')}
+                          alt={race.name}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 100vw, 256px"
+                          unoptimized={race.picture_url.includes('drive.google.com') || isGoogleSitesUrl(race.picture_url)}
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <h4 className="text-2xl font-bold text-gray-100 mb-4">{race.name}</h4>
+                      {race.info && (
+                        <div className="text-gray-300 prose prose-invert max-w-none">
+                          <Markdown content={race.info} />
+                        </div>
+                      )}
+                      {!race.info && (
+                        <p className="text-gray-400 italic">No additional information available.</p>
+                      )}
                     </div>
-                  )}
-                  {!race.info && (
-                    <p className="text-gray-400 italic text-sm">No additional information available.</p>
-                  )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

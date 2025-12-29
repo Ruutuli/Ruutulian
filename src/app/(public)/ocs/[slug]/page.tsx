@@ -96,8 +96,7 @@ export async function generateMetadata({
             {
               url: convertGoogleDriveUrl(oc.image_url),
               alt: oc.name,
-              width: 1200,
-              height: 630,
+              // Removed fixed dimensions to prevent squishing/stretching of portrait character images
             },
           ]
         : [

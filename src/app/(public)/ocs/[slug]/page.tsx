@@ -682,7 +682,7 @@ export default async function OCDetailPage({
             )}
 
             {/* Stats Section */}
-            {(oc.stat_strength || oc.stat_dexterity || oc.stat_constitution || oc.stat_intelligence || oc.stat_wisdom || oc.stat_charisma || oc.stat_level || oc.stat_class || oc.stat_hit_points_current || oc.stat_hit_points_max || oc.stat_armor_class || oc.stat_speed || oc.stat_notes) && (
+            {(oc.stat_strength || oc.stat_dexterity || oc.stat_constitution || oc.stat_intelligence || oc.stat_wisdom || oc.stat_charisma || oc.stat_level || oc.stat_class || oc.stat_subclass || oc.stat_hit_points_current || oc.stat_hit_points_max || oc.stat_armor_class || oc.stat_speed || oc.stat_initiative || oc.stat_notes) && (
               <div className="wiki-card p-4 md:p-6 lg:p-8" suppressHydrationWarning>
                 <h2 id="stats" className="wiki-section-header scroll-mt-20" suppressHydrationWarning>
                   <i className="fas fa-dice-d20 text-amber-400" aria-hidden="true" suppressHydrationWarning></i>
@@ -804,13 +804,13 @@ export default async function OCDetailPage({
                   )}
 
                   {/* Character Info */}
-                  {(oc.stat_level || oc.stat_class) && (
+                  {(oc.stat_level || oc.stat_class || oc.stat_subclass) && (
                     <div className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 rounded-xl border border-amber-500/20 shadow-lg">
                       <h3 className="text-base font-semibold text-gray-200 mb-3 flex items-center gap-2">
                         <i className="fas fa-user-circle text-amber-400"></i>
                         Character Info
                       </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         {oc.stat_level && (
                           <div className="p-3 bg-gradient-to-br from-gray-800/60 to-gray-800/40 rounded-lg border border-amber-500/30 hover:border-amber-400/50 transition-all shadow-md">
                             <div className="text-xs font-semibold text-amber-400/80 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
@@ -829,12 +829,21 @@ export default async function OCDetailPage({
                             <div className="text-gray-200 font-semibold">{oc.stat_class}</div>
                           </div>
                         )}
+                        {oc.stat_subclass && (
+                          <div className="p-3 bg-gradient-to-br from-gray-800/60 to-gray-800/40 rounded-lg border border-amber-500/30 hover:border-amber-400/50 transition-all shadow-md">
+                            <div className="text-xs font-semibold text-amber-400/80 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                              <i className="fas fa-star text-xs"></i>
+                              Subclass
+                            </div>
+                            <div className="text-gray-200 font-semibold">{oc.stat_subclass}</div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
 
                   {/* Combat Stats */}
-                  {(oc.stat_hit_points_current || oc.stat_hit_points_max || oc.stat_armor_class || oc.stat_speed) && (
+                  {(oc.stat_hit_points_current || oc.stat_hit_points_max || oc.stat_armor_class || oc.stat_speed || oc.stat_initiative) && (
                     <div className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 rounded-xl border border-amber-500/20 shadow-lg">
                       <h3 className="text-base font-semibold text-gray-200 mb-3 flex items-center gap-2">
                         <i className="fas fa-shield-alt text-amber-400"></i>
@@ -862,6 +871,15 @@ export default async function OCDetailPage({
                               AC
                             </div>
                             <div className="text-blue-300 font-bold text-xl">{oc.stat_armor_class}</div>
+                          </div>
+                        )}
+                        {oc.stat_initiative !== null && oc.stat_initiative !== undefined && (
+                          <div className="p-3 bg-gradient-to-br from-purple-900/30 to-purple-800/20 rounded-lg border border-purple-500/30 hover:border-purple-400/50 transition-all shadow-md">
+                            <div className="text-xs font-semibold text-purple-400/80 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                              <i className="fas fa-bolt text-xs"></i>
+                              Initiative
+                            </div>
+                            <div className="text-purple-300 font-bold text-xl">{oc.stat_initiative >= 0 ? '+' : ''}{oc.stat_initiative}</div>
                           </div>
                         )}
                         {oc.stat_speed !== null && oc.stat_speed !== undefined && (

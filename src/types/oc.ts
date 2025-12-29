@@ -352,6 +352,8 @@ export interface OC {
   stat_speed?: number | null;
   stat_level?: number | null;
   stat_class?: string | null;
+  stat_subclass?: string | null;
+  stat_initiative?: number | null;
   stat_notes?: string | null;
 }
 

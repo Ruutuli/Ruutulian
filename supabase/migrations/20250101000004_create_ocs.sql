@@ -114,6 +114,8 @@ CREATE TABLE IF NOT EXISTS ocs (
   stat_speed INTEGER CHECK (stat_speed >= 0),
   stat_level INTEGER CHECK (stat_level >= 1 AND stat_level <= 20),
   stat_class TEXT,
+  stat_subclass TEXT,
+  stat_initiative INTEGER,
   stat_notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -178,4 +180,6 @@ COMMENT ON COLUMN ocs.stat_armor_class IS 'Armor Class (AC)';
 COMMENT ON COLUMN ocs.stat_speed IS 'Movement speed in feet';
 COMMENT ON COLUMN ocs.stat_level IS 'Character level (1-20, D&D 5e)';
 COMMENT ON COLUMN ocs.stat_class IS 'Character class';
+COMMENT ON COLUMN ocs.stat_subclass IS 'Character subclass (archetype)';
+COMMENT ON COLUMN ocs.stat_initiative IS 'Initiative modifier';
 COMMENT ON COLUMN ocs.stat_notes IS 'Additional notes about stats';

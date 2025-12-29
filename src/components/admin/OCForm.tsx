@@ -1298,6 +1298,11 @@ const ocSchema = z.object({
     z.number().int().min(1).max(20).optional()
   ),
   stat_class: z.string().optional().nullable(),
+  stat_subclass: z.string().optional().nullable(),
+  stat_initiative: z.preprocess(
+    (val) => (val === '' || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
+    z.number().int().optional()
+  ),
   stat_notes: z.string().optional().nullable(),
 });
 
@@ -1525,6 +1530,8 @@ function getDefaultValues(oc?: OC, reverseRelationships?: ReverseRelationships):
       stat_speed: undefined,
       stat_level: undefined,
       stat_class: '',
+      stat_subclass: '',
+      stat_initiative: undefined,
       stat_notes: '',
     };
   }
@@ -1683,6 +1690,8 @@ function getDefaultValues(oc?: OC, reverseRelationships?: ReverseRelationships):
     stat_speed: oc.stat_speed ?? undefined,
     stat_level: oc.stat_level ?? undefined,
     stat_class: oc.stat_class ?? '',
+    stat_subclass: oc.stat_subclass ?? '',
+    stat_initiative: oc.stat_initiative ?? undefined,
     stat_notes: oc.stat_notes ?? '',
   };
 }
@@ -2207,6 +2216,8 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
         stat_speed: data.stat_speed === undefined || data.stat_speed === null || (typeof data.stat_speed === 'number' && isNaN(data.stat_speed)) ? null : Number(data.stat_speed),
         stat_level: data.stat_level === undefined || data.stat_level === null || (typeof data.stat_level === 'number' && isNaN(data.stat_level)) ? null : Number(data.stat_level),
         stat_class: data.stat_class || null,
+        stat_subclass: data.stat_subclass || null,
+        stat_initiative: data.stat_initiative === undefined || data.stat_initiative === null || (typeof data.stat_initiative === 'number' && isNaN(data.stat_initiative)) ? null : Number(data.stat_initiative),
         stat_notes: data.stat_notes || null,
         // System
         series_type: data.series_type || null,
@@ -3426,6 +3437,17 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           </div>
 
           <div>
+            <FormLabel htmlFor="stat_subclass">
+              Subclass
+            </FormLabel>
+            <FormInput
+              {...register('stat_subclass')}
+              placeholder="e.g., Champion, Evocation, Thief"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
             <FormLabel htmlFor="stat_armor_class">
               Armor Class (AC)
             </FormLabel>
@@ -3473,6 +3495,18 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
               {...register('stat_speed', { valueAsNumber: true })}
               min={0}
               placeholder="0+"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
+            <FormLabel htmlFor="stat_initiative">
+              Initiative
+            </FormLabel>
+            <FormInput
+              type="number"
+              {...register('stat_initiative', { valueAsNumber: true })}
+              placeholder="Modifier (e.g., +3)"
               disabled={isSubmitting}
             />
           </div>

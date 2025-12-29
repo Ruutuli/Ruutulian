@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { AdminLayoutWrapper } from '@/components/admin/AdminLayoutWrapper';
 import { requireAuth } from '@/lib/auth/require-auth';
 import { getSiteConfig } from '@/lib/config/site-config';
-import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
+import { getGoogleDriveFileId, getProxyUrl } from '@/lib/utils/googleDriveImage';
 
 // Force dynamic rendering to ensure middleware and auth checks run
 export const dynamic = 'force-dynamic';
@@ -10,8 +10,26 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata(): Promise<Metadata> {
   const config = await getSiteConfig();
   const siteUrl = config.siteUrl || process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
+  
   // Use altIconUrl for admin pages if available, otherwise default to /icon-alt.png for admin pages
-  const iconUrl = convertGoogleDriveUrl(config.altIconUrl || '/icon-alt.png');
+  const altIconUrl = config.altIconUrl || '/icon-alt.png';
+  
+  // For Google Drive URLs, use the proxy API with absolute URL
+  // For relative URLs (like /icon-alt.png), make them absolute
+  let iconUrl: string;
+  if (altIconUrl.includes('drive.google.com')) {
+    const fileId = getGoogleDriveFileId(altIconUrl);
+    if (fileId) {
+      // Use absolute URL for the proxy API
+      iconUrl = `${siteUrl}/api/images/proxy?fileId=${encodeURIComponent(fileId)}&url=${encodeURIComponent(altIconUrl)}`;
+    } else {
+      // Fallback if we can't extract file ID
+      iconUrl = altIconUrl.startsWith('http') ? altIconUrl : `${siteUrl}${altIconUrl}`;
+    }
+  } else {
+    // For non-Google Drive URLs, make relative URLs absolute
+    iconUrl = altIconUrl.startsWith('http') ? altIconUrl : `${siteUrl}${altIconUrl}`;
+  }
   
   return {
     icons: {

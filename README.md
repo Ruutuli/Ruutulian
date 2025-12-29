@@ -329,125 +329,24 @@ Follow these steps in order. Take your time - there's no rush!
 
 ---
 
-## 👥 Sharing Code Updates (For Project Maintainers)
+## 📥 Getting the Latest Updates
 
-**What this section is for**: If you're the person making changes to the code and want others to be able to use your updates, this is for you!
+**What this section is for**: If the project has been updated and you want to get the newest version with bug fixes and new features.
 
-**What you're doing**: Uploading your changes to GitHub so others can download them.
+**What you're doing**: Downloading the latest changes from GitHub to your computer.
 
-### How to Share Your Updates
+### How to Get Updates
 
-**Before you start**: Make sure you have a GitHub account and your project is already on GitHub (if you deployed to Railway, it should already be there).
-
-#### Step 1: Make Your Changes
-
-1. Edit any files you want to update (using your code editor)
-2. Save all your changes
-
-#### Step 2: Check What Changed
-
-**What you're doing**: Seeing what files you modified.
+#### Step 1: Open Your Project Folder
 
 1. Open Command Prompt (Windows) or Terminal (Mac)
 2. Navigate to your project folder:
    ```bash
    cd path/to/oc-wiki
    ```
-   (Replace `path/to/oc-wiki` with the actual path to your project)
+   (Replace `path/to/oc-wiki` with the actual path to your project folder)
 
-3. Check what files changed:
-   ```bash
-   git status
-   ```
-
-**What you should see**: A list of files you've changed (they'll be in red or green)
-
-#### Step 3: Tell Git About Your Changes
-
-**What you're doing**: Marking which files you want to upload.
-
-1. Add all your changed files:
-   ```bash
-   git add .
-   ```
-   (The `.` means "all files")
-
-   **OR** if you only want to add specific files:
-   ```bash
-   git add filename1.js filename2.tsx
-   ```
-   (Replace with your actual file names)
-
-#### Step 4: Save Your Changes (Commit)
-
-**What you're doing**: Creating a "snapshot" of your changes with a message describing what you did.
-
-1. Create a commit with a message:
-   ```bash
-   git commit -m "Description of what you changed"
-   ```
-
-   **Examples of good commit messages**:
-   - `"Fixed the character display bug"`
-   - `"Added new timeline feature"`
-   - `"Updated the README with better instructions"`
-   - `"Changed the site colors to purple"`
-
-#### Step 5: Upload to GitHub (Push)
-
-**What you're doing**: Sending your changes to GitHub so others can see them.
-
-1. Upload your changes:
-   ```bash
-   git push
-   ```
-
-2. If this is your first time, you might need to set the remote:
-   ```bash
-   git push -u origin main
-   ```
-   (Or `master` instead of `main` if that's what your branch is called)
-
-**What you should see**: Messages showing your files being uploaded. When it says "done" or shows a success message, you're finished!
-
-**If you get an error about authentication**: You might need to set up GitHub authentication. See the troubleshooting section below.
-
-#### Step 6: Tell Others About the Update
-
-Let your team know that you've pushed updates! They can now follow the instructions below to get your changes.
-
----
-
-## 📥 Getting Updates from Others (For Team Members)
-
-**What this section is for**: If someone else made changes and you want to get the latest version of the code.
-
-**What you're doing**: Downloading the newest changes from GitHub to your computer.
-
-### How to Get the Latest Updates
-
-#### Step 1: Make Sure You're in the Project Folder
-
-1. Open Command Prompt (Windows) or Terminal (Mac)
-2. Navigate to your project folder:
-   ```bash
-   cd path/to/oc-wiki
-   ```
-   (Replace `path/to/oc-wiki` with the actual path to your project)
-
-#### Step 2: Save Your Current Work (Optional but Recommended)
-
-**What you're doing**: Making sure you don't lose any changes you made.
-
-**Important**: If you've made changes to files, you should either:
-- **Option A**: Commit and push your changes first (follow the "Sharing Code Updates" section above)
-- **Option B**: Stash your changes (temporarily save them):
-  ```bash
-  git stash
-  ```
-  (You can get them back later with `git stash pop`)
-
-#### Step 3: Download the Latest Updates
+#### Step 2: Download the Latest Updates
 
 **What you're doing**: Getting all the new changes from GitHub.
 
@@ -456,24 +355,26 @@ Let your team know that you've pushed updates! They can now follow the instructi
    git pull
    ```
 
-**What you should see**: Messages showing files being downloaded and updated. If there are conflicts (see below), Git will tell you.
+**What you should see**: Messages showing files being downloaded and updated. This is normal!
 
-#### Step 4: Install Any New Packages (If Needed)
+**If you get an error**: Make sure you haven't made any changes to the code files. If you have, see the "If You've Made Changes" section below.
 
-**What you're doing**: If the update added new features, you might need new code packages.
+#### Step 3: Install Any New Packages
+
+**What you're doing**: If the update added new features, you might need to install new code packages.
 
 1. Install new packages:
    ```bash
    npm install
    ```
 
-**When to do this**: If the person who updated the code added new features or dependencies, you'll need to run this.
+**When to do this**: Always run this after getting updates, just to be safe. It won't hurt if there are no new packages.
 
-#### Step 5: Restart Your Development Server
+#### Step 4: Restart Your Development Server
 
 **What you're doing**: Making sure your local website uses the new code.
 
-1. If your development server is running, stop it (press Ctrl+C in the terminal where it's running)
+1. If your development server is running, stop it (press **Ctrl+C** in the terminal where it's running)
 2. Start it again:
    ```bash
    npm run dev
@@ -483,79 +384,67 @@ Let your team know that you've pushed updates! They can now follow the instructi
 
 ---
 
-## 🔄 Handling Conflicts (When Changes Overlap)
+### If You've Made Changes to the Code
 
-**What this means**: Sometimes you and someone else changed the same file. Git needs you to decide which version to keep.
+**Important**: If you've edited any code files, you have two options:
 
-### If You Get a Merge Conflict
+#### Option 1: Keep Your Changes (Recommended if you customized things)
 
-**What you'll see**: Git will tell you there's a conflict and which files have conflicts.
-
-1. Open the files that have conflicts (Git will mark them with `<<<<<<<`, `=======`, and `>>>>>>>`)
-
-2. You'll see something like this:
-   ```
-   <<<<<<< HEAD
-   Your version of the code
-   =======
-   Their version of the code
-   >>>>>>> branch-name
-   ```
-
-3. **Decide what to keep**:
-   - Keep your version? Delete their section (everything between `=======` and `>>>>>>>`)
-   - Keep their version? Delete your section (everything between `<<<<<<<` and `=======`)
-   - Keep both? Edit the code to combine them, then remove the conflict markers
-
-4. Save the file
-
-5. Tell Git you fixed it:
+1. Before pulling updates, save your changes temporarily:
    ```bash
-   git add filename.js
+   git stash
    ```
-   (Replace with the actual filename)
 
-6. Complete the merge:
+2. Get the updates:
    ```bash
-   git commit -m "Resolved merge conflict"
+   git pull
    ```
 
-**If this seems complicated**: Ask the person who made the changes to help you resolve it, or just keep their version if you're not sure.
+3. Get your changes back:
+   ```bash
+   git stash pop
+   ```
+
+**If there are conflicts**: Git will tell you. You may need to manually combine your changes with the updates. If this seems complicated, you might want to back up your custom files and start fresh with the update.
+
+#### Option 2: Replace Everything with the Update
+
+**Warning**: This will delete any changes you made to the code!
+
+1. Reset to match the latest version:
+   ```bash
+   git fetch origin
+   git reset --hard origin/main
+   ```
+   (Or `master` instead of `main` if that's what your branch is called)
+
+2. Install packages:
+   ```bash
+   npm install
+   ```
+
+**Note**: Your `.env` file and database won't be affected - only code files will be replaced.
 
 ---
 
-## 🔐 Setting Up GitHub Authentication (If Needed)
+### If You Get Authentication Errors
 
-**When you need this**: If `git push` or `git pull` asks for a username and password.
+**When this happens**: Git asks for a username and password when you try to pull.
 
-### Option 1: Personal Access Token (Recommended)
+**How to fix**: You'll need a GitHub Personal Access Token:
 
-1. Go to GitHub.com and sign in
+1. Go to [GitHub.com](https://github.com) and sign in
 2. Click your profile picture → **Settings**
 3. Scroll down and click **Developer settings**
 4. Click **Personal access tokens** → **Tokens (classic)**
 5. Click **Generate new token** → **Generate new token (classic)**
-6. Give it a name (like "OC Wiki Project")
+6. Give it a name (like "OC Wiki Updates")
 7. Check the box for **repo** (this gives access to repositories)
 8. Click **Generate token**
 9. **Copy the token immediately** (you won't see it again!)
-10. When Git asks for a password, paste the token instead
+10. When Git asks for a password, paste the token instead of your password
 
-### Option 2: GitHub Desktop (Easier for Beginners)
-
-1. Download [GitHub Desktop](https://desktop.github.com/)
-2. Sign in with your GitHub account
-3. Use GitHub Desktop instead of the command line - it's much easier!
-
----
-
-## 💡 Tips for Working Together
-
-- **Communicate**: Let others know when you're pushing updates
-- **Pull before you push**: Always run `git pull` before making changes to make sure you have the latest code
-- **Write clear commit messages**: Describe what you changed so others understand
-- **Test your changes**: Make sure your code works before pushing it
-- **Don't push your `.env` file**: It contains secrets! (It should already be in `.gitignore`)
+**Easier Alternative**: Use [GitHub Desktop](https://desktop.github.com/) - it handles authentication automatically!
 
 ---
 

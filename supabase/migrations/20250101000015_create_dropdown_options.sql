@@ -9,6 +9,17 @@ CREATE TABLE IF NOT EXISTS dropdown_options (
   UNIQUE(field, value)
 );
 
+-- Add display_order column if it doesn't exist (for existing tables)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'dropdown_options' AND column_name = 'display_order'
+  ) THEN
+    ALTER TABLE dropdown_options ADD COLUMN display_order INTEGER NOT NULL DEFAULT 0;
+  END IF;
+END $$;
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_dropdown_options_field ON dropdown_options(field);
 CREATE INDEX IF NOT EXISTS idx_dropdown_options_display_order ON dropdown_options(field, display_order);

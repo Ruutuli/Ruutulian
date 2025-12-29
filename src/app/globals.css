@@ -265,10 +265,6 @@ body {
   margin-bottom: 0 !important;
 }
 
-/* Ensure list items with only a paragraph still have proper spacing from other list items */
-.prose li:not(:first-child) > p:first-child {
-  /* Spacing is handled by li margin-top */
-}
 
 .prose li > *:first-child {
   margin-top: 0;

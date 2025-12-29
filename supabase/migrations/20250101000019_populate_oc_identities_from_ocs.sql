@@ -8,7 +8,7 @@
 -- Step 1: Handle duplicate identities - merge them by keeping the oldest one
 -- For each duplicate name, keep the identity with the earliest created_at
 -- and update all OCs pointing to duplicates to point to the kept identity
-WITH duplicate_identities AS (
+WITH duplicate_groups AS (
   SELECT 
     name,
     MIN(created_at) as oldest_created_at
@@ -18,18 +18,26 @@ WITH duplicate_identities AS (
   HAVING COUNT(*) > 1
 ),
 kept_identities AS (
-  SELECT 
-    di.name,
+  SELECT DISTINCT ON (dg.name)
+    dg.name,
     oi.id as kept_id
-  FROM duplicate_identities di
-  JOIN oc_identities oi ON oi.name = di.name AND oi.created_at = di.oldest_created_at
+  FROM duplicate_groups dg
+  JOIN oc_identities oi ON oi.name = dg.name AND oi.created_at = dg.oldest_created_at
+  ORDER BY dg.name, oi.created_at
+),
+duplicate_identity_ids AS (
+  SELECT 
+    oi.id as duplicate_id,
+    ki.kept_id
+  FROM duplicate_groups dg
+  JOIN oc_identities oi ON oi.name = dg.name
+  JOIN kept_identities ki ON ki.name = dg.name
+  WHERE oi.id != ki.kept_id
 )
 UPDATE ocs
-SET identity_id = ki.kept_id
-FROM kept_identities ki
-JOIN oc_identities oi ON oi.name = ki.name
-WHERE ocs.identity_id = oi.id
-  AND oi.id != ki.kept_id;
+SET identity_id = di.kept_id
+FROM duplicate_identity_ids di
+WHERE ocs.identity_id = di.duplicate_id;
 
 -- Step 2: Delete duplicate identities (keep only the oldest one for each name)
 WITH duplicate_identities AS (

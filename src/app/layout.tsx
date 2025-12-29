@@ -2,11 +2,12 @@ import type { Metadata } from 'next';
 import Script from 'next/script';
 import './globals.css';
 import { getSiteConfig } from '@/lib/config/site-config';
+import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
 
 export async function generateMetadata(): Promise<Metadata> {
   const config = await getSiteConfig();
   const siteUrl = config.siteUrl || process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
-  const iconUrl = config.iconUrl || '/icon.png';
+  const iconUrl = convertGoogleDriveUrl(config.iconUrl || '/icon.png');
   
   return {
     metadataBase: new URL(siteUrl),

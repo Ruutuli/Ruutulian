@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { TimelineEvent } from '@/components/timeline/TimelineEvent';
 import { Markdown } from '@/lib/utils/markdown';
 import { formatLastUpdated } from '@/lib/utils/dateFormat';
+import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
 
 export const revalidate = 300;
 
@@ -32,6 +33,7 @@ export async function generateMetadata({
   const baseUrl = config.siteUrl || process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
   const url = `${baseUrl}/timelines/${params.id}`;
   const world = timeline.world as any;
+  const iconUrl = convertGoogleDriveUrl(config.iconUrl || '/icon.png');
   // Use description_markdown for description, clean up markdown syntax
   const descriptionText = timeline.description_markdown || '';
   const description = descriptionText
@@ -56,7 +58,7 @@ export async function generateMetadata({
       type: 'website',
       images: [
         {
-          url: `${baseUrl}${config.iconUrl || '/icon.png'}`,
+          url: iconUrl.startsWith('http') ? iconUrl : `${baseUrl}${iconUrl}`,
           width: 512,
           height: 512,
           alt: timeline.name,
@@ -67,7 +69,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title: `${timeline.name} | ${config.websiteName}`,
       description,
-      images: [`${baseUrl}${config.iconUrl || '/icon.png'}`],
+      images: [iconUrl.startsWith('http') ? iconUrl : `${baseUrl}${iconUrl}`],
     },
     alternates: {
       canonical: url,

@@ -7,11 +7,8 @@ interface SiteSettings {
   websiteDescription: string;
   iconUrl: string;
   altIconUrl: string;
-  siteUrl: string;
   authorName: string;
   shortName: string;
-  themeColor: string;
-  backgroundColor: string;
 }
 
 export function SiteSettingsForm() {
@@ -20,11 +17,8 @@ export function SiteSettingsForm() {
     websiteDescription: '',
     iconUrl: '',
     altIconUrl: '',
-    siteUrl: '',
     authorName: '',
     shortName: '',
-    themeColor: '',
-    backgroundColor: '',
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -37,24 +31,60 @@ export function SiteSettingsForm() {
   async function fetchSettings() {
     try {
       const response = await fetch('/api/admin/site-settings');
-      const result = await response.json();
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API response not OK:', response.status, errorText);
+        setMessage({ type: 'error', text: `Failed to load settings (${response.status})` });
+        setIsLoading(false);
+        return;
+      }
 
-      if (result.success && result.data) {
+      const result = await response.json();
+      console.log('Settings API response:', result);
+
+      if (!result.success) {
+        console.error('API returned error:', result.error);
+        setMessage({ type: 'error', text: result.error || 'Failed to load settings' });
+        setIsLoading(false);
+        return;
+      }
+
+      // If data exists, populate the form. If null, try to load from site-config.json as fallback
+      if (result.data) {
+        console.log('Loading settings from database:', result.data);
         setSettings({
           websiteName: result.data.website_name || '',
           websiteDescription: result.data.website_description || '',
           iconUrl: result.data.icon_url || '',
           altIconUrl: result.data.alt_icon_url || '',
-          siteUrl: result.data.site_url || '',
           authorName: result.data.author_name || '',
           shortName: result.data.short_name || '',
-          themeColor: result.data.theme_color || '',
-          backgroundColor: result.data.background_color || '',
         });
+      } else {
+        // No data in database, try to load from site-config.json
+        console.log('No database settings found, attempting to load from site-config.json');
+        try {
+          const configResponse = await fetch('/site-config.json');
+          if (configResponse.ok) {
+            const configData = await configResponse.json();
+            console.log('Loaded from site-config.json:', configData);
+            setSettings({
+              websiteName: configData.websiteName || '',
+              websiteDescription: configData.websiteDescription || '',
+              iconUrl: configData.iconUrl || '',
+              altIconUrl: configData.altIconUrl || '',
+              authorName: configData.authorName || '',
+              shortName: configData.shortName || '',
+            });
+          }
+        } catch (configError) {
+          console.warn('Could not load site-config.json:', configError);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch settings:', error);
-      setMessage({ type: 'error', text: 'Failed to load settings' });
+      setMessage({ type: 'error', text: `Failed to load settings: ${error instanceof Error ? error.message : 'Unknown error'}` });
     } finally {
       setIsLoading(false);
     }
@@ -106,7 +136,7 @@ export function SiteSettingsForm() {
     <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
       <h2 className="text-2xl font-bold text-gray-100 mb-6">Site Settings</h2>
       <p className="text-gray-400 mb-6 text-sm">
-        Configure your site's name, description, colors, and other settings. These values will be used throughout the site.
+        Configure your site's name, description, and other settings. These values will be used throughout the site.
       </p>
 
       {message && (
@@ -170,21 +200,6 @@ export function SiteSettingsForm() {
           </div>
 
           <div>
-            <label htmlFor="siteUrl" className="block text-sm font-medium text-gray-300 mb-2">
-              Site URL *
-            </label>
-            <input
-              id="siteUrl"
-              type="url"
-              required
-              value={settings.siteUrl}
-              onChange={(e) => setSettings({ ...settings, siteUrl: e.target.value })}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              placeholder="https://example.com"
-            />
-          </div>
-
-          <div>
             <label htmlFor="iconUrl" className="block text-sm font-medium text-gray-300 mb-2">
               Icon URL *
             </label>
@@ -197,7 +212,7 @@ export function SiteSettingsForm() {
               className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
               placeholder="/icon.png"
             />
-            <p className="text-xs text-gray-500 mt-1">Path to your site icon (e.g., /icon.png)</p>
+            <p className="text-xs text-gray-500 mt-1">Path to your site icon (e.g., /icon.png) or Google Drive URL</p>
           </div>
 
           <div>
@@ -212,7 +227,7 @@ export function SiteSettingsForm() {
               className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
               placeholder="/icon-alt.png"
             />
-            <p className="text-xs text-gray-500 mt-1">Optional: Alternative icon (e.g., for dark mode or different themes)</p>
+            <p className="text-xs text-gray-500 mt-1">Optional: Alternative icon URL (supports Google Drive links)</p>
           </div>
 
           <div>
@@ -230,51 +245,6 @@ export function SiteSettingsForm() {
             />
           </div>
 
-          <div>
-            <label htmlFor="themeColor" className="block text-sm font-medium text-gray-300 mb-2">
-              Theme Color *
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="themeColor"
-                type="color"
-                required
-                value={settings.themeColor}
-                onChange={(e) => setSettings({ ...settings, themeColor: e.target.value })}
-                className="h-10 w-20 bg-gray-700 border border-gray-600 rounded-md cursor-pointer"
-              />
-              <input
-                type="text"
-                value={settings.themeColor}
-                onChange={(e) => setSettings({ ...settings, themeColor: e.target.value })}
-                className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="#8b5cf6"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="backgroundColor" className="block text-sm font-medium text-gray-300 mb-2">
-              Background Color *
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="backgroundColor"
-                type="color"
-                required
-                value={settings.backgroundColor}
-                onChange={(e) => setSettings({ ...settings, backgroundColor: e.target.value })}
-                className="h-10 w-20 bg-gray-700 border border-gray-600 rounded-md cursor-pointer"
-              />
-              <input
-                type="text"
-                value={settings.backgroundColor}
-                onChange={(e) => setSettings({ ...settings, backgroundColor: e.target.value })}
-                className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="#111827"
-              />
-            </div>
-          </div>
         </div>
 
         <div className="flex justify-end gap-4 pt-4 border-t border-gray-700">

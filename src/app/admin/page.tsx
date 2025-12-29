@@ -6,7 +6,6 @@ import { FeatureTile } from '@/components/admin/FeatureTile';
 import { RecentActivity } from '@/components/admin/RecentActivity';
 import { OCProgress } from '@/components/admin/OCProgress';
 import { RandomOCOfTheDay } from '@/components/admin/RandomOCOfTheDay';
-import { CurrentProjectsEditor } from '@/components/admin/CurrentProjectsEditor';
 
 export const metadata: Metadata = {
   title: 'Admin Dashboard',
@@ -334,11 +333,6 @@ export default async function AdminDashboard() {
             actionLabel="Configure →"
           />
         </div>
-      </div>
-
-      {/* Current Projects Editor */}
-      <div>
-        <CurrentProjectsEditor />
       </div>
 
       {/* Recent Activity */}

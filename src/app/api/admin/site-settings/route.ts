@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { errorResponse, successResponse, handleError } from '@/lib/api/route-helpers';
 import { checkAuth } from '@/lib/auth/require-auth';
 import { NextResponse } from 'next/server';
+import { getSiteConfig } from '@/lib/config/site-config';
 
 export async function GET() {
   try {
@@ -12,13 +13,32 @@ export async function GET() {
       .select('*')
       .single();
 
+    // PGRST116 is "not found" - this is normal if no settings exist yet
     if (error && error.code !== 'PGRST116') {
-      // PGRST116 is "not found" - return null if not found
-      return errorResponse(error.message);
+      console.error('Error fetching site settings:', error);
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
 
-    return successResponse(data || null);
+    // If no data in database, return site-config.json as fallback using getSiteConfig
+    if (!data) {
+      const config = await getSiteConfig();
+      return NextResponse.json({
+        success: true,
+        data: {
+          website_name: config.websiteName || '',
+          website_description: config.websiteDescription || '',
+          icon_url: config.iconUrl || '',
+          alt_icon_url: config.altIconUrl || null,
+          author_name: config.authorName || '',
+          short_name: config.shortName || '',
+        },
+      });
+    }
+
+    // Return database data
+    return NextResponse.json({ success: true, data });
   } catch (error) {
+    console.error('Exception in GET site-settings:', error);
     return handleError(error, 'Failed to fetch site settings');
   }
 }
@@ -38,25 +58,22 @@ export async function PUT(request: Request) {
       websiteDescription,
       iconUrl,
       altIconUrl,
-      siteUrl,
       authorName,
       shortName,
-      themeColor,
-      backgroundColor,
     } = body;
+
+    // Get site URL from environment variable
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
 
     // Validate required fields
     if (
       !websiteName ||
       !websiteDescription ||
       !iconUrl ||
-      !siteUrl ||
       !authorName ||
-      !shortName ||
-      !themeColor ||
-      !backgroundColor
+      !shortName
     ) {
-      return errorResponse('Missing required fields');
+      return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
     }
 
     // Check if a row exists
@@ -78,8 +95,6 @@ export async function PUT(request: Request) {
           site_url: siteUrl,
           author_name: authorName,
           short_name: shortName,
-          theme_color: themeColor,
-          background_color: backgroundColor,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id)
@@ -87,7 +102,7 @@ export async function PUT(request: Request) {
         .single();
 
       if (error) {
-        return errorResponse(error.message);
+        return NextResponse.json({ success: false, error: error.message }, { status: 400 });
       }
 
       result = data;
@@ -103,20 +118,63 @@ export async function PUT(request: Request) {
           site_url: siteUrl,
           author_name: authorName,
           short_name: shortName,
-          theme_color: themeColor,
-          background_color: backgroundColor,
         })
         .select()
         .single();
 
       if (error) {
-        return errorResponse(error.message);
+        return NextResponse.json({ success: false, error: error.message }, { status: 400 });
       }
 
       result = data;
     }
 
-    return successResponse(result);
+    // Sync current_projects description with website description
+    try {
+      const { data: existingProjects } = await supabase
+        .from('current_projects')
+        .select('id')
+        .single();
+
+      const projectsDescription = `Welcome to ${websiteName}! ${websiteDescription}`;
+
+      if (existingProjects) {
+        // Update existing current_projects description
+        await supabase
+          .from('current_projects')
+          .update({
+            description: projectsDescription,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingProjects.id);
+      } else {
+        // Create current_projects with synced description
+        await supabase
+          .from('current_projects')
+          .insert({
+            description: projectsDescription,
+            project_items: [
+              {
+                title: 'World Building',
+                description: 'Creating and expanding unique worlds and universes',
+                icon: 'fas fa-globe',
+                color: 'purple',
+              },
+              {
+                title: 'Character Development',
+                description: 'Developing rich characters with detailed backstories',
+                icon: 'fas fa-users',
+                color: 'pink',
+              },
+            ],
+          });
+      }
+    } catch (projectsError) {
+      // Log but don't fail the request if current_projects update fails
+      console.warn('Failed to sync current_projects description:', projectsError);
+    }
+
+    return NextResponse.json({ success: true, data: result });
   } catch (error) {
     return handleError(error, 'Failed to update site settings');
   }

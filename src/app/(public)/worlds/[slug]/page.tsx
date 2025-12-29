@@ -11,6 +11,7 @@ import { OCCard } from '@/components/oc/OCCard';
 import { TimelineList } from '@/components/timeline/TimelineList';
 import { LoreCard } from '@/components/lore/LoreCard';
 import { WorldRelationships } from '@/components/world/WorldRelationships';
+import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
 import Link from 'next/link';
 
 export async function generateMetadata({
@@ -37,7 +38,7 @@ export async function generateMetadata({
   const config = await getSiteConfig();
   const baseUrl = config.siteUrl || process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
   const url = `${baseUrl}/worlds/${resolvedParams.slug}`;
-  const iconUrl = config.iconUrl || '/icon.png';
+  const iconUrl = convertGoogleDriveUrl(config.iconUrl || '/icon.png');
   // Prioritize description_markdown, then summary, then fallback
   const descriptionText = world.description_markdown || world.summary || '';
   const description = descriptionText
@@ -63,7 +64,7 @@ export async function generateMetadata({
       images: world.header_image_url || world.icon_url
         ? [
             {
-              url: world.header_image_url || world.icon_url || `${baseUrl}${iconUrl}`,
+              url: world.header_image_url || world.icon_url || (iconUrl.startsWith('http') ? iconUrl : `${baseUrl}${iconUrl}`),
               alt: world.name,
               width: 1200,
               height: 630,
@@ -82,7 +83,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title: `${world.name} | ${config.websiteName}`,
       description,
-      images: world.header_image_url || world.icon_url ? [world.header_image_url || world.icon_url || `${baseUrl}${iconUrl}`] : [`${baseUrl}${iconUrl}`],
+      images: world.header_image_url || world.icon_url ? [world.header_image_url || world.icon_url || (iconUrl.startsWith('http') ? iconUrl : `${baseUrl}${iconUrl}`)] : [iconUrl.startsWith('http') ? iconUrl : `${baseUrl}${iconUrl}`],
     },
     alternates: {
       canonical: url,

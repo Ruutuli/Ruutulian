@@ -9,8 +9,6 @@ export interface SiteConfig {
   siteUrl: string;
   authorName: string;
   shortName: string;
-  themeColor: string;
-  backgroundColor: string;
 }
 
 interface SiteSettingsRow {
@@ -22,8 +20,6 @@ interface SiteSettingsRow {
   site_url: string;
   author_name: string;
   short_name: string;
-  theme_color: string;
-  background_color: string;
   created_at: string;
   updated_at: string;
 }
@@ -41,17 +37,18 @@ export async function getSiteConfig(): Promise<SiteConfig> {
       .single();
 
     // If database has settings, use them
+    // Site URL always comes from environment variable
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || siteConfigFile.siteUrl || 'https://example.com';
+    
     if (data && !error) {
       return {
         websiteName: data.website_name || siteConfigFile.websiteName,
         websiteDescription: data.website_description || siteConfigFile.websiteDescription,
         iconUrl: data.icon_url || siteConfigFile.iconUrl,
         altIconUrl: data.alt_icon_url || undefined,
-        siteUrl: data.site_url || siteConfigFile.siteUrl,
+        siteUrl: siteUrl,
         authorName: data.author_name || siteConfigFile.authorName,
         shortName: data.short_name || siteConfigFile.shortName,
-        themeColor: data.theme_color || siteConfigFile.themeColor,
-        backgroundColor: data.background_color || siteConfigFile.backgroundColor,
       };
     }
   } catch (error) {
@@ -60,7 +57,12 @@ export async function getSiteConfig(): Promise<SiteConfig> {
   }
 
   // Fall back to config file
-  return siteConfigFile as SiteConfig;
+  // Site URL always comes from environment variable
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || siteConfigFile.siteUrl || 'https://example.com';
+  return {
+    ...siteConfigFile,
+    siteUrl: siteUrl,
+  } as SiteConfig;
 }
 
 

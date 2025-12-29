@@ -17,7 +17,7 @@ export async function GET() {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: config.backgroundColor || '#111827',
+            backgroundColor: '#111827',
           }}
         >
           <div

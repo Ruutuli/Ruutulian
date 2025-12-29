@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getSiteConfig } from '@/lib/config/site-config';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { LoreDetail } from '@/components/lore/LoreDetail';
+import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
 
 export async function generateMetadata({
   params,
@@ -30,7 +31,7 @@ export async function generateMetadata({
   const baseUrl = config.siteUrl || process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
   const url = `${baseUrl}/worlds/${(lore.world as any).slug}/lore/${resolvedParams.loreSlug}`;
   const world = lore.world as any;
-  const iconUrl = config.iconUrl || '/icon.png';
+  const iconUrl = convertGoogleDriveUrl(config.iconUrl || '/icon.png');
   
   // Use description_markdown first, then description, then fallback
   const descriptionText = lore.description_markdown || lore.description || '';
@@ -66,7 +67,7 @@ export async function generateMetadata({
           ]
         : [
             {
-              url: `${baseUrl}${iconUrl}`,
+              url: iconUrl.startsWith('http') ? iconUrl : `${baseUrl}${iconUrl}`,
               width: 512,
               height: 512,
               alt: lore.name,
@@ -77,7 +78,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title: `${lore.name} | ${world.name} - ${config.websiteName}`,
       description,
-      images: lore.banner_image_url ? [lore.banner_image_url] : [`${baseUrl}${iconUrl}`],
+      images: lore.banner_image_url ? [lore.banner_image_url] : [iconUrl.startsWith('http') ? iconUrl : `${baseUrl}${iconUrl}`],
     },
     alternates: {
       canonical: url,

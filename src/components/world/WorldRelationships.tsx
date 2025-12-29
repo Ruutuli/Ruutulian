@@ -222,6 +222,7 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
   const [zoom, setZoom] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [lastPinchDistance, setLastPinchDistance] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const wheelHandlerRef = useRef<((e: WheelEvent) => void) | null>(null);
@@ -658,8 +659,8 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
   }
 
   return (
-    <div className="wiki-card p-6 md:p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="wiki-card p-4 md:p-6 lg:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h2 className="wiki-section-header scroll-mt-20">
           <i className="fas fa-heart text-red-400" aria-hidden="true"></i>
           Relationships
@@ -667,44 +668,44 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
         <div className="flex gap-2">
           <button
             onClick={() => setViewMode('list')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 py-2 md:px-4 rounded-lg text-xs md:text-sm font-medium transition-colors ${
               viewMode === 'list'
                 ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50'
                 : 'bg-gray-700/50 text-gray-400 border border-gray-600/50 hover:bg-gray-700/70'
             }`}
           >
-            <i className="fas fa-list mr-2"></i>
-            List
+            <i className="fas fa-list mr-1.5 md:mr-2"></i>
+            <span className="hidden sm:inline">List</span>
           </button>
           <button
             onClick={() => setViewMode('chart')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 py-2 md:px-4 rounded-lg text-xs md:text-sm font-medium transition-colors ${
               viewMode === 'chart'
                 ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50'
                 : 'bg-gray-700/50 text-gray-400 border border-gray-600/50 hover:bg-gray-700/70'
             }`}
           >
-            <i className="fas fa-project-diagram mr-2"></i>
-            Chart
+            <i className="fas fa-project-diagram mr-1.5 md:mr-2"></i>
+            <span className="hidden sm:inline">Chart</span>
           </button>
         </div>
       </div>
 
       {viewMode === 'list' ? (
-        <div className="space-y-3">
+        <div className="space-y-3 md:space-y-4">
           {ocs.map((oc) => {
             const ocRelationships = allRelationships.filter((rel) => rel.from.id === oc.id);
             if (ocRelationships.length === 0) return null;
 
             return (
-              <div key={oc.id} className="p-3 bg-gradient-to-br from-gray-800/40 to-gray-800/20 rounded-lg border border-gray-700/50">
-                <h3 className="text-sm font-semibold text-gray-200 mb-2 flex items-center gap-2">
+              <div key={oc.id} className="p-3 md:p-4 bg-gradient-to-br from-gray-800/40 to-gray-800/20 rounded-lg border border-gray-700/50">
+                <h3 className="text-sm md:text-base font-semibold text-gray-200 mb-3 flex items-center gap-2 flex-wrap">
                   <Link
                     href={`/ocs/${oc.slug}`}
-                    className="hover:text-purple-400 transition-colors flex items-center gap-1.5"
+                    className="hover:text-purple-400 transition-colors flex items-center gap-1.5 md:gap-2"
                   >
                     {oc.image_url && (
-                      <div className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-gray-600/50">
+                      <div className="flex-shrink-0 w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-gray-600/50">
                         <Image
                           src={convertGoogleDriveUrl(oc.image_url)}
                           alt={oc.name}
@@ -716,24 +717,24 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
                       </div>
                     )}
                     {!oc.image_url && (
-                      <i className="fas fa-user text-purple-400 text-xs"></i>
+                      <i className="fas fa-user text-purple-400 text-xs md:text-sm"></i>
                     )}
-                    {oc.name}
+                    <span className="break-words">{oc.name}</span>
                   </Link>
                   <span className="text-xs text-gray-500 font-normal">({ocRelationships.length})</span>
                 </h3>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2 md:gap-1.5">
                   {ocRelationships.map((rel, index) => {
                     const relTypeConfig = getRelationshipTypeConfig(rel.relationship_type);
                     const isExternal = !rel.to.oc_id;
                     return (
                       <div
                         key={index}
-                        className="group flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-br from-gray-800/60 to-gray-800/40 rounded-md border border-gray-700/40 hover:border-gray-600/60 transition-all text-xs"
+                        className="group flex items-center gap-1.5 md:gap-1.5 px-2.5 py-1.5 md:px-2.5 md:py-1.5 bg-gradient-to-br from-gray-800/60 to-gray-800/40 rounded-md border border-gray-700/40 hover:border-gray-600/60 transition-all text-xs w-full sm:w-auto sm:max-w-none"
                         title={rel.relationship || `${rel.to.name} - ${relTypeConfig.label}`}
                       >
                         {rel.image_url && (
-                          <div className="flex-shrink-0 w-6 h-6 rounded-full overflow-hidden border border-gray-600/50">
+                          <div className="flex-shrink-0 w-6 h-6 md:w-6 md:h-6 rounded-full overflow-hidden border border-gray-600/50">
                             <Image
                               src={convertGoogleDriveUrl(rel.image_url)}
                               alt={rel.to.name}
@@ -752,18 +753,18 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
                         {rel.to.oc_slug ? (
                           <Link
                             href={`/ocs/${rel.to.oc_slug}`}
-                            className="font-medium text-gray-200 hover:text-purple-400 transition-colors truncate max-w-[120px]"
+                            className="font-medium text-gray-200 hover:text-purple-400 transition-colors truncate flex-1 sm:flex-none sm:max-w-[120px]"
                           >
                             {rel.to.name}
                           </Link>
                         ) : (
-                          <span className="font-medium text-gray-200 truncate max-w-[120px]">
+                          <span className="font-medium text-gray-200 truncate flex-1 sm:flex-none sm:max-w-[120px]">
                             {rel.to.name}
                             {isExternal && <span className="text-gray-500 ml-1">(ext)</span>}
                           </span>
                         )}
                         {rel.relationship && (
-                          <span className="px-1.5 py-0.5 bg-gray-700/60 text-gray-300 rounded text-[10px] font-medium border border-gray-600/50 truncate max-w-[80px]">
+                          <span className="px-1.5 py-0.5 bg-gray-700/60 text-gray-300 rounded text-[10px] font-medium border border-gray-600/50 truncate max-w-[100px] sm:max-w-[80px]">
                             {rel.relationship}
                           </span>
                         )}
@@ -786,52 +787,56 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
           })}
         </div>
       ) : (
-        <div className="relative w-full h-[600px] bg-gray-900/50 rounded-lg border border-gray-700/50 overflow-hidden">
+        <div className="relative w-full h-[400px] sm:h-[500px] md:h-[600px] bg-gray-900/50 rounded-lg border border-gray-700/50 overflow-hidden">
           {nodes.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-gray-400">
+            <div className="flex items-center justify-center h-full text-gray-400 px-4">
               <div className="text-center">
                 <i className="fas fa-info-circle text-2xl mb-2"></i>
-                <p>No relationships found between characters.</p>
-                <p className="text-sm mt-1">Add relationships in character profiles to see them here.</p>
+                <p className="text-sm md:text-base">No relationships found between characters.</p>
+                <p className="text-xs md:text-sm mt-1">Add relationships in character profiles to see them here.</p>
               </div>
             </div>
           ) : (
             <>
               {/* Controls */}
-              <div className="absolute top-4 right-4 z-20 flex gap-2">
+              <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex gap-1.5 sm:gap-2">
                 <button
                   onClick={resetView}
-                  className="px-3 py-2 bg-gray-800/90 hover:bg-gray-700/90 text-gray-300 rounded-lg border border-gray-600/50 text-sm font-medium transition-colors backdrop-blur-sm"
+                  className="px-2.5 py-2 sm:px-3 sm:py-2 bg-gray-800/90 hover:bg-gray-700/90 text-gray-300 rounded-lg border border-gray-600/50 text-xs sm:text-sm font-medium transition-colors backdrop-blur-sm touch-manipulation"
                   title="Reset view"
+                  aria-label="Reset view"
                 >
                   <i className="fas fa-home"></i>
                 </button>
                 <button
                   onClick={() => setZoom((z) => Math.min(3, z + 0.2))}
-                  className="px-3 py-2 bg-gray-800/90 hover:bg-gray-700/90 text-gray-300 rounded-lg border border-gray-600/50 text-sm font-medium transition-colors backdrop-blur-sm"
+                  className="px-2.5 py-2 sm:px-3 sm:py-2 bg-gray-800/90 hover:bg-gray-700/90 text-gray-300 rounded-lg border border-gray-600/50 text-xs sm:text-sm font-medium transition-colors backdrop-blur-sm touch-manipulation"
                   title="Zoom in"
+                  aria-label="Zoom in"
                 >
                   <i className="fas fa-plus"></i>
                 </button>
                 <button
                   onClick={() => setZoom((z) => Math.max(0.5, z - 0.2))}
-                  className="px-3 py-2 bg-gray-800/90 hover:bg-gray-700/90 text-gray-300 rounded-lg border border-gray-600/50 text-sm font-medium transition-colors backdrop-blur-sm"
+                  className="px-2.5 py-2 sm:px-3 sm:py-2 bg-gray-800/90 hover:bg-gray-700/90 text-gray-300 rounded-lg border border-gray-600/50 text-xs sm:text-sm font-medium transition-colors backdrop-blur-sm touch-manipulation"
                   title="Zoom out"
+                  aria-label="Zoom out"
                 >
                   <i className="fas fa-minus"></i>
                 </button>
               </div>
 
-              <div className="absolute top-4 left-4 z-20 px-3 py-2 bg-gray-800/90 text-gray-300 rounded-lg border border-gray-600/50 text-xs backdrop-blur-sm">
-                <div className="flex items-center gap-2">
-                  <i className="fas fa-info-circle text-purple-400"></i>
-                  <span>Drag to pan, scroll to zoom</span>
+              <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 px-2 py-1.5 sm:px-3 sm:py-2 bg-gray-800/90 text-gray-300 rounded-lg border border-gray-600/50 text-[10px] sm:text-xs backdrop-blur-sm max-w-[calc(100%-120px)] sm:max-w-none">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <i className="fas fa-info-circle text-purple-400 text-xs sm:text-sm"></i>
+                  <span className="hidden sm:inline">Drag to pan, scroll to zoom</span>
+                  <span className="sm:hidden">Pinch to zoom</span>
                 </div>
               </div>
 
               <div 
                 ref={chartContainerRef}
-                className="absolute inset-0 overflow-hidden"
+                className="absolute inset-0 overflow-hidden touch-none"
                 onMouseDown={(e) => {
                   if (e.button === 0) {
                     setIsDragging(true);
@@ -848,6 +853,50 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
                 }}
                 onMouseUp={() => setIsDragging(false)}
                 onMouseLeave={() => setIsDragging(false)}
+                onTouchStart={(e) => {
+                  if (e.touches.length === 1) {
+                    const touch = e.touches[0];
+                    setIsDragging(true);
+                    setDragStart({ x: touch.clientX - pan.x, y: touch.clientY - pan.y });
+                    setLastPinchDistance(null);
+                  } else if (e.touches.length === 2) {
+                    setIsDragging(false);
+                    const touch1 = e.touches[0];
+                    const touch2 = e.touches[1];
+                    const distance = Math.hypot(
+                      touch2.clientX - touch1.clientX,
+                      touch2.clientY - touch1.clientY
+                    );
+                    setLastPinchDistance(distance);
+                  }
+                }}
+                onTouchMove={(e) => {
+                  if (e.touches.length === 2) {
+                    e.preventDefault();
+                    const touch1 = e.touches[0];
+                    const touch2 = e.touches[1];
+                    const distance = Math.hypot(
+                      touch2.clientX - touch1.clientX,
+                      touch2.clientY - touch1.clientY
+                    );
+                    
+                    if (lastPinchDistance !== null) {
+                      const scale = distance / lastPinchDistance;
+                      setZoom((prev) => Math.max(0.5, Math.min(3, prev * scale)));
+                    }
+                    setLastPinchDistance(distance);
+                  } else if (isDragging && e.touches.length === 1) {
+                    const touch = e.touches[0];
+                    setPan({
+                      x: touch.clientX - dragStart.x,
+                      y: touch.clientY - dragStart.y,
+                    });
+                  }
+                }}
+                onTouchEnd={() => {
+                  setIsDragging(false);
+                  setLastPinchDistance(null);
+                }}
                 style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
               >
                 <svg 
@@ -1108,16 +1157,16 @@ export function WorldRelationships({ ocs }: WorldRelationshipsProps) {
               </div>
               
               {/* Legend */}
-              <div className="absolute bottom-4 left-4 right-4 p-4 bg-gray-900/95 rounded-lg border border-gray-700/50 backdrop-blur-sm z-10">
-                <div className="text-sm font-semibold text-gray-200 mb-2 flex items-center gap-2">
-                  <i className="fas fa-info-circle text-purple-400"></i>
-                  Relationship Types
+              <div className="absolute bottom-2 left-2 right-2 sm:bottom-4 sm:left-4 sm:right-4 p-2 sm:p-3 md:p-4 bg-gray-900/95 rounded-lg border border-gray-700/50 backdrop-blur-sm z-10 max-h-[40%] overflow-y-auto">
+                <div className="text-xs sm:text-sm font-semibold text-gray-200 mb-2 flex items-center gap-2">
+                  <i className="fas fa-info-circle text-purple-400 text-xs sm:text-sm"></i>
+                  <span>Relationship Types</span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 sm:gap-2">
                   {RELATIONSHIP_TYPES.map((type) => (
-                    <div key={type.value} className="flex items-center gap-2">
-                      <i className={`${type.icon} text-sm`} style={{ color: type.color }}></i>
-                      <span className="text-xs text-gray-300">{type.label}</span>
+                    <div key={type.value} className="flex items-center gap-1.5 sm:gap-2">
+                      <i className={`${type.icon} text-xs sm:text-sm flex-shrink-0`} style={{ color: type.color }}></i>
+                      <span className="text-[10px] sm:text-xs text-gray-300 truncate">{type.label}</span>
                     </div>
                   ))}
                 </div>

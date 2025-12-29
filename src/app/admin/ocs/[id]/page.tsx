@@ -17,10 +17,6 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const supabase = await createClient();
 
-  console.log('[generateMetadata - Admin] Request received for id/slug:', params.id);
-  console.log('[generateMetadata - Admin] Is UUID:', isUUID(params.id));
-  console.log('[generateMetadata - Admin] Creating Supabase client...');
-
   // Support both ID (UUID) and slug
   const query = isUUID(params.id)
     ? supabase.from('ocs').select('name').eq('id', params.id)
@@ -31,29 +27,17 @@ export async function generateMetadata({
   if (error) {
     console.error('[generateMetadata - Admin] Supabase query error:', {
       id: params.id,
-      isUUID: isUUID(params.id),
       error: error.message,
       code: error.code,
-      details: error.details,
-      hint: error.hint,
     });
   }
 
   if (!oc) {
-    console.warn('[generateMetadata - Admin] Character not found:', {
-      id: params.id,
-      isUUID: isUUID(params.id),
-      error: error?.message || 'No data returned',
-    });
+    console.warn('[generateMetadata - Admin] Character not found:', params.id);
     return {
       title: 'Edit Character',
     };
   }
-
-  console.log('[generateMetadata - Admin] Character found:', {
-    id: params.id,
-    name: oc.name,
-  });
 
   return {
     title: `Edit ${oc.name}`,
@@ -141,12 +125,7 @@ export default async function EditOCPage({
 }: {
   params: { id: string };
 }) {
-  const startTime = Date.now();
   const supabase = await createClient();
-
-  console.log('[EditOCPage] Request received for id/slug:', params.id);
-  console.log('[EditOCPage] Is UUID:', isUUID(params.id));
-  console.log('[EditOCPage] Creating Supabase client...');
 
   // Support both ID (UUID) and slug
   // Try with foreign key hint first, fallback to inferred relationship if it fails
@@ -178,8 +157,6 @@ export default async function EditOCPage({
   if (ocError && ocError.code === 'PGRST200' && 
       ocError.message?.includes('story_aliases') &&
       ocError.details?.includes('fk_ocs_story_alias_id')) {
-    console.log('[EditOCPage] FK hint failed, falling back to inferred relationship');
-    
     baseQuery = supabase
       .from('ocs')
       .select(`
@@ -206,44 +183,21 @@ export default async function EditOCPage({
     oc = fallbackResult.data;
     ocError = fallbackResult.error;
   }
-  
-  const ocQueryDuration = Date.now() - startTime;
 
   if (ocError) {
     console.error('[EditOCPage] Supabase OC query error:', {
       id: params.id,
-      isUUID: isUUID(params.id),
       error: ocError.message,
       code: ocError.code,
-      details: ocError.details,
-      hint: ocError.hint,
-      duration: `${ocQueryDuration}ms`,
     });
   }
 
   if (!oc) {
-    console.error('[EditOCPage] Character not found - calling notFound():', {
-      id: params.id,
-      isUUID: isUUID(params.id),
-      error: ocError?.message || 'No data returned',
-      duration: `${ocQueryDuration}ms`,
-    });
+    console.error('[EditOCPage] Character not found:', params.id);
     notFound();
   }
 
-  console.log('[EditOCPage] Character loaded successfully:', {
-    id: params.id,
-    name: oc.name,
-    ocId: oc.id,
-    slug: oc.slug,
-    hasWorld: !!oc.world,
-    hasStoryAlias: !!oc.story_alias,
-    hasIdentity: !!oc.identity,
-    duration: `${ocQueryDuration}ms`,
-  });
-
   // Fetch all OCs to find reverse relationships
-  const allOCsStartTime = Date.now();
   const { data: allOCs, error: allOCsError } = await supabase
     .from('ocs')
     .select('id, name, slug, family, friends_allies, rivals_enemies, romantic, other_relationships');
@@ -252,13 +206,6 @@ export default async function EditOCPage({
     console.error('[EditOCPage] Error fetching all OCs for reverse relationships:', {
       error: allOCsError.message,
       code: allOCsError.code,
-      details: allOCsError.details,
-      duration: `${Date.now() - allOCsStartTime}ms`,
-    });
-  } else {
-    console.log('[EditOCPage] All OCs fetched for reverse relationships:', {
-      count: allOCs?.length || 0,
-      duration: `${Date.now() - allOCsStartTime}ms`,
     });
   }
 
@@ -272,24 +219,6 @@ export default async function EditOCPage({
         romantic: [],
         other_relationships: [],
       };
-
-  // Debug: Log reverse relationships (remove in production if needed)
-  if (process.env.NODE_ENV === 'development') {
-    console.log('=== Reverse Relationships Debug ===');
-    console.log('Current OC:', oc.name, '(ID:', oc.id, ', Slug:', oc.slug, ')');
-    console.log('Total OCs checked:', allOCs?.length || 0);
-    console.log('Reverse relationships found:', {
-      family: reverseRelationships.family.length,
-      friends_allies: reverseRelationships.friends_allies.length,
-      rivals_enemies: reverseRelationships.rivals_enemies.length,
-      romantic: reverseRelationships.romantic.length,
-      other_relationships: reverseRelationships.other_relationships.length,
-    });
-    if (reverseRelationships.family.length > 0) {
-      console.log('Family reverse relationships:', reverseRelationships.family);
-    }
-    console.log('===================================');
-  }
 
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6">

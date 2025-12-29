@@ -45,6 +45,12 @@ export function TableOfContents({ oc }: TableOfContentsProps) {
       exists: !!(oc.abilities || oc.skills || oc.aptitudes || oc.strengths || oc.limits || oc.conditions)
     },
     {
+      id: 'stats',
+      title: 'Stats',
+      icon: 'fas fa-dice-d20',
+      exists: !!(oc.stat_strength || oc.stat_dexterity || oc.stat_constitution || oc.stat_intelligence || oc.stat_wisdom || oc.stat_charisma || oc.stat_level || oc.stat_class || oc.stat_hit_points_current || oc.stat_hit_points_max || oc.stat_armor_class || oc.stat_speed || oc.stat_notes)
+    },
+    {
       id: 'appearance',
       title: 'Appearance',
       icon: 'fas fa-user',

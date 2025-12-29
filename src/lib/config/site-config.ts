@@ -1,5 +1,4 @@
 import { createAdminClient } from '@/lib/supabase/server';
-import siteConfigFile from '../../../site-config.json';
 
 export interface SiteConfig {
   websiteName: string;
@@ -25,44 +24,33 @@ interface SiteSettingsRow {
 }
 
 /**
- * Get site configuration from database, falling back to config file
+ * Get site configuration from database only (no file fallback)
+ * Throws error if no settings exist in database
  */
 export async function getSiteConfig(): Promise<SiteConfig> {
-  try {
-    const supabase = createAdminClient();
-    
-    const { data, error } = await supabase
-      .from('site_settings')
-      .select('*')
-      .single();
+  const supabase = createAdminClient();
+  
+  const { data, error } = await supabase
+    .from('site_settings')
+    .select('*')
+    .single();
 
-    // If database has settings, use them
-    // Site URL always comes from environment variable
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || siteConfigFile.siteUrl || 'https://example.com';
-    
-    if (data && !error) {
-      return {
-        websiteName: data.website_name || siteConfigFile.websiteName,
-        websiteDescription: data.website_description || siteConfigFile.websiteDescription,
-        iconUrl: data.icon_url || siteConfigFile.iconUrl,
-        altIconUrl: data.alt_icon_url || undefined,
-        siteUrl: siteUrl,
-        authorName: data.author_name || siteConfigFile.authorName,
-        shortName: data.short_name || siteConfigFile.shortName,
-      };
-    }
-  } catch (error) {
-    // If table doesn't exist or other error, fall back to file
-    console.warn('Could not fetch site settings from database, using config file:', error);
+  if (error || !data) {
+    throw new Error(`Site settings not found in database. Please configure site settings in the admin panel. Error: ${error?.message || 'No data'}`);
   }
 
-  // Fall back to config file
   // Site URL always comes from environment variable
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || siteConfigFile.siteUrl || 'https://example.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || data.site_url || 'https://example.com';
+  
   return {
-    ...siteConfigFile,
+    websiteName: data.website_name,
+    websiteDescription: data.website_description,
+    iconUrl: data.icon_url,
+    altIconUrl: data.alt_icon_url || undefined,
     siteUrl: siteUrl,
-  } as SiteConfig;
+    authorName: data.author_name,
+    shortName: data.short_name,
+  };
 }
 
 

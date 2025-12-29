@@ -244,6 +244,13 @@ export const formStyles = {
       hoverFrom: 'hover:from-purple-700',
       hoverTo: 'hover:to-purple-600/80',
     },
+    stats: {
+      border: 'border-amber-500/50',
+      from: 'from-amber-700/80',
+      to: 'to-amber-600/60',
+      hoverFrom: 'hover:from-amber-700',
+      hoverTo: 'hover:to-amber-600/80',
+    },
     history: {
       border: 'border-amber-500/50',
       from: 'from-amber-700/80',

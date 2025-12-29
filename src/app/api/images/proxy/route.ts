@@ -10,18 +10,9 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const url = searchParams.get('url');
   const fileId = searchParams.get('fileId');
-  const startTime = Date.now();
-
-  console.log('[ImageProxy] Request received:', {
-    url,
-    fileId,
-    searchParams: Object.fromEntries(searchParams.entries()),
-    timestamp: new Date().toISOString(),
-  });
 
   if (!url && !fileId) {
     logger.warn('ImageProxy', 'Missing url or fileId parameter', { url, fileId });
-    console.error('[ImageProxy] Missing url or fileId parameter');
     return NextResponse.json(
       { error: 'Missing url or fileId parameter' },
       { status: 400 }
@@ -31,22 +22,13 @@ export async function GET(request: NextRequest) {
   // Get file ID from URL or use provided fileId
   const driveFileId = fileId || (url ? getGoogleDriveFileId(url) : null);
   
-  console.log('[ImageProxy] File ID extraction:', {
-    providedFileId: fileId,
-    extractedFromUrl: url ? getGoogleDriveFileId(url) : null,
-    finalFileId: driveFileId,
-  });
-  
   if (!driveFileId) {
     logger.warn('ImageProxy', 'Invalid Google Drive URL or file ID', { url, fileId });
-    console.error('[ImageProxy] Invalid Google Drive URL or file ID');
     return NextResponse.json(
       { error: 'Invalid Google Drive URL or file ID' },
       { status: 400 }
     );
   }
-
-  console.log('[ImageProxy] Starting image fetch attempts for fileId:', driveFileId);
 
   // Try multiple URL formats in order of reliability
   const urls = url 
@@ -94,20 +76,7 @@ export async function GET(request: NextRequest) {
         
         // Verify it's actually image data (not HTML error page)
         if (imageBuffer.byteLength > 100) {
-          // Success - log and return image
-          const fetchDuration = Date.now() - fetchStartTime;
-          const totalDuration = Date.now() - startTime;
-          console.log('[ImageProxy] Successfully fetched image:', {
-            fileId: driveFileId,
-            attempt: attemptCount,
-            url: imageUrl,
-            finalUrl: finalUrl,
-            contentType,
-            size: imageBuffer.byteLength,
-            fetchDuration: `${fetchDuration}ms`,
-            totalDuration: `${totalDuration}ms`,
-          });
-          
+          // Success - return image
           // Return the image with appropriate headers
           return new NextResponse(imageBuffer, {
             status: 200,
@@ -165,32 +134,16 @@ export async function GET(request: NextRequest) {
   }
 
   // All URLs failed - log comprehensive error details
-  const totalDuration = Date.now() - startTime;
   const isPublicAccessIssue = errors.some(e => 
     e.error.includes('not publicly accessible') || 
     e.error.includes('redirected to login') ||
     e.error.includes('Access denied')
   );
 
-  console.error('[ImageProxy] Failed to fetch Google Drive image after all attempts:', {
-    fileId: driveFileId,
-    originalUrl: url,
-    totalAttempts: attemptCount,
-    totalDuration: `${totalDuration}ms`,
-    isPublicAccessIssue,
-    errors: errors.map(e => ({
-      url: e.url,
-      error: e.error,
-      status: e.status,
-      contentType: e.contentType,
-    })),
-  });
-
   logger.error('ImageProxy', 'Failed to fetch Google Drive image after all attempts', {
     fileId: driveFileId,
     originalUrl: url,
     totalAttempts: attemptCount,
-    totalDuration: `${totalDuration}ms`,
     isPublicAccessIssue,
     errors: errors.map(e => ({
       url: e.url,

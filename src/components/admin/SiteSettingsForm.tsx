@@ -50,7 +50,7 @@ export function SiteSettingsForm() {
         return;
       }
 
-      // If data exists, populate the form. If null, try to load from site-config.json as fallback
+      // If data exists, populate the form. If null, leave form empty (no file fallback)
       if (result.data) {
         console.log('Loading settings from database:', result.data);
         setSettings({
@@ -62,25 +62,9 @@ export function SiteSettingsForm() {
           shortName: result.data.short_name || '',
         });
       } else {
-        // No data in database, try to load from site-config.json
-        console.log('No database settings found, attempting to load from site-config.json');
-        try {
-          const configResponse = await fetch('/site-config.json');
-          if (configResponse.ok) {
-            const configData = await configResponse.json();
-            console.log('Loaded from site-config.json:', configData);
-            setSettings({
-              websiteName: configData.websiteName || '',
-              websiteDescription: configData.websiteDescription || '',
-              iconUrl: configData.iconUrl || '',
-              altIconUrl: configData.altIconUrl || '',
-              authorName: configData.authorName || '',
-              shortName: configData.shortName || '',
-            });
-          }
-        } catch (configError) {
-          console.warn('Could not load site-config.json:', configError);
-        }
+        // No data in database - form will be empty, user needs to fill it in
+        console.log('No database settings found. Form will be empty.');
+        // Settings state already initialized with empty strings, so no action needed
       }
     } catch (error) {
       console.error('Failed to fetch settings:', error);
@@ -116,6 +100,15 @@ export function SiteSettingsForm() {
         setMessage({ type: 'success', text: 'Settings saved successfully!' });
         // Clear message after 3 seconds
         setTimeout(() => setMessage(null), 3000);
+        // Dispatch custom event to refresh site name in navigation after a delay
+        // to ensure database transaction is fully committed
+        // Include the saved websiteName in the event so components can use it immediately
+        setTimeout(() => {
+          const event = new CustomEvent('site-settings-updated', {
+            detail: { websiteName: settings.websiteName }
+          });
+          window.dispatchEvent(event);
+        }, 1000); // Increased delay to ensure database commit
       } else {
         setMessage({ type: 'error', text: result.error || 'Failed to save settings' });
       }

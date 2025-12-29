@@ -101,6 +101,20 @@ CREATE TABLE IF NOT EXISTS ocs (
   trivia TEXT,
   -- Development
   development_status TEXT,
+  -- D&D-like Stats
+  stat_strength INTEGER CHECK (stat_strength >= 1 AND stat_strength <= 30),
+  stat_dexterity INTEGER CHECK (stat_dexterity >= 1 AND stat_dexterity <= 30),
+  stat_constitution INTEGER CHECK (stat_constitution >= 1 AND stat_constitution <= 30),
+  stat_intelligence INTEGER CHECK (stat_intelligence >= 1 AND stat_intelligence <= 30),
+  stat_wisdom INTEGER CHECK (stat_wisdom >= 1 AND stat_wisdom <= 30),
+  stat_charisma INTEGER CHECK (stat_charisma >= 1 AND stat_charisma <= 30),
+  stat_hit_points_current INTEGER CHECK (stat_hit_points_current >= 0),
+  stat_hit_points_max INTEGER CHECK (stat_hit_points_max >= 1),
+  stat_armor_class INTEGER CHECK (stat_armor_class >= 0),
+  stat_speed INTEGER CHECK (stat_speed >= 0),
+  stat_level INTEGER CHECK (stat_level >= 1 AND stat_level <= 20),
+  stat_class TEXT,
+  stat_notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -151,3 +165,17 @@ CREATE TRIGGER update_ocs_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_ocs_updated_at();
 
+-- Add comments for D&D stats documentation
+COMMENT ON COLUMN ocs.stat_strength IS 'Strength ability score (1-30)';
+COMMENT ON COLUMN ocs.stat_dexterity IS 'Dexterity ability score (1-30)';
+COMMENT ON COLUMN ocs.stat_constitution IS 'Constitution ability score (1-30)';
+COMMENT ON COLUMN ocs.stat_intelligence IS 'Intelligence ability score (1-30)';
+COMMENT ON COLUMN ocs.stat_wisdom IS 'Wisdom ability score (1-30)';
+COMMENT ON COLUMN ocs.stat_charisma IS 'Charisma ability score (1-30)';
+COMMENT ON COLUMN ocs.stat_hit_points_current IS 'Current hit points';
+COMMENT ON COLUMN ocs.stat_hit_points_max IS 'Maximum hit points';
+COMMENT ON COLUMN ocs.stat_armor_class IS 'Armor Class (AC)';
+COMMENT ON COLUMN ocs.stat_speed IS 'Movement speed in feet';
+COMMENT ON COLUMN ocs.stat_level IS 'Character level (1-20, D&D 5e)';
+COMMENT ON COLUMN ocs.stat_class IS 'Character class';
+COMMENT ON COLUMN ocs.stat_notes IS 'Additional notes about stats';

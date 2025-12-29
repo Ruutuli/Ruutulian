@@ -338,6 +338,21 @@ export interface OC {
   
   // Development
   development_status?: string | null;
+  
+  // D&D-like Stats
+  stat_strength?: number | null;
+  stat_dexterity?: number | null;
+  stat_constitution?: number | null;
+  stat_intelligence?: number | null;
+  stat_wisdom?: number | null;
+  stat_charisma?: number | null;
+  stat_hit_points_current?: number | null;
+  stat_hit_points_max?: number | null;
+  stat_armor_class?: number | null;
+  stat_speed?: number | null;
+  stat_level?: number | null;
+  stat_class?: string | null;
+  stat_notes?: string | null;
 }
 
 export interface Timeline {

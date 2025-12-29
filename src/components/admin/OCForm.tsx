@@ -1251,6 +1251,54 @@ const ocSchema = z.object({
   
   // Development
   development_status: z.string().optional(),
+  
+  // D&D-like Stats
+  stat_strength: z.preprocess(
+    (val) => (val === '' || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
+    z.number().int().min(1).max(30).optional()
+  ),
+  stat_dexterity: z.preprocess(
+    (val) => (val === '' || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
+    z.number().int().min(1).max(30).optional()
+  ),
+  stat_constitution: z.preprocess(
+    (val) => (val === '' || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
+    z.number().int().min(1).max(30).optional()
+  ),
+  stat_intelligence: z.preprocess(
+    (val) => (val === '' || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
+    z.number().int().min(1).max(30).optional()
+  ),
+  stat_wisdom: z.preprocess(
+    (val) => (val === '' || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
+    z.number().int().min(1).max(30).optional()
+  ),
+  stat_charisma: z.preprocess(
+    (val) => (val === '' || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
+    z.number().int().min(1).max(30).optional()
+  ),
+  stat_hit_points_current: z.preprocess(
+    (val) => (val === '' || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
+    z.number().int().min(0).optional()
+  ),
+  stat_hit_points_max: z.preprocess(
+    (val) => (val === '' || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
+    z.number().int().min(1).optional()
+  ),
+  stat_armor_class: z.preprocess(
+    (val) => (val === '' || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
+    z.number().int().min(0).optional()
+  ),
+  stat_speed: z.preprocess(
+    (val) => (val === '' || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
+    z.number().int().min(0).optional()
+  ),
+  stat_level: z.preprocess(
+    (val) => (val === '' || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
+    z.number().int().min(1).max(20).optional()
+  ),
+  stat_class: z.string().optional().nullable(),
+  stat_notes: z.string().optional().nullable(),
 });
 
 type OCFormData = z.infer<typeof ocSchema>;
@@ -1464,6 +1512,20 @@ function getDefaultValues(oc?: OC, reverseRelationships?: ReverseRelationships):
       trivia: '',
       // Development
       development_status: '',
+      // D&D-like Stats
+      stat_strength: '',
+      stat_dexterity: '',
+      stat_constitution: '',
+      stat_intelligence: '',
+      stat_wisdom: '',
+      stat_charisma: '',
+      stat_hit_points_current: '',
+      stat_hit_points_max: '',
+      stat_armor_class: '',
+      stat_speed: '',
+      stat_level: '',
+      stat_class: '',
+      stat_notes: '',
     };
   }
 
@@ -1608,6 +1670,20 @@ function getDefaultValues(oc?: OC, reverseRelationships?: ReverseRelationships):
     trivia: oc.trivia ?? '',
     // Development
     development_status: oc.development_status ?? '',
+    // D&D-like Stats
+    stat_strength: oc.stat_strength ?? '',
+    stat_dexterity: oc.stat_dexterity ?? '',
+    stat_constitution: oc.stat_constitution ?? '',
+    stat_intelligence: oc.stat_intelligence ?? '',
+    stat_wisdom: oc.stat_wisdom ?? '',
+    stat_charisma: oc.stat_charisma ?? '',
+    stat_hit_points_current: oc.stat_hit_points_current ?? '',
+    stat_hit_points_max: oc.stat_hit_points_max ?? '',
+    stat_armor_class: oc.stat_armor_class ?? '',
+    stat_speed: oc.stat_speed ?? '',
+    stat_level: oc.stat_level ?? '',
+    stat_class: oc.stat_class ?? '',
+    stat_notes: oc.stat_notes ?? '',
   };
 }
 
@@ -2118,6 +2194,20 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
         trivia: data.trivia || null,
         // Development
         development_status: data.development_status || null,
+        // D&D-like Stats
+        stat_strength: data.stat_strength === '' || data.stat_strength === null || (typeof data.stat_strength === 'number' && isNaN(data.stat_strength)) ? null : Number(data.stat_strength),
+        stat_dexterity: data.stat_dexterity === '' || data.stat_dexterity === null || (typeof data.stat_dexterity === 'number' && isNaN(data.stat_dexterity)) ? null : Number(data.stat_dexterity),
+        stat_constitution: data.stat_constitution === '' || data.stat_constitution === null || (typeof data.stat_constitution === 'number' && isNaN(data.stat_constitution)) ? null : Number(data.stat_constitution),
+        stat_intelligence: data.stat_intelligence === '' || data.stat_intelligence === null || (typeof data.stat_intelligence === 'number' && isNaN(data.stat_intelligence)) ? null : Number(data.stat_intelligence),
+        stat_wisdom: data.stat_wisdom === '' || data.stat_wisdom === null || (typeof data.stat_wisdom === 'number' && isNaN(data.stat_wisdom)) ? null : Number(data.stat_wisdom),
+        stat_charisma: data.stat_charisma === '' || data.stat_charisma === null || (typeof data.stat_charisma === 'number' && isNaN(data.stat_charisma)) ? null : Number(data.stat_charisma),
+        stat_hit_points_current: data.stat_hit_points_current === '' || data.stat_hit_points_current === null || (typeof data.stat_hit_points_current === 'number' && isNaN(data.stat_hit_points_current)) ? null : Number(data.stat_hit_points_current),
+        stat_hit_points_max: data.stat_hit_points_max === '' || data.stat_hit_points_max === null || (typeof data.stat_hit_points_max === 'number' && isNaN(data.stat_hit_points_max)) ? null : Number(data.stat_hit_points_max),
+        stat_armor_class: data.stat_armor_class === '' || data.stat_armor_class === null || (typeof data.stat_armor_class === 'number' && isNaN(data.stat_armor_class)) ? null : Number(data.stat_armor_class),
+        stat_speed: data.stat_speed === '' || data.stat_speed === null || (typeof data.stat_speed === 'number' && isNaN(data.stat_speed)) ? null : Number(data.stat_speed),
+        stat_level: data.stat_level === '' || data.stat_level === null || (typeof data.stat_level === 'number' && isNaN(data.stat_level)) ? null : Number(data.stat_level),
+        stat_class: data.stat_class || null,
+        stat_notes: data.stat_notes || null,
         // System
         series_type: data.series_type || null,
         story_alias_id: data.story_alias_id === '' || data.story_alias_id === null ? null : data.story_alias_id,
@@ -3217,6 +3307,185 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
             {...register('conditions')}
             rows={2}
             placeholder="Situational requirements or restrictions"
+            disabled={isSubmitting}
+          />
+        </div>
+      </FormSection>
+
+      <FormSection title="Stats" icon="stats" accentColor="stats" defaultOpen={false}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <FormLabel htmlFor="stat_strength">
+              Strength (STR)
+            </FormLabel>
+            <FormInput
+              type="number"
+              {...register('stat_strength', { valueAsNumber: true })}
+              min={1}
+              max={30}
+              placeholder="1-30"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
+            <FormLabel htmlFor="stat_dexterity">
+              Dexterity (DEX)
+            </FormLabel>
+            <FormInput
+              type="number"
+              {...register('stat_dexterity', { valueAsNumber: true })}
+              min={1}
+              max={30}
+              placeholder="1-30"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
+            <FormLabel htmlFor="stat_constitution">
+              Constitution (CON)
+            </FormLabel>
+            <FormInput
+              type="number"
+              {...register('stat_constitution', { valueAsNumber: true })}
+              min={1}
+              max={30}
+              placeholder="1-30"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
+            <FormLabel htmlFor="stat_intelligence">
+              Intelligence (INT)
+            </FormLabel>
+            <FormInput
+              type="number"
+              {...register('stat_intelligence', { valueAsNumber: true })}
+              min={1}
+              max={30}
+              placeholder="1-30"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
+            <FormLabel htmlFor="stat_wisdom">
+              Wisdom (WIS)
+            </FormLabel>
+            <FormInput
+              type="number"
+              {...register('stat_wisdom', { valueAsNumber: true })}
+              min={1}
+              max={30}
+              placeholder="1-30"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
+            <FormLabel htmlFor="stat_charisma">
+              Charisma (CHA)
+            </FormLabel>
+            <FormInput
+              type="number"
+              {...register('stat_charisma', { valueAsNumber: true })}
+              min={1}
+              max={30}
+              placeholder="1-30"
+              disabled={isSubmitting}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <FormLabel htmlFor="stat_level">
+              Level
+            </FormLabel>
+            <FormInput
+              type="number"
+              {...register('stat_level', { valueAsNumber: true })}
+              min={1}
+              max={20}
+              placeholder="1-20"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
+            <FormLabel htmlFor="stat_class">
+              Class
+            </FormLabel>
+            <FormInput
+              {...register('stat_class')}
+              placeholder="e.g., Fighter, Wizard, Rogue"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
+            <FormLabel htmlFor="stat_armor_class">
+              Armor Class (AC)
+            </FormLabel>
+            <FormInput
+              type="number"
+              {...register('stat_armor_class', { valueAsNumber: true })}
+              min={0}
+              placeholder="0+"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
+            <FormLabel htmlFor="stat_hit_points_max">
+              Max Hit Points
+            </FormLabel>
+            <FormInput
+              type="number"
+              {...register('stat_hit_points_max', { valueAsNumber: true })}
+              min={1}
+              placeholder="1+"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
+            <FormLabel htmlFor="stat_hit_points_current">
+              Current Hit Points
+            </FormLabel>
+            <FormInput
+              type="number"
+              {...register('stat_hit_points_current', { valueAsNumber: true })}
+              min={0}
+              placeholder="0+"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
+            <FormLabel htmlFor="stat_speed">
+              Speed (feet)
+            </FormLabel>
+            <FormInput
+              type="number"
+              {...register('stat_speed', { valueAsNumber: true })}
+              min={0}
+              placeholder="0+"
+              disabled={isSubmitting}
+            />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <FormLabel htmlFor="stat_notes" optional>
+            Stats Notes
+          </FormLabel>
+          <FormTextarea
+            {...register('stat_notes')}
+            rows={3}
+            placeholder="Additional notes about stats, modifiers, or special abilities"
             disabled={isSubmitting}
           />
         </div>

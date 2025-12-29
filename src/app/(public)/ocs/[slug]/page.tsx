@@ -29,9 +29,6 @@ export async function generateMetadata({
   const supabase = await createClient();
   const resolvedParams = await params;
 
-  console.log('[generateMetadata] Request received for slug:', resolvedParams.slug);
-  console.log('[generateMetadata] Creating Supabase client...');
-
   const { data: oc, error } = await supabase
     .from('ocs')
     .select('name, slug, history_summary, image_url, world:worlds(name, slug)')
@@ -44,26 +41,15 @@ export async function generateMetadata({
       slug: resolvedParams.slug,
       error: error.message,
       code: error.code,
-      details: error.details,
-      hint: error.hint,
     });
   }
 
   if (!oc) {
-    console.warn('[generateMetadata] Character not found:', {
-      slug: resolvedParams.slug,
-      error: error?.message || 'No data returned',
-    });
+    console.warn('[generateMetadata] Character not found:', resolvedParams.slug);
     return {
       title: 'Character Not Found',
     };
   }
-
-  console.log('[generateMetadata] Character found:', {
-    slug: resolvedParams.slug,
-    name: oc.name,
-    hasWorld: !!oc.world,
-  });
 
   const config = await getSiteConfig();
   const baseUrl = config.siteUrl || process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
@@ -119,12 +105,8 @@ export default async function OCDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const startTime = Date.now();
   const supabase = await createClient();
   const resolvedParams = await params;
-
-  console.log('[OCDetailPage] Request received for slug:', resolvedParams.slug);
-  console.log('[OCDetailPage] Creating Supabase client...');
 
   // Try with foreign key hint first, fallback to inferred relationship if it fails
   let { data: oc, error } = await supabase
@@ -155,8 +137,6 @@ export default async function OCDetailPage({
   if (error && error.code === 'PGRST200' && 
       error.message?.includes('story_aliases') &&
       error.details?.includes('fk_ocs_story_alias_id')) {
-    console.log('[OCDetailPage] FK hint failed, falling back to inferred relationship');
-    
     const fallbackResult = await supabase
       .from('ocs')
       .select(`
@@ -185,38 +165,18 @@ export default async function OCDetailPage({
     error = fallbackResult.error;
   }
 
-  const duration = Date.now() - startTime;
-
   if (error) {
     console.error('[OCDetailPage] Supabase query error:', {
       slug: resolvedParams.slug,
       error: error.message,
       code: error.code,
-      details: error.details,
-      hint: error.hint,
-      duration: `${duration}ms`,
     });
   }
 
   if (!oc) {
-    console.error('[OCDetailPage] Character not found - calling notFound():', {
-      slug: resolvedParams.slug,
-      error: error?.message || 'No data returned',
-      duration: `${duration}ms`,
-    });
+    console.error('[OCDetailPage] Character not found:', resolvedParams.slug);
     notFound();
   }
-
-  console.log('[OCDetailPage] Character loaded successfully:', {
-    slug: resolvedParams.slug,
-    name: oc.name,
-    id: oc.id,
-    is_public: oc.is_public,
-    hasWorld: !!oc.world,
-    hasStoryAlias: !!oc.story_alias,
-    hasIdentity: !!oc.identity,
-    duration: `${duration}ms`,
-  });
 
   // Helper function to render a field value
   const renderFieldValue = (field: WorldFieldDefinition, value: string | number | string[] | null) => {
@@ -717,6 +677,219 @@ export default async function OCDetailPage({
                       );
                     });
                   })()}
+                </div>
+              </div>
+            )}
+
+            {/* Stats Section */}
+            {(oc.stat_strength || oc.stat_dexterity || oc.stat_constitution || oc.stat_intelligence || oc.stat_wisdom || oc.stat_charisma || oc.stat_level || oc.stat_class || oc.stat_hit_points_current || oc.stat_hit_points_max || oc.stat_armor_class || oc.stat_speed || oc.stat_notes) && (
+              <div className="wiki-card p-4 md:p-6 lg:p-8" suppressHydrationWarning>
+                <h2 id="stats" className="wiki-section-header scroll-mt-20" suppressHydrationWarning>
+                  <i className="fas fa-dice-d20 text-amber-400" aria-hidden="true" suppressHydrationWarning></i>
+                  Stats
+                </h2>
+                <div className="space-y-6 text-gray-300">
+                  {/* Ability Scores */}
+                  {(oc.stat_strength || oc.stat_dexterity || oc.stat_constitution || oc.stat_intelligence || oc.stat_wisdom || oc.stat_charisma) && (
+                    <div className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 rounded-xl border border-amber-500/20 shadow-lg">
+                      <h3 className="text-base font-semibold text-gray-200 mb-3 flex items-center gap-2">
+                        <i className="fas fa-dice-d20 text-amber-400"></i>
+                        Ability Scores
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                        {oc.stat_strength && (() => {
+                          const modifier = Math.floor((oc.stat_strength - 10) / 2);
+                          const modifierStr = modifier >= 0 ? `+${modifier}` : `${modifier}`;
+                          const statColor = oc.stat_strength >= 20 ? 'text-amber-200' : oc.stat_strength >= 15 ? 'text-amber-300' : 'text-amber-400';
+                          return (
+                            <div className="p-3 bg-gradient-to-br from-gray-800/60 to-gray-800/40 rounded-lg border border-amber-500/30 hover:border-amber-400/50 transition-all shadow-md">
+                              <div className="text-xs font-semibold text-amber-400/80 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                                <i className="fas fa-dumbbell text-xs"></i>
+                                STR
+                              </div>
+                              <div className={`${statColor} font-bold text-xl mb-0.5`}>{oc.stat_strength}</div>
+                              <div className="text-xs font-medium text-gray-400 mt-1.5 pt-1.5 border-t border-gray-700/50">
+                                <span className="text-gray-500">Mod:</span> <span className="text-amber-300 font-semibold">{modifierStr}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        {oc.stat_dexterity && (() => {
+                          const modifier = Math.floor((oc.stat_dexterity - 10) / 2);
+                          const modifierStr = modifier >= 0 ? `+${modifier}` : `${modifier}`;
+                          const statColor = oc.stat_dexterity >= 20 ? 'text-amber-200' : oc.stat_dexterity >= 15 ? 'text-amber-300' : 'text-amber-400';
+                          return (
+                            <div className="p-3 bg-gradient-to-br from-gray-800/60 to-gray-800/40 rounded-lg border border-amber-500/30 hover:border-amber-400/50 transition-all shadow-md">
+                              <div className="text-xs font-semibold text-amber-400/80 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                                <i className="fas fa-running text-xs"></i>
+                                DEX
+                              </div>
+                              <div className={`${statColor} font-bold text-xl mb-0.5`}>{oc.stat_dexterity}</div>
+                              <div className="text-xs font-medium text-gray-400 mt-1.5 pt-1.5 border-t border-gray-700/50">
+                                <span className="text-gray-500">Mod:</span> <span className="text-amber-300 font-semibold">{modifierStr}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        {oc.stat_constitution && (() => {
+                          const modifier = Math.floor((oc.stat_constitution - 10) / 2);
+                          const modifierStr = modifier >= 0 ? `+${modifier}` : `${modifier}`;
+                          const statColor = oc.stat_constitution >= 20 ? 'text-amber-200' : oc.stat_constitution >= 15 ? 'text-amber-300' : 'text-amber-400';
+                          return (
+                            <div className="p-3 bg-gradient-to-br from-gray-800/60 to-gray-800/40 rounded-lg border border-amber-500/30 hover:border-amber-400/50 transition-all shadow-md">
+                              <div className="text-xs font-semibold text-amber-400/80 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                                <i className="fas fa-heartbeat text-xs"></i>
+                                CON
+                              </div>
+                              <div className={`${statColor} font-bold text-xl mb-0.5`}>{oc.stat_constitution}</div>
+                              <div className="text-xs font-medium text-gray-400 mt-1.5 pt-1.5 border-t border-gray-700/50">
+                                <span className="text-gray-500">Mod:</span> <span className="text-amber-300 font-semibold">{modifierStr}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        {oc.stat_intelligence && (() => {
+                          const modifier = Math.floor((oc.stat_intelligence - 10) / 2);
+                          const modifierStr = modifier >= 0 ? `+${modifier}` : `${modifier}`;
+                          const statColor = oc.stat_intelligence >= 20 ? 'text-amber-200' : oc.stat_intelligence >= 15 ? 'text-amber-300' : 'text-amber-400';
+                          return (
+                            <div className="p-3 bg-gradient-to-br from-gray-800/60 to-gray-800/40 rounded-lg border border-amber-500/30 hover:border-amber-400/50 transition-all shadow-md">
+                              <div className="text-xs font-semibold text-amber-400/80 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                                <i className="fas fa-brain text-xs"></i>
+                                INT
+                              </div>
+                              <div className={`${statColor} font-bold text-xl mb-0.5`}>{oc.stat_intelligence}</div>
+                              <div className="text-xs font-medium text-gray-400 mt-1.5 pt-1.5 border-t border-gray-700/50">
+                                <span className="text-gray-500">Mod:</span> <span className="text-amber-300 font-semibold">{modifierStr}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        {oc.stat_wisdom && (() => {
+                          const modifier = Math.floor((oc.stat_wisdom - 10) / 2);
+                          const modifierStr = modifier >= 0 ? `+${modifier}` : `${modifier}`;
+                          const statColor = oc.stat_wisdom >= 20 ? 'text-amber-200' : oc.stat_wisdom >= 15 ? 'text-amber-300' : 'text-amber-400';
+                          return (
+                            <div className="p-3 bg-gradient-to-br from-gray-800/60 to-gray-800/40 rounded-lg border border-amber-500/30 hover:border-amber-400/50 transition-all shadow-md">
+                              <div className="text-xs font-semibold text-amber-400/80 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                                <i className="fas fa-eye text-xs"></i>
+                                WIS
+                              </div>
+                              <div className={`${statColor} font-bold text-xl mb-0.5`}>{oc.stat_wisdom}</div>
+                              <div className="text-xs font-medium text-gray-400 mt-1.5 pt-1.5 border-t border-gray-700/50">
+                                <span className="text-gray-500">Mod:</span> <span className="text-amber-300 font-semibold">{modifierStr}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        {oc.stat_charisma && (() => {
+                          const modifier = Math.floor((oc.stat_charisma - 10) / 2);
+                          const modifierStr = modifier >= 0 ? `+${modifier}` : `${modifier}`;
+                          const statColor = oc.stat_charisma >= 20 ? 'text-amber-200' : oc.stat_charisma >= 15 ? 'text-amber-300' : 'text-amber-400';
+                          return (
+                            <div className="p-3 bg-gradient-to-br from-gray-800/60 to-gray-800/40 rounded-lg border border-amber-500/30 hover:border-amber-400/50 transition-all shadow-md">
+                              <div className="text-xs font-semibold text-amber-400/80 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                                <i className="fas fa-comments text-xs"></i>
+                                CHA
+                              </div>
+                              <div className={`${statColor} font-bold text-xl mb-0.5`}>{oc.stat_charisma}</div>
+                              <div className="text-xs font-medium text-gray-400 mt-1.5 pt-1.5 border-t border-gray-700/50">
+                                <span className="text-gray-500">Mod:</span> <span className="text-amber-300 font-semibold">{modifierStr}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Character Info */}
+                  {(oc.stat_level || oc.stat_class) && (
+                    <div className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 rounded-xl border border-amber-500/20 shadow-lg">
+                      <h3 className="text-base font-semibold text-gray-200 mb-3 flex items-center gap-2">
+                        <i className="fas fa-user-circle text-amber-400"></i>
+                        Character Info
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {oc.stat_level && (
+                          <div className="p-3 bg-gradient-to-br from-gray-800/60 to-gray-800/40 rounded-lg border border-amber-500/30 hover:border-amber-400/50 transition-all shadow-md">
+                            <div className="text-xs font-semibold text-amber-400/80 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                              <i className="fas fa-level-up-alt text-xs"></i>
+                              Level
+                            </div>
+                            <div className="text-amber-300 font-bold text-xl">{oc.stat_level}</div>
+                          </div>
+                        )}
+                        {oc.stat_class && (
+                          <div className="p-3 bg-gradient-to-br from-gray-800/60 to-gray-800/40 rounded-lg border border-amber-500/30 hover:border-amber-400/50 transition-all shadow-md">
+                            <div className="text-xs font-semibold text-amber-400/80 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                              <i className="fas fa-user-ninja text-xs"></i>
+                              Class
+                            </div>
+                            <div className="text-gray-200 font-semibold">{oc.stat_class}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Combat Stats */}
+                  {(oc.stat_hit_points_current || oc.stat_hit_points_max || oc.stat_armor_class || oc.stat_speed) && (
+                    <div className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 rounded-xl border border-amber-500/20 shadow-lg">
+                      <h3 className="text-base font-semibold text-gray-200 mb-3 flex items-center gap-2">
+                        <i className="fas fa-shield-alt text-amber-400"></i>
+                        Combat Stats
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {oc.stat_hit_points_max && (
+                          <div className="p-3 bg-gradient-to-br from-red-900/30 to-red-800/20 rounded-lg border border-red-500/30 hover:border-red-400/50 transition-all shadow-md">
+                            <div className="text-xs font-semibold text-red-400/80 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                              <i className="fas fa-heart text-xs"></i>
+                              HP
+                            </div>
+                            <div className="text-red-300 font-bold text-xl mb-0.5">{oc.stat_hit_points_max}</div>
+                            {oc.stat_hit_points_current !== null && oc.stat_hit_points_current !== undefined && (
+                              <div className="text-xs font-medium text-gray-400 mt-1.5 pt-1.5 border-t border-gray-700/50">
+                                <span className="text-gray-500">Cur:</span> <span className="text-red-200 font-semibold">{oc.stat_hit_points_current}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {oc.stat_armor_class !== null && oc.stat_armor_class !== undefined && (
+                          <div className="p-3 bg-gradient-to-br from-blue-900/30 to-blue-800/20 rounded-lg border border-blue-500/30 hover:border-blue-400/50 transition-all shadow-md">
+                            <div className="text-xs font-semibold text-blue-400/80 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                              <i className="fas fa-shield text-xs"></i>
+                              AC
+                            </div>
+                            <div className="text-blue-300 font-bold text-xl">{oc.stat_armor_class}</div>
+                          </div>
+                        )}
+                        {oc.stat_speed !== null && oc.stat_speed !== undefined && (
+                          <div className="p-3 bg-gradient-to-br from-green-900/30 to-green-800/20 rounded-lg border border-green-500/30 hover:border-green-400/50 transition-all shadow-md">
+                            <div className="text-xs font-semibold text-green-400/80 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                              <i className="fas fa-running text-xs"></i>
+                              Speed
+                            </div>
+                            <div className="text-green-300 font-bold text-xl">{oc.stat_speed}</div>
+                            <div className="text-xs text-gray-500 mt-0.5">ft</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Stats Notes */}
+                  {oc.stat_notes && (
+                    <div className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 rounded-xl border border-amber-500/20 shadow-lg">
+                      <h3 className="text-base font-semibold text-gray-200 mb-3 flex items-center gap-2">
+                        <i className="fas fa-sticky-note text-amber-400"></i>
+                        Stats Notes
+                      </h3>
+                      <div className="prose prose-invert max-w-none">
+                        <Markdown content={oc.stat_notes} />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1912,7 +2085,7 @@ export default async function OCDetailPage({
               const recognizedCategories = [
                 'Core Identity', 'Overview', 'Identity Background', 'Appearance',
                 'Personality Overview', 'Personality Metrics', 'Personality Traits',
-                'Abilities', 'Relationships', 'History', 'Preferences & Habits',
+                'Abilities', 'Stats', 'Relationships', 'History', 'Preferences & Habits',
                 'Media', 'Trivia', 'Development', 'Settings'
               ];
               

@@ -1,5 +1,5 @@
 import siteConfigFile from '../../../site-config.json';
-export type { SiteConfig } from './site-config';
+import type { SiteConfig } from './site-config';
 
 /**
  * Get site configuration synchronously (for client components)
@@ -8,4 +8,6 @@ export type { SiteConfig } from './site-config';
 export function getSiteConfigSync(): SiteConfig {
   return siteConfigFile as SiteConfig;
 }
+
+export type { SiteConfig };
 

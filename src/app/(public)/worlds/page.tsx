@@ -16,6 +16,7 @@ export async function generateMetadata() {
 }
 
 export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 interface WorldsPageProps {
   searchParams: { [key: string]: string | string[] | undefined };

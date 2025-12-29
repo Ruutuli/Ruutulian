@@ -9,7 +9,9 @@ interface SiteLayoutProps {
 export function SiteLayout({ children }: SiteLayoutProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-purple-900/30" suppressHydrationWarning>
-      <NavigationProgress />
+      <Suspense fallback={null}>
+        <NavigationProgress />
+      </Suspense>
       <Suspense fallback={<nav className="bg-gray-900/80 backdrop-blur-md border-b border-gray-700/50 sticky top-0 z-50 h-14 sm:h-16" />}>
         <Navigation />
       </Suspense>

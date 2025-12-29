@@ -15,6 +15,8 @@ export async function generateMetadata() {
   );
 }
 
+export const dynamic = 'force-dynamic';
+
 interface LorePageProps {
   searchParams: { [key: string]: string | string[] | undefined };
 }

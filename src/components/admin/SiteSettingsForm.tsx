@@ -96,12 +96,18 @@ export function SiteSettingsForm() {
     setMessage(null);
 
     try {
+      // Prepare data for submission, converting empty strings to null for optional fields
+      const submitData = {
+        ...settings,
+        altIconUrl: settings.altIconUrl?.trim() || null,
+      };
+
       const response = await fetch('/api/admin/site-settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(submitData),
       });
 
       const result = await response.json();

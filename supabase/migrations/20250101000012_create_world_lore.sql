@@ -19,6 +19,17 @@ CREATE TABLE IF NOT EXISTS world_lore (
   UNIQUE(world_id, slug)
 );
 
+-- Add is_public column if it doesn't exist (for existing tables)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'world_lore' AND column_name = 'is_public'
+  ) THEN
+    ALTER TABLE world_lore ADD COLUMN is_public BOOLEAN NOT NULL DEFAULT false;
+  END IF;
+END $$;
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_world_lore_world_id ON world_lore(world_id);
 CREATE INDEX IF NOT EXISTS idx_world_lore_slug ON world_lore(slug);

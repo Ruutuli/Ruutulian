@@ -4,11 +4,10 @@ CREATE TABLE IF NOT EXISTS site_settings (
   website_name TEXT NOT NULL,
   website_description TEXT NOT NULL,
   icon_url TEXT NOT NULL,
+  alt_icon_url TEXT,
   site_url TEXT NOT NULL,
   author_name TEXT NOT NULL,
   short_name TEXT NOT NULL,
-  theme_color TEXT NOT NULL,
-  background_color TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

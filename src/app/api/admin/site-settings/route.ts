@@ -65,6 +65,9 @@ export async function PUT(request: Request) {
       shortName,
     } = body;
 
+    // Normalize altIconUrl: convert empty strings, null, or undefined to null
+    const normalizedAltIconUrl = altIconUrl && altIconUrl.trim() ? altIconUrl.trim() : null;
+
     // Get site URL from environment variable
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
 
@@ -94,7 +97,7 @@ export async function PUT(request: Request) {
           website_name: websiteName,
           website_description: websiteDescription,
           icon_url: iconUrl,
-          alt_icon_url: altIconUrl || null,
+          alt_icon_url: normalizedAltIconUrl,
           site_url: siteUrl,
           author_name: authorName,
           short_name: shortName,
@@ -117,7 +120,7 @@ export async function PUT(request: Request) {
           website_name: websiteName,
           website_description: websiteDescription,
           icon_url: iconUrl,
-          alt_icon_url: altIconUrl || null,
+          alt_icon_url: normalizedAltIconUrl,
           site_url: siteUrl,
           author_name: authorName,
           short_name: shortName,

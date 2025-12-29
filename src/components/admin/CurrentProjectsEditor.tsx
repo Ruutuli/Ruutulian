@@ -54,11 +54,34 @@ export function CurrentProjectsEditor() {
   const fetchData = async () => {
     try {
       const response = await fetch('/api/admin/current-projects');
-      if (!response.ok) throw new Error('Failed to fetch');
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        let errorMessage = `Failed to fetch (${response.status} ${response.statusText})`;
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const error = await response.json();
+            errorMessage = error.error || errorMessage;
+          } catch (parseError) {
+            console.error('Failed to parse error response:', parseError);
+          }
+        } else {
+          const text = await response.text();
+          console.error('Non-JSON error response:', text.substring(0, 200));
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
       const result = await response.json();
-      setData(result);
+      // Handle both direct data and wrapped success response
+      setData(result.data || result);
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to load current projects' });
+      console.error('Error fetching current projects:', error);
+      setMessage({ 
+        type: 'error', 
+        text: error instanceof Error ? error.message : 'Failed to load current projects' 
+      });
     } finally {
       setIsLoading(false);
     }
@@ -79,13 +102,31 @@ export function CurrentProjectsEditor() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to save');
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get('content-type');
+        let errorMessage = `Failed to save (${response.status} ${response.statusText})`;
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const error = await response.json();
+            errorMessage = error.error || errorMessage;
+          } catch (parseError) {
+            console.error('Failed to parse error response:', parseError);
+          }
+        } else {
+          // If it's HTML (like an error page), try to get text for debugging
+          const text = await response.text();
+          console.error('Non-JSON error response:', text.substring(0, 200));
+        }
+        
+        throw new Error(errorMessage);
       }
 
+      const result = await response.json();
       setMessage({ type: 'success', text: 'Current projects updated successfully!' });
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
+      console.error('Error saving current projects:', error);
       setMessage({
         type: 'error',
         text: error instanceof Error ? error.message : 'Failed to save current projects',

@@ -71,9 +71,9 @@ export async function generateMetadata({
           ]
         : [
             {
-              url: `${baseUrl}${iconUrl}`,
-              width: 512,
-              height: 512,
+              url: `${baseUrl}/og-image`,
+              width: 1200,
+              height: 630,
               alt: world.name,
             },
           ],

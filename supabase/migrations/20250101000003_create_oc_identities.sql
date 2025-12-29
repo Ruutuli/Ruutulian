@@ -14,6 +14,7 @@ CREATE INDEX IF NOT EXISTS idx_oc_identities_created_at ON oc_identities(created
 ALTER TABLE oc_identities ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Public can read (for displaying OC versions)
+DROP POLICY IF EXISTS "Public can read oc identities" ON oc_identities;
 CREATE POLICY "Public can read oc identities"
   ON oc_identities
   FOR SELECT
@@ -21,6 +22,7 @@ CREATE POLICY "Public can read oc identities"
   USING (true);
 
 -- RLS Policy: Authenticated users can manage (admin only)
+DROP POLICY IF EXISTS "Authenticated users can manage oc identities" ON oc_identities;
 CREATE POLICY "Authenticated users can manage oc identities"
   ON oc_identities
   FOR ALL
@@ -38,6 +40,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to automatically update updated_at
+DROP TRIGGER IF EXISTS update_oc_identities_updated_at ON oc_identities;
 CREATE TRIGGER update_oc_identities_updated_at
   BEFORE UPDATE ON oc_identities
   FOR EACH ROW

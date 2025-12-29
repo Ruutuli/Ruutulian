@@ -12,6 +12,7 @@ ALTER TABLE admin_credentials ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: No public access - only service role can access
 -- Service role key bypasses RLS, so this effectively blocks all public access
+DROP POLICY IF EXISTS "No public access to admin credentials" ON admin_credentials;
 CREATE POLICY "No public access to admin credentials"
   ON admin_credentials
   FOR ALL
@@ -29,6 +30,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to automatically update updated_at
+DROP TRIGGER IF EXISTS update_admin_credentials_updated_at ON admin_credentials;
 CREATE TRIGGER update_admin_credentials_updated_at
   BEFORE UPDATE ON admin_credentials
   FOR EACH ROW

@@ -14,6 +14,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS current_projects_single_row ON current_project
 ALTER TABLE current_projects ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Public can read (for displaying on homepage)
+DROP POLICY IF EXISTS "Public can read current projects" ON current_projects;
 CREATE POLICY "Public can read current projects"
   ON current_projects
   FOR SELECT
@@ -21,6 +22,7 @@ CREATE POLICY "Public can read current projects"
   USING (true);
 
 -- RLS Policy: Authenticated users can manage (admin only)
+DROP POLICY IF EXISTS "Authenticated users can manage current projects" ON current_projects;
 CREATE POLICY "Authenticated users can manage current projects"
   ON current_projects
   FOR ALL
@@ -38,6 +40,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to automatically update updated_at
+DROP TRIGGER IF EXISTS update_current_projects_updated_at ON current_projects;
 CREATE TRIGGER update_current_projects_updated_at
   BEFORE UPDATE ON current_projects
   FOR EACH ROW

@@ -20,6 +20,10 @@ CREATE INDEX IF NOT EXISTS idx_world_races_created_at ON world_races(created_at)
 -- Enable RLS
 ALTER TABLE world_races ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Public can read world races" ON world_races;
+DROP POLICY IF EXISTS "Authenticated users can manage world races" ON world_races;
+
 -- RLS Policy: Public can read (for displaying race information)
 CREATE POLICY "Public can read world races"
   ON world_races
@@ -43,6 +47,9 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Drop existing trigger if it exists (must be done before creating)
+DROP TRIGGER IF EXISTS update_world_races_updated_at ON world_races;
 
 -- Trigger to automatically update updated_at
 CREATE TRIGGER update_world_races_updated_at

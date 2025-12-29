@@ -16,6 +16,7 @@ CREATE INDEX IF NOT EXISTS idx_timeline_event_characters_oc_id ON timeline_event
 ALTER TABLE timeline_event_characters ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Public can read (for displaying character relationships)
+DROP POLICY IF EXISTS "Public can read timeline event characters" ON timeline_event_characters;
 CREATE POLICY "Public can read timeline event characters"
   ON timeline_event_characters
   FOR SELECT
@@ -23,6 +24,7 @@ CREATE POLICY "Public can read timeline event characters"
   USING (true);
 
 -- RLS Policy: Authenticated users can manage (admin only)
+DROP POLICY IF EXISTS "Authenticated users can manage timeline event characters" ON timeline_event_characters;
 CREATE POLICY "Authenticated users can manage timeline event characters"
   ON timeline_event_characters
   FOR ALL

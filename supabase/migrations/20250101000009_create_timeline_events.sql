@@ -33,6 +33,7 @@ CREATE INDEX IF NOT EXISTS idx_timeline_events_story_alias_id ON timeline_events
 ALTER TABLE timeline_events ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Public can read (for displaying timeline events)
+DROP POLICY IF EXISTS "Public can read timeline events" ON timeline_events;
 CREATE POLICY "Public can read timeline events"
   ON timeline_events
   FOR SELECT
@@ -40,6 +41,7 @@ CREATE POLICY "Public can read timeline events"
   USING (true);
 
 -- RLS Policy: Authenticated users can manage (admin only)
+DROP POLICY IF EXISTS "Authenticated users can manage timeline events" ON timeline_events;
 CREATE POLICY "Authenticated users can manage timeline events"
   ON timeline_events
   FOR ALL
@@ -57,6 +59,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to automatically update updated_at
+DROP TRIGGER IF EXISTS update_timeline_events_updated_at ON timeline_events;
 CREATE TRIGGER update_timeline_events_updated_at
   BEFORE UPDATE ON timeline_events
   FOR EACH ROW

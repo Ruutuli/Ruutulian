@@ -17,6 +17,7 @@ CREATE INDEX IF NOT EXISTS idx_timeline_event_timelines_position ON timeline_eve
 ALTER TABLE timeline_event_timelines ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Public can read (for displaying timeline relationships)
+DROP POLICY IF EXISTS "Public can read timeline event timelines" ON timeline_event_timelines;
 CREATE POLICY "Public can read timeline event timelines"
   ON timeline_event_timelines
   FOR SELECT
@@ -24,6 +25,7 @@ CREATE POLICY "Public can read timeline event timelines"
   USING (true);
 
 -- RLS Policy: Authenticated users can manage (admin only)
+DROP POLICY IF EXISTS "Authenticated users can manage timeline event timelines" ON timeline_event_timelines;
 CREATE POLICY "Authenticated users can manage timeline event timelines"
   ON timeline_event_timelines
   FOR ALL

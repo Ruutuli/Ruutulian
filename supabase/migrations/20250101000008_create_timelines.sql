@@ -16,6 +16,7 @@ CREATE INDEX IF NOT EXISTS idx_timelines_created_at ON timelines(created_at);
 ALTER TABLE timelines ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Public can read (for displaying timelines)
+DROP POLICY IF EXISTS "Public can read timelines" ON timelines;
 CREATE POLICY "Public can read timelines"
   ON timelines
   FOR SELECT
@@ -23,6 +24,7 @@ CREATE POLICY "Public can read timelines"
   USING (true);
 
 -- RLS Policy: Authenticated users can manage (admin only)
+DROP POLICY IF EXISTS "Authenticated users can manage timelines" ON timelines;
 CREATE POLICY "Authenticated users can manage timelines"
   ON timelines
   FOR ALL
@@ -40,6 +42,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to automatically update updated_at
+DROP TRIGGER IF EXISTS update_timelines_updated_at ON timelines;
 CREATE TRIGGER update_timelines_updated_at
   BEFORE UPDATE ON timelines
   FOR EACH ROW

@@ -548,6 +548,18 @@ Everything is done through easy-to-use forms - no coding required!
 2. Make sure all your environment variables are set in Railway
 3. Make sure your Supabase keys are correct in Railway
 
+### Problem: "Could not find the table 'public.world_races' in the schema cache"
+
+**What this means**: The `world_races` table (or another database table) hasn't been created yet. This happens when migrations haven't been run or were run in the wrong order.
+
+**How to fix**:
+1. Go back to **Step 4c** in the setup guide (Set Up Your Database Tables)
+2. Make sure you've run **all** migration files in the correct order
+3. Specifically check that `20250101000007_create_world_races.sql` has been executed
+4. If you're using Supabase CLI, you can run `supabase migration up` to apply any pending migrations
+5. If you're using the Supabase dashboard SQL Editor, copy and run the migration file content there
+6. Make sure all previous migrations (especially those that create `worlds` and `story_aliases` tables) have been run first, as `world_races` depends on them
+
 ### Still Having Problems?
 
 - Check that you followed all the steps in order

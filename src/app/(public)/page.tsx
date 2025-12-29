@@ -22,9 +22,9 @@ export async function generateMetadata(): Promise<Metadata> {
       type: 'website',
       images: [
         {
-          url: `${siteUrl}${iconUrl}`,
-          width: 512,
-          height: 512,
+          url: `${siteUrl}/og-image`,
+          width: 1200,
+          height: 630,
           alt: `${config.websiteName} Logo`,
         },
       ],
@@ -33,7 +33,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: 'summary_large_image',
       title: `${config.websiteName} - ${config.websiteDescription.split('.')[0]}`,
       description: config.websiteDescription,
-      images: [`${siteUrl}${iconUrl}`],
+      images: [`${siteUrl}/og-image`],
     },
     alternates: {
       canonical: '/',

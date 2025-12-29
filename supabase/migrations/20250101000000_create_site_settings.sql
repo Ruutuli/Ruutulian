@@ -20,6 +20,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS site_settings_single_row ON site_settings ((TR
 ALTER TABLE site_settings ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Public read access
+DROP POLICY IF EXISTS "Public can read site settings" ON site_settings;
 CREATE POLICY "Public can read site settings"
   ON site_settings
   FOR SELECT
@@ -28,6 +29,7 @@ CREATE POLICY "Public can read site settings"
 
 -- RLS Policy: Only authenticated users can update (admin only)
 -- Note: In practice, admin routes use service role key which bypasses RLS
+DROP POLICY IF EXISTS "Authenticated users can update site settings" ON site_settings;
 CREATE POLICY "Authenticated users can update site settings"
   ON site_settings
   FOR UPDATE
@@ -36,6 +38,7 @@ CREATE POLICY "Authenticated users can update site settings"
   WITH CHECK (true);
 
 -- RLS Policy: Authenticated users can insert
+DROP POLICY IF EXISTS "Authenticated users can insert site settings" ON site_settings;
 CREATE POLICY "Authenticated users can insert site settings"
   ON site_settings
   FOR INSERT
@@ -52,6 +55,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to automatically update updated_at
+DROP TRIGGER IF EXISTS update_site_settings_updated_at ON site_settings;
 CREATE TRIGGER update_site_settings_updated_at
   BEFORE UPDATE ON site_settings
   FOR EACH ROW

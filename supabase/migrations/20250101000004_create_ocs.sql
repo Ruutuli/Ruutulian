@@ -119,6 +119,7 @@ CREATE INDEX IF NOT EXISTS idx_ocs_story_alias_id ON ocs(story_alias_id);
 ALTER TABLE ocs ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Public can read public OCs
+DROP POLICY IF EXISTS "Public can read public ocs" ON ocs;
 CREATE POLICY "Public can read public ocs"
   ON ocs
   FOR SELECT
@@ -126,6 +127,7 @@ CREATE POLICY "Public can read public ocs"
   USING (is_public = true);
 
 -- RLS Policy: Authenticated users can do everything (admin only)
+DROP POLICY IF EXISTS "Authenticated users can manage ocs" ON ocs;
 CREATE POLICY "Authenticated users can manage ocs"
   ON ocs
   FOR ALL
@@ -143,6 +145,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to automatically update updated_at
+DROP TRIGGER IF EXISTS update_ocs_updated_at ON ocs;
 CREATE TRIGGER update_ocs_updated_at
   BEFORE UPDATE ON ocs
   FOR EACH ROW

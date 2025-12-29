@@ -18,6 +18,7 @@ CREATE INDEX IF NOT EXISTS idx_dropdown_options_created_at ON dropdown_options(c
 ALTER TABLE dropdown_options ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Public can read (for form dropdowns)
+DROP POLICY IF EXISTS "Public can read dropdown options" ON dropdown_options;
 CREATE POLICY "Public can read dropdown options"
   ON dropdown_options
   FOR SELECT
@@ -25,6 +26,7 @@ CREATE POLICY "Public can read dropdown options"
   USING (true);
 
 -- RLS Policy: Authenticated users can manage (admin only)
+DROP POLICY IF EXISTS "Authenticated users can manage dropdown options" ON dropdown_options;
 CREATE POLICY "Authenticated users can manage dropdown options"
   ON dropdown_options
   FOR ALL
@@ -42,6 +44,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to automatically update updated_at
+DROP TRIGGER IF EXISTS update_dropdown_options_updated_at ON dropdown_options;
 CREATE TRIGGER update_dropdown_options_updated_at
   BEFORE UPDATE ON dropdown_options
   FOR EACH ROW

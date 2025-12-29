@@ -31,6 +31,7 @@ CREATE INDEX IF NOT EXISTS idx_world_lore_story_alias_id ON world_lore(story_ali
 ALTER TABLE world_lore ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Public can read public lore entries
+DROP POLICY IF EXISTS "Public can read public world lore" ON world_lore;
 CREATE POLICY "Public can read public world lore"
   ON world_lore
   FOR SELECT
@@ -38,6 +39,7 @@ CREATE POLICY "Public can read public world lore"
   USING (is_public = true);
 
 -- RLS Policy: Authenticated users can do everything (admin only)
+DROP POLICY IF EXISTS "Authenticated users can manage world lore" ON world_lore;
 CREATE POLICY "Authenticated users can manage world lore"
   ON world_lore
   FOR ALL
@@ -55,6 +57,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to automatically update updated_at
+DROP TRIGGER IF EXISTS update_world_lore_updated_at ON world_lore;
 CREATE TRIGGER update_world_lore_updated_at
   BEFORE UPDATE ON world_lore
   FOR EACH ROW

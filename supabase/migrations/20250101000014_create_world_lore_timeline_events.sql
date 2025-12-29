@@ -15,6 +15,7 @@ CREATE INDEX IF NOT EXISTS idx_world_lore_timeline_events_event_id ON world_lore
 ALTER TABLE world_lore_timeline_events ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Public can read (for displaying relationships)
+DROP POLICY IF EXISTS "Public can read world lore timeline events" ON world_lore_timeline_events;
 CREATE POLICY "Public can read world lore timeline events"
   ON world_lore_timeline_events
   FOR SELECT
@@ -22,6 +23,7 @@ CREATE POLICY "Public can read world lore timeline events"
   USING (true);
 
 -- RLS Policy: Authenticated users can manage (admin only)
+DROP POLICY IF EXISTS "Authenticated users can manage world lore timeline events" ON world_lore_timeline_events;
 CREATE POLICY "Authenticated users can manage world lore timeline events"
   ON world_lore_timeline_events
   FOR ALL

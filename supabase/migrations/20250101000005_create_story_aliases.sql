@@ -19,6 +19,7 @@ CREATE INDEX IF NOT EXISTS idx_story_aliases_created_at ON story_aliases(created
 ALTER TABLE story_aliases ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Public can read (for displaying story information)
+DROP POLICY IF EXISTS "Public can read story aliases" ON story_aliases;
 CREATE POLICY "Public can read story aliases"
   ON story_aliases
   FOR SELECT
@@ -26,6 +27,7 @@ CREATE POLICY "Public can read story aliases"
   USING (true);
 
 -- RLS Policy: Authenticated users can manage (admin only)
+DROP POLICY IF EXISTS "Authenticated users can manage story aliases" ON story_aliases;
 CREATE POLICY "Authenticated users can manage story aliases"
   ON story_aliases
   FOR ALL
@@ -43,6 +45,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to automatically update updated_at
+DROP TRIGGER IF EXISTS update_story_aliases_updated_at ON story_aliases;
 CREATE TRIGGER update_story_aliases_updated_at
   BEFORE UPDATE ON story_aliases
   FOR EACH ROW

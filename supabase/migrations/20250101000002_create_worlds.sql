@@ -65,6 +65,10 @@ CREATE INDEX IF NOT EXISTS idx_worlds_created_at ON worlds(created_at);
 -- Enable RLS
 ALTER TABLE worlds ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Public can read public worlds" ON worlds;
+DROP POLICY IF EXISTS "Authenticated users can manage worlds" ON worlds;
+
 -- RLS Policy: Public can read public worlds
 CREATE POLICY "Public can read public worlds"
   ON worlds
@@ -90,6 +94,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to automatically update updated_at
+DROP TRIGGER IF EXISTS update_worlds_updated_at ON worlds;
 CREATE TRIGGER update_worlds_updated_at
   BEFORE UPDATE ON worlds
   FOR EACH ROW

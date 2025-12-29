@@ -54,6 +54,7 @@ CREATE INDEX IF NOT EXISTS idx_world_story_data_created_at ON world_story_data(c
 ALTER TABLE world_story_data ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Public can read (for displaying story-specific world data)
+DROP POLICY IF EXISTS "Public can read world story data" ON world_story_data;
 CREATE POLICY "Public can read world story data"
   ON world_story_data
   FOR SELECT
@@ -61,6 +62,7 @@ CREATE POLICY "Public can read world story data"
   USING (true);
 
 -- RLS Policy: Authenticated users can manage (admin only)
+DROP POLICY IF EXISTS "Authenticated users can manage world story data" ON world_story_data;
 CREATE POLICY "Authenticated users can manage world story data"
   ON world_story_data
   FOR ALL
@@ -78,6 +80,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to automatically update updated_at
+DROP TRIGGER IF EXISTS update_world_story_data_updated_at ON world_story_data;
 CREATE TRIGGER update_world_story_data_updated_at
   BEFORE UPDATE ON world_story_data
   FOR EACH ROW

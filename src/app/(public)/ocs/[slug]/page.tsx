@@ -91,22 +91,14 @@ export async function generateMetadata({
       description,
       url,
       type: 'profile',
-      images: oc.image_url
-        ? [
-            {
-              url: convertGoogleDriveUrl(oc.image_url),
-              alt: oc.name,
-              // Removed fixed dimensions to prevent squishing/stretching of portrait character images
-            },
-          ]
-        : [
-            {
-              url: `${baseUrl}/og-image`,
-              width: 1200,
-              height: 630,
-              alt: oc.name,
-            },
-          ],
+      images: [
+        {
+          url: `${baseUrl}/api/og/oc/${resolvedParams.slug}`,
+          width: 1200,
+          height: 630,
+          alt: oc.name,
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',

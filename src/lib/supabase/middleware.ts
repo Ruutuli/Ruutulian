@@ -65,7 +65,6 @@ export async function updateSession(request: NextRequest) {
 
       console.log('[Middleware] Session valid - allowing access:', {
         pathname,
-        sessionId: session.id,
       });
     } catch (error) {
       // If session check fails, redirect to login

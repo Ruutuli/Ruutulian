@@ -60,3 +60,81 @@ export function createAdminClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 }
+
+/**
+ * Helper function to build OC select query with graceful fallback for story_aliases relationship.
+ * Tries with foreign key hint first, falls back to inferred relationship if that fails.
+ */
+export function buildOCSelectQuery() {
+  return `
+    *,
+    likes,
+    dislikes,
+    world:worlds(*),
+    story_alias:story_aliases!fk_ocs_story_alias_id(id, name, slug, description),
+    identity:oc_identities(
+      *,
+      versions:ocs(
+        id,
+        name,
+        slug,
+        world_id,
+        is_public,
+        world:worlds(id, name, slug)
+      )
+    )
+  `;
+}
+
+/**
+ * Helper function to build OC select query without foreign key hint (fallback version).
+ */
+export function buildOCSelectQueryFallback() {
+  return `
+    *,
+    likes,
+    dislikes,
+    world:worlds(*),
+    story_alias:story_aliases(id, name, slug, description),
+    identity:oc_identities(
+      *,
+      versions:ocs(
+        id,
+        name,
+        slug,
+        world_id,
+        is_public,
+        world:worlds(id, name, slug)
+      )
+    )
+  `;
+}
+
+/**
+ * Executes an OC query with graceful fallback for story_aliases relationship.
+ * Tries with foreign key hint first, falls back to inferred relationship if PGRST200 error occurs.
+ */
+export async function queryOCWithFallback<T>(
+  queryBuilder: (selectQuery: string) => Promise<{ data: T | null; error: any }>,
+  logContext?: string
+): Promise<{ data: T | null; error: any }> {
+  // Try with foreign key hint first
+  const selectQuery = buildOCSelectQuery();
+  const result = await queryBuilder(selectQuery);
+  
+  // Check if error is related to missing relationship (PGRST200)
+  if (result.error && result.error.code === 'PGRST200' && 
+      result.error.message?.includes('story_aliases') &&
+      result.error.details?.includes('fk_ocs_story_alias_id')) {
+    
+    if (logContext) {
+      console.log(`[${logContext}] FK hint failed, falling back to inferred relationship`);
+    }
+    
+    // Retry with fallback query (no FK hint)
+    const fallbackQuery = buildOCSelectQueryFallback();
+    return await queryBuilder(fallbackQuery);
+  }
+  
+  return result;
+}

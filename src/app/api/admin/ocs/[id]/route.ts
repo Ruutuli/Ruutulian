@@ -124,7 +124,8 @@ export async function PUT(
     }
 
     // Fetch the updated OC with relationships
-    const { data, error: selectError } = await supabase
+    // Try with foreign key hint first, fallback to inferred relationship if it fails
+    let { data, error: selectError } = await supabase
       .from('ocs')
       .select(`
         *,
@@ -143,6 +144,36 @@ export async function PUT(
       `)
       .eq('id', id)
       .single();
+
+    // If FK hint fails with PGRST200 error, retry without the hint
+    if (selectError && selectError.code === 'PGRST200' && 
+        selectError.message?.includes('story_aliases') &&
+        selectError.details?.includes('fk_ocs_story_alias_id')) {
+      logger.info('OC', 'FK hint failed, falling back to inferred relationship');
+      
+      const fallbackResult = await supabase
+        .from('ocs')
+        .select(`
+          *,
+          world:worlds(*),
+          story_alias:story_aliases(id, name, slug, description),
+          identity:oc_identities(
+            *,
+            versions:ocs(
+              id,
+              name,
+              slug,
+              world_id,
+              world:worlds(id, name, slug)
+            )
+          )
+        `)
+        .eq('id', id)
+        .single();
+      
+      data = fallbackResult.data;
+      selectError = fallbackResult.error;
+    }
 
     if (selectError) {
       logger.error('OC', 'Select error', selectError);

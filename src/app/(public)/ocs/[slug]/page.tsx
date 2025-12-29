@@ -126,7 +126,8 @@ export default async function OCDetailPage({
   console.log('[OCDetailPage] Request received for slug:', resolvedParams.slug);
   console.log('[OCDetailPage] Creating Supabase client...');
 
-  const { data: oc, error } = await supabase
+  // Try with foreign key hint first, fallback to inferred relationship if it fails
+  let { data: oc, error } = await supabase
     .from('ocs')
     .select(`
       *,
@@ -149,6 +150,40 @@ export default async function OCDetailPage({
     .eq('slug', resolvedParams.slug)
     .eq('is_public', true)
     .single();
+
+  // If FK hint fails with PGRST200 error, retry without the hint
+  if (error && error.code === 'PGRST200' && 
+      error.message?.includes('story_aliases') &&
+      error.details?.includes('fk_ocs_story_alias_id')) {
+    console.log('[OCDetailPage] FK hint failed, falling back to inferred relationship');
+    
+    const fallbackResult = await supabase
+      .from('ocs')
+      .select(`
+        *,
+        likes,
+        dislikes,
+        world:worlds(*),
+        story_alias:story_aliases(id, name, slug, description),
+        identity:oc_identities(
+          *,
+          versions:ocs(
+            id,
+            name,
+            slug,
+            world_id,
+            is_public,
+            world:worlds(id, name, slug)
+          )
+        )
+      `)
+      .eq('slug', resolvedParams.slug)
+      .eq('is_public', true)
+      .single();
+    
+    oc = fallbackResult.data;
+    error = fallbackResult.error;
+  }
 
   const duration = Date.now() - startTime;
 

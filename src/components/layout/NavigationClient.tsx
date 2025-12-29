@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { SiteName } from './SiteName';
 
@@ -10,7 +10,7 @@ interface NavigationClientProps {
 
 export function NavigationClient({ isAuthenticated }: NavigationClientProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const allNavLinks = [
+  const navLinks = useMemo(() => [
     { href: '/', label: 'Home', prefetch: true },
     { href: '/worlds', label: 'Worlds', prefetch: true },
     { href: '/ocs', label: 'Characters', prefetch: true },
@@ -19,14 +19,10 @@ export function NavigationClient({ isAuthenticated }: NavigationClientProps) {
     { href: '/stats', label: 'Statistics', prefetch: true },
     {
       href: isAuthenticated ? '/admin' : '/admin/login',
-      label: isAuthenticated ? 'Admin' : 'Login',
+      label: isAuthenticated ? 'Admin Page' : 'Login',
       prefetch: false,
-      isAuthLink: true, // Mark this as the auth link
     },
-  ];
-
-  // Filter out login/admin link on all public pages (never show on main website)
-  const navLinks = allNavLinks.filter((link) => !(link as any).isAuthLink);
+  ], [isAuthenticated]);
 
   const toggleMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);

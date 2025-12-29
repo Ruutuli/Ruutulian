@@ -12,7 +12,9 @@ export function SiteLayout({ children }: SiteLayoutProps) {
       <Suspense fallback={null}>
         <NavigationProgress />
       </Suspense>
-      <Navigation />
+      <Suspense fallback={<nav className="bg-gray-900/80 backdrop-blur-md border-b border-gray-700/50 sticky top-0 z-50 h-14 sm:h-16" />}>
+        <Navigation />
+      </Suspense>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6 lg:py-8" suppressHydrationWarning>
         {children}
       </main>

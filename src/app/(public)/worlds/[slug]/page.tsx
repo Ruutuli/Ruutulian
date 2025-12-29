@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
+import { getSiteConfig } from '@/lib/config/site-config';
 import type { StoryAlias } from '@/types/oc';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { WorldHeader } from '@/components/world/WorldHeader';

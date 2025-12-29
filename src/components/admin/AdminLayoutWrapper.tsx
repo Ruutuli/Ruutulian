@@ -1,6 +1,8 @@
 'use client';
 
+import { Suspense } from 'react';
 import { AdminNav } from './AdminNav';
+import { NavigationProgress } from '@/components/layout/NavigationProgress';
 
 export function AdminLayoutWrapper({ 
   children,
@@ -13,6 +15,9 @@ export function AdminLayoutWrapper({
   // All pages using this wrapper are authenticated admin pages
   return (
     <div className="min-h-screen bg-gray-900">
+      <Suspense fallback={null}>
+        <NavigationProgress />
+      </Suspense>
       {userEmail && <AdminNav userEmail={userEmail} />}
       <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
         {children}

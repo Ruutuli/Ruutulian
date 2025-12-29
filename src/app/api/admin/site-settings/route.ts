@@ -4,6 +4,9 @@ import { checkAuth } from '@/lib/auth/require-auth';
 import { NextResponse } from 'next/server';
 import { getSiteConfig } from '@/lib/config/site-config';
 
+// Ensure runtime is set to nodejs for proper route handler execution
+export const runtime = 'nodejs';
+
 export async function GET() {
   try {
     const supabase = createAdminClient();

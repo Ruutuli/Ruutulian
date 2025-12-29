@@ -4,8 +4,6 @@
   "iconUrl": "/icon.png",
   "siteUrl": "https://your-domain.com",
   "authorName": "Your Name",
-  "shortName": "OC Wiki",
-  "themeColor": "#8b5cf6",
-  "backgroundColor": "#111827"
+  "shortName": "OC Wiki"
 }
 

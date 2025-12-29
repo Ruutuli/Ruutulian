@@ -10,8 +10,6 @@ interface SetupData {
   siteUrl: string;
   authorName: string;
   shortName: string;
-  themeColor: string;
-  backgroundColor: string;
   username: string;
   password: string;
   confirmPassword: string;
@@ -30,8 +28,6 @@ export default function SetupPage() {
     siteUrl: '',
     authorName: '',
     shortName: '',
-    themeColor: '#8b5cf6',
-    backgroundColor: '#111827',
     username: '',
     password: '',
     confirmPassword: '',
@@ -228,52 +224,6 @@ export default function SetupPage() {
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
                   placeholder="Your Name"
                 />
-              </div>
-
-              <div>
-                <label htmlFor="themeColor" className="block text-sm font-medium text-gray-300 mb-2">
-                  Theme Color *
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    id="themeColor"
-                    type="color"
-                    required
-                    value={formData.themeColor}
-                    onChange={(e) => setFormData({ ...formData, themeColor: e.target.value })}
-                    className="h-10 w-20 bg-gray-700 border border-gray-600 rounded-md cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={formData.themeColor}
-                    onChange={(e) => setFormData({ ...formData, themeColor: e.target.value })}
-                    className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                    placeholder="#8b5cf6"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="backgroundColor" className="block text-sm font-medium text-gray-300 mb-2">
-                  Background Color *
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    id="backgroundColor"
-                    type="color"
-                    required
-                    value={formData.backgroundColor}
-                    onChange={(e) => setFormData({ ...formData, backgroundColor: e.target.value })}
-                    className="h-10 w-20 bg-gray-700 border border-gray-600 rounded-md cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={formData.backgroundColor}
-                    onChange={(e) => setFormData({ ...formData, backgroundColor: e.target.value })}
-                    className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                    placeholder="#111827"
-                  />
-                </div>
               </div>
             </div>
           </div>

@@ -4,8 +4,6 @@
   "description": "A place to store and organize information on original characters, worlds, lore, and timelines across every universe.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#111827",
-  "theme_color": "#8b5cf6",
   "icons": [
     {
       "src": "/icon.png",

@@ -60,8 +60,6 @@ export async function POST(request: Request) {
       siteUrl,
       authorName,
       shortName,
-      themeColor,
-      backgroundColor,
       username,
       password,
     } = body;
@@ -74,8 +72,6 @@ export async function POST(request: Request) {
       !siteUrl ||
       !authorName ||
       !shortName ||
-      !themeColor ||
-      !backgroundColor ||
       !username ||
       !password
     ) {
@@ -101,8 +97,6 @@ export async function POST(request: Request) {
           site_url: siteUrl,
           author_name: authorName,
           short_name: shortName,
-          theme_color: themeColor,
-          background_color: backgroundColor,
         });
 
       if (settingsError) {

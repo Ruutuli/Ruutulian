@@ -118,9 +118,7 @@ Follow these steps in order. Take your time - there's no rush!
      "iconUrl": "/icon.png",
      "siteUrl": "https://your-domain.com",
      "authorName": "Your Name",
-     "shortName": "OC Wiki",
-     "themeColor": "#8b5cf6",
-     "backgroundColor": "#111827"
+     "shortName": "OC Wiki"
    }
    ```
 
@@ -129,8 +127,6 @@ Follow these steps in order. Take your time - there's no rush!
    - `websiteDescription`: A short description of your site
    - `authorName`: Your name
    - `shortName`: A shorter version of your site name (for menus)
-   - `themeColor`: A color code (like `#8b5cf6` for purple). You can find color codes at [htmlcolorcodes.com](https://htmlcolorcodes.com)
-   - `backgroundColor`: Another color code for the background
    - `siteUrl`: Leave this for now - you'll fill it in later when you deploy
    - `iconUrl`: Leave this as is unless you have a custom icon
 

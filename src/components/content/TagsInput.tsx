@@ -46,7 +46,7 @@ export function TagsInput({
           !selectedTags.some(st => st.id === tag.id)
       );
       setFilteredTags(filtered);
-      setShowSuggestions(filtered.length > 0 || onCreateTag);
+      setShowSuggestions(filtered.length > 0 || !!onCreateTag);
     } else {
       setFilteredTags([]);
       setShowSuggestions(false);

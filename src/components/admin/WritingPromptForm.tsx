@@ -299,7 +299,7 @@ export function WritingPromptForm({ prompt }: WritingPromptFormProps) {
             )}
           </div>
           {errors.category && (
-            <FormMessage type="error">{errors.category.message}</FormMessage>
+            <FormMessage type="error" message={errors.category.message || ''} />
           )}
           <div className="text-sm text-gray-400">
             <span className="font-medium">Available categories:</span>{' '}
@@ -321,7 +321,7 @@ export function WritingPromptForm({ prompt }: WritingPromptFormProps) {
             disabled={isSubmitting}
           />
           {errors.prompt_text && (
-            <FormMessage type="error">{errors.prompt_text.message}</FormMessage>
+            <FormMessage type="error" message={errors.prompt_text.message || ''} />
           )}
           <div className="text-sm text-gray-400">
             <p className="mb-1">Placeholders:</p>
@@ -363,7 +363,7 @@ export function WritingPromptForm({ prompt }: WritingPromptFormProps) {
             </label>
           </div>
           {errors.requires_two_characters && (
-            <FormMessage type="error">{errors.requires_two_characters.message}</FormMessage>
+            <FormMessage type="error" message={errors.requires_two_characters.message || ''} />
           )}
         </div>
       </FormSection>
@@ -380,11 +380,12 @@ export function WritingPromptForm({ prompt }: WritingPromptFormProps) {
         </label>
       </FormSection>
 
-      {error && <FormMessage type="error">{error}</FormMessage>}
+      {error && <FormMessage type="error" message={error} />}
       {success && (
-        <FormMessage type="success">
-          Prompt {prompt ? 'updated' : 'created'} successfully! Redirecting...
-        </FormMessage>
+        <FormMessage
+          type="success"
+          message={`Prompt ${prompt ? 'updated' : 'created'} successfully! Redirecting...`}
+        />
       )}
 
       <div className="flex gap-4">

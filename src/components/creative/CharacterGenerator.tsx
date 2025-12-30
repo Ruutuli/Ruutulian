@@ -243,6 +243,23 @@ export function CharacterGenerator({ className = '' }: { className?: string }) {
     return hookResult.options || [];
   };
 
+  // Check if any options are still loading
+  const isAnyLoading = 
+    genderOptions.isLoading ||
+    pronounsOptions.isLoading ||
+    speciesOptions.isLoading ||
+    romanticOptions.isLoading ||
+    sexualOptions.isLoading ||
+    eyeColorOptions.isLoading ||
+    hairColorOptions.isLoading ||
+    skinToneOptions.isLoading ||
+    occupationOptions.isLoading ||
+    ethnicityOptions.isLoading ||
+    positiveTraitsOptions.isLoading ||
+    neutralTraitsOptions.isLoading ||
+    negativeTraitsOptions.isLoading ||
+    sexOptions.isLoading;
+
   const generate = () => {
     setLoading(true);
     
@@ -315,16 +332,16 @@ export function CharacterGenerator({ className = '' }: { className?: string }) {
           </p>
           <button
             onClick={generate}
-            disabled={loading}
+            disabled={loading || isAnyLoading}
             className="group relative w-full md:w-auto px-8 py-4 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-purple-500/25 hover:shadow-xl hover:shadow-purple-500/40 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 overflow-hidden"
           >
             {/* Shimmer effect */}
             <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
             <span className="relative flex items-center gap-2">
-              {loading ? (
+              {loading || isAnyLoading ? (
                 <>
                   <i className="fas fa-spinner fa-spin"></i>
-                  Generating...
+                  {loading ? 'Generating...' : 'Loading options...'}
                 </>
               ) : (
                 <>

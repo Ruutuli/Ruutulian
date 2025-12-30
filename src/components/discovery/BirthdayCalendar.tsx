@@ -72,16 +72,16 @@ export function BirthdayCalendar({ ocs, className = '' }: BirthdayCalendarProps)
       const characters = getCharactersForDate(date);
       if (characters.length > 0) {
         return (
-          <div className="flex flex-wrap gap-1 justify-center mt-1.5 items-center">
+          <div className="flex flex-wrap gap-1 justify-center items-center mt-1.5 flex-shrink-0">
             {characters.slice(0, 2).map((oc) => (
               <div
                 key={oc.id}
-                className="w-2 h-2 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 shadow-sm"
+                className="w-2 h-2 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 shadow-sm flex-shrink-0"
                 title={oc.name}
               />
             ))}
             {characters.length > 2 && (
-              <div className="text-[10px] font-semibold text-purple-300 bg-purple-500/20 px-1.5 py-0.5 rounded">
+              <div className="text-[10px] font-semibold text-purple-300 bg-purple-500/20 px-1.5 py-0.5 rounded flex-shrink-0">
                 +{characters.length - 2}
               </div>
             )}
@@ -202,17 +202,19 @@ export function BirthdayCalendar({ ocs, className = '' }: BirthdayCalendarProps)
           .react-calendar__month-view__days {
             display: grid !important;
             grid-template-columns: repeat(7, 1fr);
+            grid-auto-rows: 1fr;
             gap: 0.5rem;
           }
           
           .react-calendar__tile {
             max-width: 100%;
             text-align: center;
-            padding: 0.875rem 0.5rem;
+            padding: 0.5rem;
             background: rgba(31, 41, 55, 0.4);
             color: #e5e7eb;
             border-radius: 0.5rem;
             min-height: 70px;
+            height: 100%;
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
@@ -221,6 +223,28 @@ export function BirthdayCalendar({ ocs, className = '' }: BirthdayCalendarProps)
             transition: all 0.2s;
             font-weight: 500;
             position: relative;
+            overflow: visible;
+            box-sizing: border-box;
+          }
+          
+          .react-calendar__tile abbr {
+            position: relative;
+            display: block;
+            margin-bottom: 0.25rem;
+            flex-shrink: 0;
+            line-height: 1.2;
+          }
+          
+          @media (min-width: 768px) {
+            .react-calendar__tile {
+              min-height: 80px;
+            }
+          }
+          
+          @media (min-width: 1024px) {
+            .react-calendar__tile {
+              min-height: 90px;
+            }
           }
           
           .react-calendar__tile:enabled:hover,

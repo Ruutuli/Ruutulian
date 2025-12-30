@@ -17,7 +17,6 @@ export function NavigationClient({ isAuthenticated }: NavigationClientProps) {
     { href: '/lore', label: 'Lore', prefetch: true },
     { href: '/timelines', label: 'Timelines', prefetch: true },
     { href: '/calendar', label: 'Calendar', prefetch: true },
-    { href: '/relationships/graph', label: 'Relationships', prefetch: true },
     { href: '/stats', label: 'Statistics', prefetch: true },
     { href: '/tools', label: 'Tools', prefetch: true },
     {

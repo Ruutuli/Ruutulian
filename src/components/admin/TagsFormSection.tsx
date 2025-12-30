@@ -45,7 +45,15 @@ export function TagsFormSection({ ocId, currentTags: initialTags }: TagsFormSect
       }
 
       if (charTags) {
-        const tags = charTags.map(ct => ct.tags).filter(Boolean) as Tag[];
+        const tags = charTags
+          .flatMap(ct => {
+            const tag = ct.tags;
+            if (Array.isArray(tag)) {
+              return tag;
+            }
+            return tag ? [tag] : [];
+          })
+          .filter((tag): tag is Tag => tag !== null && tag !== undefined);
         setSelectedTags(tags);
       }
 

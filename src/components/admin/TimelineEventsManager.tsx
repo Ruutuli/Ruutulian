@@ -254,7 +254,7 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
                     <div className="mt-2">
                       <p className="text-xs text-gray-400 mb-1">
                         Characters:{' '}
-                        {event.characters.map((char, index) => {
+                        {event.characters.map((char, index, arr) => {
                           const characterName = char.custom_name || char.oc?.name;
                           const age = char.oc?.date_of_birth && event.date_data
                             ? calculateAge(char.oc.date_of_birth, event.date_data)
@@ -264,7 +264,7 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
                             <span key={char.id}>
                               {characterName}
                               {age !== null && ` (${age})`}
-                              {index < event.characters.length - 1 && ', '}
+                              {index < arr.length - 1 && ', '}
                             </span>
                           );
                         })}

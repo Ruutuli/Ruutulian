@@ -316,7 +316,7 @@ export function BirthdayCalendar({ ocs, className = '' }: BirthdayCalendarProps)
               <Link
                 key={oc.id}
                 href={`/ocs/${oc.slug}`}
-                className="block p-4 bg-gradient-to-r from-gray-800/50 to-gray-800/30 rounded-lg hover:from-gray-700/50 hover:to-gray-700/30 transition-all border border-gray-700/50 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10"
+                className="group block p-4 bg-gradient-to-r from-gray-800/50 to-gray-800/30 rounded-lg hover:from-gray-700/50 hover:to-gray-700/30 transition-all border border-gray-700/50 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10"
               >
                 <div className="flex items-center gap-4">
                   {oc.image_url && (
@@ -345,7 +345,7 @@ export function BirthdayCalendar({ ocs, className = '' }: BirthdayCalendarProps)
                       </p>
                     )}
                   </div>
-                  <i className="fas fa-chevron-right text-gray-400 group-hover:text-purple-400 transition-colors"></i>
+                  <i className="fas fa-chevron-right text-gray-400 group-hover:text-purple-400 transition-colors flex-shrink-0"></i>
                 </div>
               </Link>
             ))}

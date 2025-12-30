@@ -2,11 +2,11 @@
 -- These represent various locations and settings for character generation
 
 INSERT INTO dropdown_options (field, option) VALUES
-('setting', 'A Villa', 1),
-('setting', 'Abattoir (Slaughterhouse)', 2),
-('setting', 'Abbey', 3),
-('setting', 'Academy', 4),
-('setting', 'Academy (Alchemist)', 5),
+('setting', 'A Villa'),
+('setting', 'Abattoir (Slaughterhouse)'),
+('setting', 'Abbey'),
+('setting', 'Academy'),
+('setting', 'Academy (Alchemist)'),
 ('setting', 'Academy (Arcane)', 6),
 ('setting', 'Academy (Artificer''s)', 7),
 ('setting', 'Academy (Bards)', 8),

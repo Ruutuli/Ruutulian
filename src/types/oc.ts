@@ -355,6 +355,10 @@ export interface OC {
   stat_subclass?: string | null;
   stat_initiative?: number | null;
   stat_notes?: string | null;
+  
+  // Analytics
+  view_count?: number | null;
+  last_viewed_at?: string | null;
 }
 
 export interface Timeline {

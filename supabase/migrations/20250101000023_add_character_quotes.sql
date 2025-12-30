@@ -31,3 +31,4 @@ CREATE TRIGGER update_character_quotes_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_character_quotes_updated_at();
 
+

@@ -13,14 +13,15 @@ export const revalidate = 300;
 export async function generateMetadata({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const supabase = await createClient();
+  const resolvedParams = await params;
 
   const { data: timeline } = await supabase
     .from('timelines')
     .select('name, description_markdown, world:worlds(name, slug)')
-    .eq('id', params.id)
+    .eq('id', resolvedParams.id)
     .single();
 
   if (!timeline) {
@@ -31,7 +32,7 @@ export async function generateMetadata({
 
   const config = await getSiteConfig();
   const baseUrl = config.siteUrl || process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
-  const url = `${baseUrl}/timelines/${params.id}`;
+  const url = `${baseUrl}/timelines/${resolvedParams.id}`;
   const world = timeline.world as any;
   const iconUrl = convertGoogleDriveUrl(config.iconUrl || '/images/logo.png');
   // Use description_markdown for description, clean up markdown syntax
@@ -80,14 +81,15 @@ export async function generateMetadata({
 export default async function TimelinePage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const supabase = await createClient();
+  const resolvedParams = await params;
 
   const { data: timeline } = await supabase
     .from('timelines')
     .select('*, world:worlds(*)')
-    .eq('id', params.id)
+    .eq('id', resolvedParams.id)
     .single();
 
   if (!timeline) {
@@ -117,9 +119,25 @@ export default async function TimelinePage({
     .eq('timeline_id', timeline.id)
     .order('position', { ascending: true });
 
-  // Extract events from associations
+  // Extract events from associations and sanitize date_data
   const events = associations
-    ?.map((assoc: any) => assoc.event)
+    ?.map((assoc: any) => {
+      const event = assoc.event;
+      if (!event?.id) return null;
+      
+      // Sanitize date_data if it's invalid
+      if (event.date_data && typeof event.date_data === 'string') {
+        try {
+          // Try to parse if it's a JSON string
+          event.date_data = JSON.parse(event.date_data);
+        } catch {
+          // If parsing fails, set to null and use date_text instead
+          event.date_data = null;
+        }
+      }
+      
+      return event;
+    })
     .filter((e: any) => e?.id) || [];
 
   return (

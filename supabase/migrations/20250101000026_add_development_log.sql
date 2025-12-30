@@ -16,3 +16,4 @@ COMMENT ON TABLE character_development_log IS 'Tracks changes and evolution of c
 COMMENT ON COLUMN character_development_log.change_type IS 'Type of change (personality, appearance, backstory, stats, other)';
 COMMENT ON COLUMN character_development_log.notes IS 'Description of what changed and why';
 
+

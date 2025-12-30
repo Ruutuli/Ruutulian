@@ -8,6 +8,16 @@ interface TimelineEventProps {
 function formatDateData(dateData: EventDateData | null | undefined): string {
   if (!dateData) return '';
   
+  // Handle case where dateData might be a string (invalid JSON from DB)
+  if (typeof dateData === 'string') {
+    return dateData;
+  }
+  
+  // Ensure dateData has a type property
+  if (typeof dateData !== 'object' || !('type' in dateData)) {
+    return '';
+  }
+  
   switch (dateData.type) {
     case 'exact':
       const parts = [dateData.year.toString()];

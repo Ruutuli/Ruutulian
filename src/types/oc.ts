@@ -366,6 +366,9 @@ export interface Timeline {
   world_id: string;
   name: string;
   description_markdown?: string | null;
+  date_format?: string | null; // Custom date format notation (e.g., "[ μ ] – εγλ 1977")
+  era?: string | null; // Era system for dates (e.g., "BE", "SE", "CE", etc.)
+  story_alias_id?: string | null;
   created_at: string;
   updated_at: string;
   // Joined data
@@ -378,9 +381,11 @@ export type DateType = 'exact' | 'approximate' | 'range' | 'relative' | 'unknown
 
 export interface ExactDate {
   type: 'exact';
+  era?: string | null; // Era identifier (e.g., "BE", "SE", "CE")
   year: number;
   month?: number;
   day?: number;
+  approximate?: boolean; // For dates like "BE 0001 ~"
 }
 
 export interface ApproximateDate {
@@ -392,8 +397,8 @@ export interface ApproximateDate {
 
 export interface DateRange {
   type: 'range';
-  start: { year: number; month?: number; day?: number };
-  end: { year: number; month?: number; day?: number };
+  start: { era?: string | null; year: number; month?: number; day?: number };
+  end: { era?: string | null; year: number; month?: number; day?: number };
   text?: string;
 }
 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { PREDEFINED_EVENT_CATEGORIES } from '@/types/oc';
+import { getCategoryButtonColorClasses, getCategoryColorClasses } from '@/lib/utils/categoryColors';
 
 interface CategorySelectorProps {
   value: string[];
@@ -47,11 +48,7 @@ export function CategorySelector({ value, onChange }: CategorySelectorProps) {
                   key={category}
                   type="button"
                   onClick={() => toggleCategory(category)}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                    isSelected
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${getCategoryButtonColorClasses(category, isSelected)}`}
                 >
                   {category}
                 </button>
@@ -95,10 +92,10 @@ export function CategorySelector({ value, onChange }: CategorySelectorProps) {
               return (
                 <span
                   key={category}
-                  className={`inline-flex items-center gap-1 px-3 py-1 rounded text-sm ${
+                  className={`inline-flex items-center gap-1 px-3 py-1 rounded text-sm border ${
                     isPredefined
-                      ? 'bg-purple-600/30 text-purple-300 border border-purple-500'
-                      : 'bg-gray-700 text-gray-300 border border-gray-600'
+                      ? getCategoryColorClasses(category)
+                      : 'bg-gray-700 text-gray-300 border-gray-600'
                   }`}
                 >
                   {category}

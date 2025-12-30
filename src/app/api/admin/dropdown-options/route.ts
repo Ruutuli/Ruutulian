@@ -120,6 +120,26 @@ export async function GET() {
       cache = null; // Clear cache if no data
     }
 
+    // Combine race and species options into species field (for backward compatibility and combined dropdown)
+    if (options['race'] || options['species']) {
+      const raceOptions = options['race'] || [];
+      const speciesOptions = options['species'] || [];
+      
+      // Combine options, removing duplicates
+      const combinedOptions = Array.from(new Set([...raceOptions, ...speciesOptions]));
+      
+      // Sort combined options alphabetically
+      combinedOptions.sort();
+      
+      // Set the combined options as the species field
+      options['species'] = combinedOptions;
+      
+      // Merge hex codes from both fields (species takes precedence if duplicate option names)
+      const raceHexCodes = hexCodes['race'] || {};
+      const speciesHexCodes = hexCodes['species'] || {};
+      hexCodes['species'] = { ...raceHexCodes, ...speciesHexCodes };
+    }
+
     const responseData = { options, hexCodes };
     
     // Update cache

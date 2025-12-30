@@ -1,5 +1,7 @@
 import type { TimelineEvent as TimelineEventType, EventDateData } from '@/types/oc';
 import { Markdown } from '@/lib/utils/markdown';
+import { getCategoryColorClasses } from '@/lib/utils/categoryColors';
+import { calculateAge } from '@/lib/utils/ageCalculation';
 
 interface TimelineEventProps {
   event: TimelineEventType;
@@ -20,20 +22,31 @@ function formatDateData(dateData: EventDateData | null | undefined): string {
   
   switch (dateData.type) {
     case 'exact':
-      const parts = [dateData.year.toString()];
-      if (dateData.month) parts.push(dateData.month.toString().padStart(2, '0'));
-      if (dateData.day) parts.push(dateData.day.toString().padStart(2, '0'));
-      return parts.join('-');
+      const exact = dateData as any;
+      const eraPrefix = exact.era ? `${exact.era} ` : '';
+      const yearStr = exact.year.toString().padStart(4, '0');
+      const approximateSuffix = exact.approximate ? ' ~' : '';
+      
+      if (exact.month && exact.day) {
+        const monthStr = exact.month.toString().padStart(2, '0');
+        const dayStr = exact.day.toString().padStart(2, '0');
+        return `${eraPrefix}${yearStr}-${monthStr}-${dayStr}${approximateSuffix}`;
+      }
+      return `${eraPrefix}${yearStr}${approximateSuffix}`;
     case 'approximate':
       return dateData.text;
     case 'range':
-      const startParts = [dateData.start.year.toString()];
-      if (dateData.start.month) startParts.push(dateData.start.month.toString().padStart(2, '0'));
-      if (dateData.start.day) startParts.push(dateData.start.day.toString().padStart(2, '0'));
-      const endParts = [dateData.end.year.toString()];
-      if (dateData.end.month) endParts.push(dateData.end.month.toString().padStart(2, '0'));
-      if (dateData.end.day) endParts.push(dateData.end.day.toString().padStart(2, '0'));
-      return `${startParts.join('-')} to ${endParts.join('-')}${dateData.text ? ` (${dateData.text})` : ''}`;
+      const range = dateData as any;
+      const startEra = range.start?.era ? `${range.start.era} ` : '';
+      const endEra = range.end?.era ? `${range.end.era} ` : '';
+      const startParts = [range.start.year.toString().padStart(4, '0')];
+      if (range.start.month) startParts.push(range.start.month.toString().padStart(2, '0'));
+      if (range.start.day) startParts.push(range.start.day.toString().padStart(2, '0'));
+      const endParts = [range.end.year.toString().padStart(4, '0')];
+      if (range.end.month) endParts.push(range.end.month.toString().padStart(2, '0'));
+      if (range.end.day) endParts.push(range.end.day.toString().padStart(2, '0'));
+      const separator = range.start?.era && range.end?.era && range.start.era === range.end.era ? '–' : ' to ';
+      return `${startEra}${startParts.join('-')}${separator}${endEra}${endParts.join('-')}${range.text ? ` (${range.text})` : ''}`;
     case 'relative':
       return dateData.text;
     case 'unknown':
@@ -81,7 +94,7 @@ export function TimelineEvent({ event }: TimelineEventProps) {
               {event.categories.map((cat) => (
                 <span
                   key={cat}
-                  className="text-xs px-2 py-0.5 bg-purple-600/30 text-purple-300 rounded"
+                  className={`text-xs px-2 py-0.5 rounded border ${getCategoryColorClasses(cat)}`}
                 >
                   {cat}
                 </span>
@@ -104,21 +117,27 @@ export function TimelineEvent({ event }: TimelineEventProps) {
           {/* Characters */}
           {event.characters && event.characters.length > 0 && (
             <div className="mt-3 pt-3 border-t border-gray-700">
-              <p className="text-sm text-gray-400 mb-2">Characters Involved:</p>
-              <div className="flex flex-wrap gap-2">
-                {event.characters.map((char) => (
-                  <a
-                    key={char.id}
-                    href={`/ocs/${char.oc?.slug}`}
-                    className="text-sm text-purple-400 hover:text-purple-300 bg-gray-800 px-2 py-1 rounded"
-                  >
-                    {char.oc?.name}
-                    {char.role && (
-                      <span className="text-gray-500 ml-1">({char.role})</span>
-                    )}
-                  </a>
-                ))}
-              </div>
+              <p className="text-sm text-gray-400 mb-2">
+                Characters:{' '}
+                {event.characters.map((char, index) => {
+                  const age = char.oc?.date_of_birth && event.date_data
+                    ? calculateAge(char.oc.date_of_birth, event.date_data)
+                    : null;
+                  
+                  return (
+                    <span key={char.id}>
+                      <a
+                        href={`/ocs/${char.oc?.slug}`}
+                        className="text-purple-400 hover:text-purple-300"
+                      >
+                        {char.oc?.name}
+                      </a>
+                      {age !== null && ` (${age})`}
+                      {index < event.characters.length - 1 && ', '}
+                    </span>
+                  );
+                })}
+              </p>
             </div>
           )}
         </div>

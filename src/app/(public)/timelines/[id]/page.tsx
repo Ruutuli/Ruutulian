@@ -112,7 +112,7 @@ export default async function TimelinePage({
         story_alias:story_aliases(id, name, slug, description),
         characters:timeline_event_characters(
           *,
-          oc:ocs(id, name, slug)
+          oc:ocs(id, name, slug, date_of_birth)
         )
       )
     `)

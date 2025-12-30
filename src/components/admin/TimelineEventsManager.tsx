@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { TimelineEvent, OC, Timeline } from '@/types/oc';
 import { createClient } from '@/lib/supabase/client';
+import { TimelineEventForm } from './TimelineEventForm';
+import { getCategoryColorClasses } from '@/lib/utils/categoryColors';
+import { calculateAge } from '@/lib/utils/ageCalculation';
 
 interface TimelineEventsManagerProps {
   timelineId: string;
@@ -12,12 +15,12 @@ interface TimelineEventsManagerProps {
 export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps) {
   const router = useRouter();
   const [timelineEvents, setTimelineEvents] = useState<Array<TimelineEvent & { position: number }>>([]);
-  const [availableEvents, setAvailableEvents] = useState<TimelineEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [worldId, setWorldId] = useState<string | null>(null);
-  const [showAddEvent, setShowAddEvent] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [timelineEra, setTimelineEra] = useState<string | null>(null);
+  const [timelineStoryAliasId, setTimelineStoryAliasId] = useState<string | null>(null);
+  const [showCreateEventForm, setShowCreateEventForm] = useState(false);
 
   useEffect(() => {
     loadTimelineAndEvents();
@@ -27,10 +30,10 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
     setIsLoading(true);
     const supabase = createClient();
     
-    // Get timeline to find world_id
+    // Get timeline to find world_id, era, and story_alias_id
     const { data: timeline } = await supabase
       .from('timelines')
-      .select('world_id')
+      .select('world_id, era, story_alias_id')
       .eq('id', timelineId)
       .single();
     
@@ -40,6 +43,8 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
     }
 
     setWorldId(timeline.world_id);
+    setTimelineEra(timeline.era);
+    setTimelineStoryAliasId(timeline.story_alias_id);
 
     // Load events associated with this timeline via junction table
     const { data: associations } = await supabase
@@ -49,10 +54,10 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
         event:timeline_events(
           *,
           world:worlds(id, name, slug),
-          characters:timeline_event_characters(
-            *,
-            oc:ocs(id, name, slug)
-          )
+        characters:timeline_event_characters(
+          *,
+          oc:ocs(id, name, slug, date_of_birth)
+        )
         )
       `)
       .eq('timeline_id', timelineId)
@@ -66,25 +71,6 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
         }))
         .filter((e: any) => e.id); // Filter out any null events
       setTimelineEvents(events);
-    }
-
-    // Load all available events from this world (for adding to timeline)
-    const { data: allEvents } = await supabase
-      .from('timeline_events')
-      .select(`
-        *,
-        world:worlds(id, name, slug),
-        characters:timeline_event_characters(
-          *,
-          oc:ocs(id, name, slug)
-        )
-      `)
-      .eq('world_id', timeline.world_id)
-      .order('year', { ascending: true, nullsFirst: false })
-      .order('created_at', { ascending: false });
-
-    if (allEvents) {
-      setAvailableEvents(allEvents);
     }
 
     setIsLoading(false);
@@ -118,9 +104,17 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
       alert('Failed to add event to timeline');
     } else {
       await loadTimelineAndEvents();
-      setShowAddEvent(false);
     }
     setIsSaving(false);
+  }
+
+  async function handleEventCreated(responseData: any) {
+    if (responseData?.id && worldId) {
+      // Automatically add the new event to the timeline
+      await addEventToTimeline(responseData.id);
+      // Hide the form
+      setShowCreateEventForm(false);
+    }
   }
 
   async function removeEventFromTimeline(eventId: string) {
@@ -178,21 +172,6 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
     updateEventPosition(targetEvent.id, event.position);
   }
 
-  const filteredAvailableEvents = availableEvents.filter((event) => {
-    if (!showAddEvent) return false;
-    const alreadyAdded = timelineEvents.some((te) => te.id === event.id);
-    if (alreadyAdded) return false;
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return (
-        event.title.toLowerCase().includes(query) ||
-        event.description?.toLowerCase().includes(query) ||
-        event.categories.some((cat) => cat.toLowerCase().includes(query))
-      );
-    }
-    return true;
-  });
-
   if (isLoading) {
     return <div className="text-center py-8 text-gray-300">Loading events...</div>;
   }
@@ -203,79 +182,34 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
         <h3 className="text-xl font-semibold text-gray-100">Timeline Events</h3>
         <div className="flex gap-2">
           <button
-            onClick={() => router.push(`/admin/timeline-events/new?world_id=${worldId}`)}
+            onClick={() => setShowCreateEventForm(!showCreateEventForm)}
             className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
           >
-            Create New Event
-          </button>
-          <button
-            onClick={() => setShowAddEvent(!showAddEvent)}
-            className="px-4 py-2 bg-gray-700 text-gray-300 rounded-md hover:bg-gray-600"
-          >
-            {showAddEvent ? 'Cancel' : 'Add Existing Event'}
+            {showCreateEventForm ? 'Cancel' : 'Create New Event'}
           </button>
         </div>
       </div>
 
-      {showAddEvent && (
-        <div className="border border-gray-600/70 rounded-lg p-4 bg-gray-700/60">
-          <div className="mb-3">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search events by title, description, or category..."
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
-            />
-          </div>
-          {filteredAvailableEvents.length > 0 ? (
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {filteredAvailableEvents.map((event) => (
-                <div
-                  key={event.id}
-                  className="flex justify-between items-center p-2 bg-gray-800 rounded hover:bg-gray-750"
-                >
-                  <div>
-                    <div className="font-medium text-gray-100">{event.title}</div>
-                    {event.date_text && (
-                      <div className="text-sm text-gray-400">{event.date_text}</div>
-                    )}
-                    {event.categories && event.categories.length > 0 && (
-                      <div className="flex gap-1 mt-1">
-                        {event.categories.map((cat) => (
-                          <span
-                            key={cat}
-                            className="text-xs px-2 py-0.5 bg-purple-600/30 text-purple-300 rounded"
-                          >
-                            {cat}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => addEventToTimeline(event.id)}
-                    disabled={isSaving}
-                    className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50"
-                  >
-                    Add
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-4 text-gray-400">
-              {searchQuery
-                ? 'No events found matching your search.'
-                : 'No available events to add. Create a new event first.'}
-            </div>
-          )}
+      {showCreateEventForm && worldId && (
+        <div className="border border-gray-600/70 rounded-lg p-6 bg-gray-700/60">
+          <h4 className="text-lg font-semibold text-gray-100 mb-4">Create New Event</h4>
+          <TimelineEventForm
+            key={showCreateEventForm ? 'create-event-form' : undefined}
+            worldId={worldId}
+            lockWorld={true}
+            timelineEra={timelineEra}
+            timelineStoryAliasId={timelineStoryAliasId}
+            lockStoryAlias={true}
+            onSuccess={handleEventCreated}
+            onCancel={() => setShowCreateEventForm(false)}
+            hideCancel={false}
+          />
         </div>
       )}
 
       {timelineEvents.length === 0 ? (
         <div className="text-center py-8 text-gray-400">
-          No events in this timeline yet. Add or create events to get started.
+          No events in this timeline yet. Create events to get started.
         </div>
       ) : (
         <div className="space-y-4">
@@ -303,7 +237,7 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
                       {event.categories.map((cat) => (
                         <span
                           key={cat}
-                          className="text-xs px-2 py-0.5 bg-purple-600/30 text-purple-300 rounded"
+                          className={`text-xs px-2 py-0.5 rounded border ${getCategoryColorClasses(cat)}`}
                         >
                           {cat}
                         </span>
@@ -318,18 +252,22 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
                   )}
                   {event.characters && event.characters.length > 0 && (
                     <div className="mt-2">
-                      <p className="text-xs text-gray-400 mb-1">Characters:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {event.characters.map((char) => (
-                          <span
-                            key={char.id}
-                            className="text-xs px-2 py-0.5 bg-gray-800 text-gray-300 rounded"
-                          >
-                            {char.oc?.name}
-                            {char.role && ` (${char.role})`}
-                          </span>
-                        ))}
-                      </div>
+                      <p className="text-xs text-gray-400 mb-1">
+                        Characters:{' '}
+                        {event.characters.map((char, index) => {
+                          const age = char.oc?.date_of_birth && event.date_data
+                            ? calculateAge(char.oc.date_of_birth, event.date_data)
+                            : null;
+                          
+                          return (
+                            <span key={char.id}>
+                              {char.oc?.name}
+                              {age !== null && ` (${age})`}
+                              {index < event.characters.length - 1 && ', '}
+                            </span>
+                          );
+                        })}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -372,3 +310,4 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
     </div>
   );
 }
+

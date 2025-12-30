@@ -5,6 +5,7 @@ interface OC {
   id: string;
   name: string;
   slug: string;
+  date_of_birth?: string | null;
 }
 
 interface UseOCsByWorldResult {
@@ -39,7 +40,7 @@ export function useOCsByWorld(
         const supabase = createClient();
         let query = supabase
           .from('ocs')
-          .select('id, name, slug')
+          .select('id, name, slug, date_of_birth')
           .eq('world_id', worldId);
         
         if (storyAliasId !== undefined) {

@@ -6,9 +6,10 @@ import type { EventDateData, ExactDate, ApproximateDate, DateRange, RelativeDate
 interface DateInputProps {
   value: EventDateData | null | undefined;
   onChange: (value: EventDateData | null) => void;
+  availableEras?: string[]; // Available era options from timeline (e.g., ["BE", "SE"])
 }
 
-export function DateInput({ value, onChange }: DateInputProps) {
+export function DateInput({ value, onChange, availableEras }: DateInputProps) {
   const [dateType, setDateType] = useState<'exact' | 'approximate' | 'range' | 'relative' | 'unknown'>(
     value?.type || 'exact'
   );
@@ -24,7 +25,7 @@ export function DateInput({ value, onChange }: DateInputProps) {
     // Reset to default for new type
     switch (newType) {
       case 'exact':
-        onChange({ type: 'exact', year: new Date().getFullYear() });
+        onChange({ type: 'exact', era: null, year: new Date().getFullYear(), approximate: false });
         break;
       case 'approximate':
         onChange({ type: 'approximate', text: '' });
@@ -32,8 +33,8 @@ export function DateInput({ value, onChange }: DateInputProps) {
       case 'range':
         onChange({
           type: 'range',
-          start: { year: new Date().getFullYear() },
-          end: { year: new Date().getFullYear() },
+          start: { era: null, year: new Date().getFullYear() },
+          end: { era: null, year: new Date().getFullYear() },
         });
         break;
       case 'relative':
@@ -70,6 +71,23 @@ export function DateInput({ value, onChange }: DateInputProps) {
 
       {dateType === 'exact' && (
         <div className="space-y-2">
+          {availableEras && availableEras.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Era (optional)</label>
+              <select
+                value={(value as ExactDate)?.era || ''}
+                onChange={(e) => updateValue({ era: e.target.value || null })}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
+              >
+                <option value="">No Era</option>
+                {availableEras.map((era) => (
+                  <option key={era} value={era}>
+                    {era}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Year *</label>
             <input
@@ -103,6 +121,17 @@ export function DateInput({ value, onChange }: DateInputProps) {
                 className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
               />
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={(value as ExactDate)?.approximate || false}
+              onChange={(e) => updateValue({ approximate: e.target.checked })}
+              className="w-4 h-4 text-purple-600 bg-gray-800 border-gray-700 rounded focus:ring-purple-500"
+            />
+            <label className="text-sm text-gray-300">
+              Approximate date (shows ~)
+            </label>
           </div>
         </div>
       )}
@@ -164,6 +193,25 @@ export function DateInput({ value, onChange }: DateInputProps) {
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Start Date</label>
             <div className="space-y-2">
+              {availableEras && availableEras.length > 0 && (
+                <select
+                  value={(value as DateRange)?.start?.era || ''}
+                  onChange={(e) => {
+                    const range = value as DateRange;
+                    updateValue({
+                      start: { ...range?.start, era: e.target.value || null },
+                    });
+                  }}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
+                >
+                  <option value="">No Era</option>
+                  {availableEras.map((era) => (
+                    <option key={era} value={era}>
+                      {era}
+                    </option>
+                  ))}
+                </select>
+              )}
               <input
                 type="number"
                 value={(value as DateRange)?.start?.year || ''}
@@ -212,6 +260,25 @@ export function DateInput({ value, onChange }: DateInputProps) {
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">End Date</label>
             <div className="space-y-2">
+              {availableEras && availableEras.length > 0 && (
+                <select
+                  value={(value as DateRange)?.end?.era || ''}
+                  onChange={(e) => {
+                    const range = value as DateRange;
+                    updateValue({
+                      end: { ...range?.end, era: e.target.value || null },
+                    });
+                  }}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
+                >
+                  <option value="">No Era</option>
+                  {availableEras.map((era) => (
+                    <option key={era} value={era}>
+                      {era}
+                    </option>
+                  ))}
+                </select>
+              )}
               <input
                 type="number"
                 value={(value as DateRange)?.end?.year || ''}

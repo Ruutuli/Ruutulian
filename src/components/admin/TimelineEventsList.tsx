@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import type { TimelineEvent, World, OC } from '@/types/oc';
+import { getCategoryColorClasses } from '@/lib/utils/categoryColors';
 
 interface TimelineEventsListProps {
   events: TimelineEvent[];
@@ -216,7 +217,7 @@ export function TimelineEventsList({
                         event.categories.map((cat) => (
                           <span
                             key={cat}
-                            className="text-xs px-2 py-0.5 bg-purple-600/30 text-purple-300 rounded"
+                            className={`text-xs px-2 py-0.5 rounded border ${getCategoryColorClasses(cat)}`}
                           >
                             {cat}
                           </span>

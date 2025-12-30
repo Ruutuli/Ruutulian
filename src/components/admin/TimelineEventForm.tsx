@@ -20,6 +20,7 @@ import { FormTextarea } from './forms/FormTextarea';
 import { FormButton } from './forms/FormButton';
 import { StoryAliasSelector } from './StoryAliasSelector';
 import { optionalUuid, optionalUrl } from '@/lib/utils/zodSchemas';
+import { calculateAge } from '@/lib/utils/ageCalculation';
 
 const eventSchema = z.object({
   world_id: z.string().uuid('Invalid world'),
@@ -27,7 +28,6 @@ const eventSchema = z.object({
   description: z.string().optional(),
   description_markdown: z.string().optional(),
   date_data: z.any().optional().nullable(),
-  date_text: z.string().optional(),
   year: z.number().int().optional().nullable(),
   month: z.number().int().min(1).max(12).optional().nullable(),
   day: z.number().int().min(1).max(31).optional().nullable(),
@@ -47,9 +47,16 @@ type EventFormData = z.infer<typeof eventSchema>;
 interface TimelineEventFormProps {
   event?: TimelineEvent;
   worldId?: string; // Pre-select a world
+  lockWorld?: boolean; // If true, hide world field and lock it to worldId
+  timelineEra?: string | null; // Era system from timeline (comma-separated, e.g., "BE, SE")
+  timelineStoryAliasId?: string | null; // Story alias from timeline - events inherit this
+  lockStoryAlias?: boolean; // If true, hide story alias field and lock it to timelineStoryAliasId
+  onSuccess?: (responseData: any) => void | Promise<void>; // Callback after successful creation
+  onCancel?: () => void; // Callback when cancel is clicked
+  hideCancel?: boolean; // Hide cancel button (useful for inline forms)
 }
 
-export function TimelineEventForm({ event, worldId }: TimelineEventFormProps) {
+export function TimelineEventForm({ event, worldId, lockWorld = false, timelineEra, timelineStoryAliasId, lockStoryAlias = false, onSuccess, onCancel, hideCancel = false }: TimelineEventFormProps) {
   const router = useRouter();
   const { worlds } = useWorlds();
   const shouldNavigateAfterSaveRef = useRef(false);
@@ -64,7 +71,18 @@ export function TimelineEventForm({ event, worldId }: TimelineEventFormProps) {
       return event ? `/admin/timeline-events/${event.id}` : '/admin/timeline-events';
     },
     shouldNavigateRef: shouldNavigateAfterSaveRef,
+    onSuccess: async (responseData, isUpdate) => {
+      // Call custom onSuccess callback if provided
+      if (onSuccess && !isUpdate) {
+        await onSuccess(responseData);
+        // Return false to prevent navigation when we have a custom callback
+        return false;
+      }
+    },
   });
+
+  // Get world name for display when locked
+  const lockedWorld = lockWorld && worldId ? worlds.find(w => w.id === worldId) : null;
 
   const form = useForm<EventFormData>({
     resolver: zodResolver(eventSchema),
@@ -74,7 +92,6 @@ export function TimelineEventForm({ event, worldId }: TimelineEventFormProps) {
       description: event.description || '',
       description_markdown: event.description_markdown || '',
       date_data: event.date_data || null,
-      date_text: event.date_text || '',
       year: event.year || null,
       month: event.month || null,
       day: event.day || null,
@@ -93,7 +110,6 @@ export function TimelineEventForm({ event, worldId }: TimelineEventFormProps) {
       description: '',
       description_markdown: '',
       date_data: null,
-      date_text: '',
       year: null,
       month: null,
       day: null,
@@ -102,9 +118,25 @@ export function TimelineEventForm({ event, worldId }: TimelineEventFormProps) {
       location: '',
       image_url: '',
       characters: [],
-      story_alias_id: null,
+      story_alias_id: lockStoryAlias ? (timelineStoryAliasId || null) : null,
     },
   });
+
+  // Ensure world_id is set when locked
+  useEffect(() => {
+    if (lockWorld && worldId && !event) {
+      setValue('world_id', worldId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockWorld, worldId, event]);
+
+  // Ensure story_alias_id is set when locked
+  useEffect(() => {
+    if (lockStoryAlias && timelineStoryAliasId !== undefined && !event) {
+      setValue('story_alias_id', timelineStoryAliasId || null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockStoryAlias, timelineStoryAliasId, event]);
 
   const {
     register,
@@ -170,28 +202,50 @@ export function TimelineEventForm({ event, worldId }: TimelineEventFormProps) {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {error && <FormMessage type="error" message={error} />}
 
-      <div>
-        <FormLabel htmlFor="world_id" required>
-          World
-        </FormLabel>
-        <FormSelect
-          {...register('world_id')}
-          options={worlds.map((world) => ({
-            value: world.id,
-            label: world.name,
-          }))}
-          placeholder="Select a world"
-          error={errors.world_id?.message}
-          disabled={!!event || isSubmitting} // Can't change world after creation
-        />
-      </div>
+      {lockWorld && lockedWorld ? (
+        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3">
+          <FormLabel>World</FormLabel>
+          <div className="text-gray-200 font-medium">{lockedWorld.name}</div>
+          <p className="text-xs text-gray-400 mt-1">World is automatically set from timeline context</p>
+          <input type="hidden" {...register('world_id')} value={worldId} />
+        </div>
+      ) : (
+        <div>
+          <FormLabel htmlFor="world_id" required>
+            World
+          </FormLabel>
+          <FormSelect
+            {...register('world_id')}
+            options={worlds.map((world) => ({
+              value: world.id,
+              label: world.name,
+            }))}
+            placeholder="Select a world"
+            error={errors.world_id?.message}
+            disabled={!!event || isSubmitting} // Can't change world after creation
+          />
+        </div>
+      )}
 
-      <StoryAliasSelector
-        worldId={watchedWorldId}
-        register={register('story_alias_id')}
-        error={errors.story_alias_id?.message}
-        disabled={isSubmitting}
-      />
+      {!lockStoryAlias && (
+        <StoryAliasSelector
+          worldId={watchedWorldId}
+          register={register('story_alias_id')}
+          error={errors.story_alias_id?.message}
+          disabled={isSubmitting}
+        />
+      )}
+
+      {lockStoryAlias && timelineStoryAliasId && (
+        <div>
+          <FormLabel htmlFor="story_alias_locked">
+            Story Alias
+          </FormLabel>
+          <div className="px-3 py-2 bg-gray-700/50 border border-gray-600/70 rounded-md text-gray-300">
+            Inherited from timeline (locked)
+          </div>
+        </div>
+      )}
 
       <div>
         <FormLabel htmlFor="title" required>
@@ -236,17 +290,8 @@ export function TimelineEventForm({ event, worldId }: TimelineEventFormProps) {
         <DateInput
           value={watchedDateData}
           onChange={(value) => setValue('date_data', value)}
+          availableEras={timelineEra ? timelineEra.split(',').map(e => e.trim()).filter(Boolean) : undefined}
         />
-        <div className="mt-2">
-          <FormLabel htmlFor="date_text" optional>
-            Date Text (Legacy/Display Fallback)
-          </FormLabel>
-          <FormInput
-            {...register('date_text')}
-            placeholder="e.g., Spring 500 BCE"
-            disabled={isSubmitting}
-          />
-        </div>
       </div>
 
       <div>
@@ -307,36 +352,48 @@ export function TimelineEventForm({ event, worldId }: TimelineEventFormProps) {
         </div>
         {relatedCharacters.items && relatedCharacters.items.length > 0 ? (
           <div className="space-y-2">
-            {relatedCharacters.items.map((char, index) => (
-              <div key={index} className="flex gap-2">
-                <select
-                  value={char.oc_id}
-                  onChange={(e) => relatedCharacters.updateItemField(index, 'oc_id', e.target.value)}
-                  className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
-                >
-                  <option value="">Select character</option>
-                  {characters.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="text"
-                  value={char.role || ''}
-                  onChange={(e) => relatedCharacters.updateItemField(index, 'role', e.target.value)}
-                  placeholder="Role (optional)"
-                  className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
-                />
-                <button
-                  type="button"
-                  onClick={() => relatedCharacters.removeItem(index)}
-                  className="px-3 py-2 bg-red-700 text-white rounded hover:bg-red-600"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+            {relatedCharacters.items.map((char, index) => {
+              const selectedCharacter = characters.find(c => c.id === char.oc_id);
+              const age = selectedCharacter?.date_of_birth && watchedDateData
+                ? calculateAge(selectedCharacter.date_of_birth, watchedDateData)
+                : null;
+              
+              return (
+                <div key={index} className="flex gap-2 items-center">
+                  <select
+                    value={char.oc_id}
+                    onChange={(e) => relatedCharacters.updateItemField(index, 'oc_id', e.target.value)}
+                    className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
+                  >
+                    <option value="">Select character</option>
+                    {characters.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedCharacter && age !== null && (
+                    <span className="text-sm text-gray-400 whitespace-nowrap">
+                      Age: {age}
+                    </span>
+                  )}
+                  <input
+                    type="text"
+                    value={char.role || ''}
+                    onChange={(e) => relatedCharacters.updateItemField(index, 'role', e.target.value)}
+                    placeholder="Role (optional)"
+                    className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => relatedCharacters.removeItem(index)}
+                    className="px-3 py-2 bg-red-700 text-white rounded hover:bg-red-600"
+                  >
+                    Remove
+                  </button>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <p className="text-sm text-gray-400">
@@ -348,14 +405,22 @@ export function TimelineEventForm({ event, worldId }: TimelineEventFormProps) {
       </div>
 
       <div className="flex gap-4">
-        <FormButton
-          type="button"
-          variant="secondary"
-          onClick={() => router.back()}
-          disabled={isSubmitting}
-        >
-          Cancel
-        </FormButton>
+        {!hideCancel && (
+          <FormButton
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              if (onCancel) {
+                onCancel();
+              } else {
+                router.back();
+              }
+            }}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </FormButton>
+        )}
         {event ? (
           <>
             <FormButton

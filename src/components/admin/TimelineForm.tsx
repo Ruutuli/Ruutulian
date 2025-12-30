@@ -15,11 +15,16 @@ import { FormSelect } from './forms/FormSelect';
 import { FormTextarea } from './forms/FormTextarea';
 import { FormButton } from './forms/FormButton';
 import { FormMessage } from './forms/FormMessage';
+import { StoryAliasSelector } from './StoryAliasSelector';
+import { optionalUuid } from '@/lib/utils/zodSchemas';
 
 const timelineSchema = z.object({
   world_id: z.string().uuid('Invalid world'),
   name: z.string().min(1, 'Name is required'),
   description_markdown: z.string().optional(),
+  date_format: z.string().optional(),
+  era: z.string().optional(),
+  story_alias_id: optionalUuid,
 });
 
 type TimelineFormData = z.infer<typeof timelineSchema>;
@@ -35,7 +40,14 @@ export function TimelineForm({ timeline }: TimelineFormProps) {
   const { isSubmitting, error, success, submit } = useFormSubmission<TimelineFormData>({
     apiRoute: '/api/admin/timelines',
     entity: timeline,
-    successRoute: '/admin/timelines',
+    successRoute: (responseData, isUpdate) => {
+      // After creating a new timeline, navigate to its events page for quick event creation
+      if (!isUpdate && responseData?.id) {
+        return `/admin/timelines/${responseData.id}/events`;
+      }
+      // When updating, go back to timelines list
+      return '/admin/timelines';
+    },
     showSuccessMessage: true,
     successMessage: 'Timeline saved successfully!',
     shouldNavigateRef: shouldNavigateAfterSaveRef,
@@ -48,15 +60,23 @@ export function TimelineForm({ timeline }: TimelineFormProps) {
           world_id: timeline.world_id,
           name: timeline.name,
           description_markdown: timeline.description_markdown ?? undefined,
+          date_format: timeline.date_format ?? undefined,
+          era: timeline.era ?? undefined,
+          story_alias_id: timeline.story_alias_id ?? null,
         }
       : {
           world_id: '',
           name: '',
           description_markdown: '',
+          date_format: '',
+          era: '',
+          story_alias_id: null,
         },
   });
 
-  const { register, handleSubmit, formState: { errors } } = methods;
+  const { register, handleSubmit, formState: { errors }, watch } = methods;
+  
+  const watchedWorldId = watch('world_id');
 
   const onSubmit = async (data: TimelineFormData) => {
     await submit(data);
@@ -89,6 +109,21 @@ export function TimelineForm({ timeline }: TimelineFormProps) {
         {error && <FormMessage type="error" message={error} />}
         {success && <FormMessage type="success" message="Timeline saved successfully!" />}
 
+        {timeline && (
+          <div className="bg-blue-900/30 border border-blue-700/50 rounded-lg p-4 mb-6">
+            <p className="text-sm text-blue-200">
+              <strong>Tip:</strong> Once your timeline is saved, you can{' '}
+              <a
+                href={`/admin/timelines/${timeline.id}/events`}
+                className="text-blue-300 underline hover:text-blue-200"
+              >
+                go to the events page
+              </a>
+              {' '}to add events to this timeline.
+            </p>
+          </div>
+        )}
+
         <FormSection title="Timeline Information" icon="timeline" accentColor="timeline" defaultOpen={true}>
           <div>
             <FormLabel htmlFor="world_id" required>
@@ -102,6 +137,13 @@ export function TimelineForm({ timeline }: TimelineFormProps) {
               disabled={isSubmitting}
             />
           </div>
+
+          <StoryAliasSelector
+            worldId={watchedWorldId}
+            register={register('story_alias_id')}
+            error={errors.story_alias_id?.message}
+            disabled={isSubmitting}
+          />
 
           <div>
             <FormLabel htmlFor="name" required>
@@ -124,6 +166,34 @@ export function TimelineForm({ timeline }: TimelineFormProps) {
               markdown
               disabled={isSubmitting}
             />
+          </div>
+
+          <div>
+            <FormLabel htmlFor="era" optional>
+              Era System
+            </FormLabel>
+            <FormInput
+              {...register('era')}
+              placeholder='e.g., "BE, SE" or "Before Era, Current Era, Future Era"'
+              disabled={isSubmitting}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Optional: Define custom era systems for this timeline (comma-separated). For example: "BE, SE" or "Before Era, Current Era, Future Era". Events will use these eras when created.
+            </p>
+          </div>
+
+          <div>
+            <FormLabel htmlFor="date_format" optional>
+              Date Format Notation
+            </FormLabel>
+            <FormInput
+              {...register('date_format')}
+              placeholder='e.g., "[ μ ] – εγλ 1977"'
+              disabled={isSubmitting}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Optional: Specify how dates should be formatted for this timeline (e.g., custom calendar notation)
+            </p>
           </div>
         </FormSection>
 

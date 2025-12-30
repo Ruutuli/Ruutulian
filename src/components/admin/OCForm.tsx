@@ -26,11 +26,16 @@ import { FormButton } from './forms/FormButton';
 import { FormMessage } from './forms/FormMessage';
 import { FormColorSelect } from './forms/FormColorSelect';
 import { StoryAliasSelector } from './StoryAliasSelector';
+import { QuotesFormSection } from './QuotesFormSection';
+import { TagsFormSection } from './TagsFormSection';
+import { StorySnippetsFormSection } from './StorySnippetsFormSection';
+import { DevelopmentLogFormSection } from './DevelopmentLogFormSection';
 import { optionalUuid, optionalUrl } from '@/lib/utils/zodSchemas';
 import { useDropdownPosition } from '@/hooks/useDropdownPosition';
 import { getGoogleDriveImageUrls } from '@/lib/utils/googleDriveImage';
 import { slugify } from '@/lib/utils/slugify';
 import { autoCreateOptions, autoCreateTemplateOptions, autoCreateWorldFieldOptions } from '@/lib/utils/autoCreateOptions';
+import { DropdownOptionsProvider } from '@/contexts/DropdownOptionsContext';
 
 // Component to preview images from URLs
 function ImagePreview({ url, maxHeight = '200px', className = '' }: { url: string; maxHeight?: string; className?: string }) {
@@ -2421,7 +2426,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
   }, [handleSubmit, onSubmit, onError]);
 
   return (
-    <>
+    <DropdownOptionsProvider>
       <FormProvider {...methods}>
         <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-4 md:space-y-6 w-full max-w-5xl">
       {error && <FormMessage type="error" message={error} />}
@@ -2798,6 +2803,11 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           />
         </div>
       </FormSection>
+
+      {/* Tags Section - Early placement for categorization */}
+      {oc && (
+        <TagsFormSection ocId={oc.id} currentTags={[]} />
+      )}
 
       <FormSection title="Identity Background" icon="identity-background" accentColor="identity-background" defaultOpen={false}>
         <div>
@@ -3249,6 +3259,11 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
         </div>
       </FormSection>
 
+      {/* Quotes Section - After Personality Traits for character voice */}
+      {oc && (
+        <QuotesFormSection ocId={oc.id} />
+      )}
+
       <FormSection title="Abilities" icon="abilities" accentColor="abilities" defaultOpen={false}>
         <div>
           <FormLabel htmlFor="abilities">
@@ -3591,6 +3606,11 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
         </div>
       </FormSection>
 
+      {/* Story Snippets Section - After History for content-related snippets */}
+      {oc && (
+        <StorySnippetsFormSection ocId={oc.id} />
+      )}
+
       <FormSection title="Preferences & Habits" icon="preferences-habits" accentColor="preferences-habits" defaultOpen={false}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -3799,6 +3819,11 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
         </div>
       </FormSection>
 
+      {/* Development Log Section - Within Development section */}
+      {oc && (
+        <DevelopmentLogFormSection ocId={oc.id} />
+      )}
+
       <FormSection title="Settings" icon="settings" accentColor="settings" defaultOpen={true}>
         <div className="flex items-center">
           <input
@@ -3942,6 +3967,6 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
         </button>,
         document.body
       )}
-    </>
+    </DropdownOptionsProvider>
   );
 }

@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { UseFormRegisterReturn, ControllerRenderProps } from 'react-hook-form';
-import { csvOptions } from '@/lib/utils/csvOptionsData';
 import { useDropdownOptions } from '@/hooks/useDropdownOptions';
 import { useDropdownPosition } from '@/hooks/useDropdownPosition';
 
@@ -14,7 +13,7 @@ interface FormAutocompleteProps extends Omit<React.InputHTMLAttributes<HTMLInput
   error?: string;
   helpText?: string;
   options?: string[];
-  optionsSource?: keyof typeof csvOptions | string; // Allow string for fields not in csvOptions
+  optionsSource?: string;
   placeholder?: string;
   allowCustom?: boolean; // Allow adding custom values not in the options list
 }
@@ -69,7 +68,7 @@ export const FormAutocomplete = React.forwardRef<HTMLInputElement, FormAutocompl
 
     // Fetch options from database first, fallback to generated file
     // The hook already handles the fallback, so we can use it directly
-    const { options: dbOptions, isLoading } = useDropdownOptions(optionsSource);
+    const { options: dbOptions, isLoading, error: hookError } = useDropdownOptions(optionsSource);
 
     // Get options: use provided options, then database/generated file from hook
     const availableOptions = useMemo(() => {
@@ -79,10 +78,18 @@ export const FormAutocomplete = React.forwardRef<HTMLInputElement, FormAutocompl
       if (optionsSource) {
         // Hook already provides database options or fallback to generated file
         const opts = dbOptions || [];
+        
+        // Debug logging in development
+        if (process.env.NODE_ENV === 'development' && isLoading === false) {
+          if (opts.length === 0 && !hookError) {
+            console.warn(`[FormAutocomplete] No options found for field "${optionsSource}"`);
+          }
+        }
+        
         return opts;
       }
       return [];
-    }, [options, optionsSource, dbOptions, isLoading]);
+    }, [options, optionsSource, dbOptions, isLoading, hookError]);
 
     // Filter suggestions based on input
     const filteredSuggestions = useMemo(() => {

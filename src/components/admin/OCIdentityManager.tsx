@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { OCIdentity, OC } from '@/types/oc';
 import { createClient } from '@/lib/supabase/client';
@@ -11,7 +10,6 @@ interface OCIdentityManagerProps {
 }
 
 export function OCIdentityManager({ identityId }: OCIdentityManagerProps) {
-  const router = useRouter();
   const [identity, setIdentity] = useState<OCIdentity | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

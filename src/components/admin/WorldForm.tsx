@@ -22,6 +22,7 @@ import { WorldStorySwitcher } from './WorldStorySwitcher';
 import { WorldRacesManager } from './WorldRacesManager';
 import { optionalString, optionalUrl } from '@/lib/utils/zodSchemas';
 import { autoCreateWorldFieldOptions } from '@/lib/utils/autoCreateOptions';
+import { DropdownOptionsProvider } from '@/contexts/DropdownOptionsContext';
 
 const worldSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -611,7 +612,8 @@ export function WorldForm({ world }: WorldFormProps) {
   }, [handleSubmit, onSubmit, onError]);
 
   return (
-    <FormProvider {...methods}>
+    <DropdownOptionsProvider>
+      <FormProvider {...methods}>
       <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-6 w-full">
       {error && <FormMessage type="error" message={error} />}
       {Object.keys(errors).length > 0 && (
@@ -1376,5 +1378,6 @@ export function WorldForm({ world }: WorldFormProps) {
       </div>
       </form>
     </FormProvider>
+    </DropdownOptionsProvider>
   );
 }

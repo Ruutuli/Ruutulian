@@ -16,6 +16,7 @@ export function CharacterFilters() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [worlds, setWorlds] = useState<World[]>([]);
+  const [tags, setTags] = useState<Array<{ id: string; name: string }>>([]);
   const [genderOptions, setGenderOptions] = useState<string[]>([]);
   const [sexOptions, setSexOptions] = useState<string[]>([]);
   const [searchInput, setSearchInput] = useState<string>('');
@@ -26,6 +27,7 @@ export function CharacterFilters() {
   const seriesType = searchParams.get('series_type') || '';
   const gender = searchParams.get('gender') || '';
   const sex = searchParams.get('sex') || '';
+  const tagId = searchParams.get('tag') || '';
 
   // Sync search input with URL param on mount or when URL changes externally
   useEffect(() => {
@@ -43,6 +45,28 @@ export function CharacterFilters() {
       if (data) setWorlds(data);
     }
     fetchWorlds();
+  }, []);
+
+  useEffect(() => {
+    async function fetchTags() {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('tags')
+          .select('id, name')
+          .order('name');
+        if (error) {
+          console.error('Error fetching tags:', error);
+          // Silently fail - tags are optional
+          return;
+        }
+        if (data) setTags(data);
+      } catch (error) {
+        console.error('Error fetching tags:', error);
+        // Silently fail - tags are optional
+      }
+    }
+    fetchTags();
   }, []);
 
   useEffect(() => {
@@ -121,7 +145,7 @@ export function CharacterFilters() {
     router.push('/ocs');
   };
 
-  const hasActiveFilters = !!(search || worldId || seriesType || gender || sex);
+  const hasActiveFilters = !!(search || worldId || seriesType || gender || sex || tagId);
 
   return (
     <FilterContainer
@@ -182,6 +206,19 @@ export function CharacterFilters() {
           options={[
             { value: '', label: 'All Sexes' },
             ...sexOptions.map((s) => ({ value: s, label: s })),
+          ]}
+          focusColor="pink"
+        />
+      )}
+
+      {tags.length > 0 && (
+        <FilterSelect
+          label="Tag"
+          value={tagId}
+          onChange={(value) => updateFilter('tag', value)}
+          options={[
+            { value: '', label: 'All Tags' },
+            ...tags.map((tag) => ({ value: tag.id, label: tag.name })),
           ]}
           focusColor="pink"
         />

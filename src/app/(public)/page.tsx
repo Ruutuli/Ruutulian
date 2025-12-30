@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { SimpleWorldCard } from '@/components/world/SimpleWorldCard';
 import { SimpleOCCard } from '@/components/oc/SimpleOCCard';
 import { FeatureTile } from '@/components/admin/FeatureTile';
+import { QuoteOfTheDay } from '@/components/content/QuotesSection';
 import { getSiteConfig } from '@/lib/config/site-config';
 import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
 
@@ -168,6 +169,20 @@ export default async function HomePage() {
   ]);
 
 
+  // Get quote of the day
+  const { data: allQuotes } = await supabase
+    .from('character_quotes')
+    .select('*, oc:ocs!inner(id, name, slug, is_public)')
+    .eq('oc.is_public', true)
+    .limit(100);
+
+  let quoteOfTheDay = null;
+  if (allQuotes && allQuotes.length > 0) {
+    const seed = getDaySeed();
+    const shuffled = seededShuffle(allQuotes, seed);
+    quoteOfTheDay = shuffled[0];
+  }
+
   // Get current projects section data
   const { data: currentProjectsData } = await supabase
     .from('current_projects')
@@ -263,6 +278,13 @@ export default async function HomePage() {
           >
             View Statistics
           </Link>
+          <Link
+            href="/ocs/random"
+            prefetch={true}
+            className="px-5 py-2.5 md:px-6 md:py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-all hover:scale-105 shadow-lg text-sm md:text-base"
+          >
+            Random Character
+          </Link>
           {user && (
             <Link
               href="/admin"
@@ -274,6 +296,17 @@ export default async function HomePage() {
           )}
         </div>
       </section>
+
+      {/* Quote of the Day */}
+      {quoteOfTheDay && quoteOfTheDay.oc && (
+        <section className="slide-up">
+          <QuoteOfTheDay
+            quote={quoteOfTheDay}
+            ocName={(quoteOfTheDay.oc as any).name}
+            ocSlug={(quoteOfTheDay.oc as any).slug}
+          />
+        </section>
+      )}
 
       {/* Enhanced Stats Section */}
       <section className="slide-up">

@@ -2,7 +2,6 @@
 
 import React, { useMemo, useState, useRef, forwardRef } from 'react';
 import { UseFormRegisterReturn, useFormContext } from 'react-hook-form';
-import { csvOptions } from '@/lib/utils/csvOptionsData';
 import { useDropdownOptions } from '@/hooks/useDropdownOptions';
 
 interface FormMultiSelectProps {
@@ -10,7 +9,7 @@ interface FormMultiSelectProps {
   error?: string;
   helpText?: string;
   options?: Array<{ value: string; label: string }>;
-  optionsSource?: keyof typeof csvOptions | string; // Allow string for fields not in csvOptions
+  optionsSource?: string;
   placeholder?: string;
   className?: string;
   disabled?: boolean;

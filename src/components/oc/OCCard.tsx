@@ -7,6 +7,7 @@ import type { OC } from '@/types/oc';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
 import { convertGoogleDriveUrl, isGoogleSitesUrl } from '@/lib/utils/googleDriveImage';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
+import { TagsDisplay } from '@/components/content/TagsInput';
 
 interface OCCardProps {
   oc: OC;

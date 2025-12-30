@@ -2,8 +2,10 @@ import { createClient } from '@/lib/supabase/server';
 import { StatCard } from '@/components/stats/StatCard';
 import { DistributionChart } from '@/components/stats/DistributionChart';
 import { PieChart } from '@/components/stats/PieChart';
-import { BarChart } from '@/components/stats/BarChart';
-import Link from 'next/link';
+import { StatsSection } from '@/components/stats/StatsSection';
+import { AnalyticsDashboard } from '@/components/analytics/AnalyticsDashboard';
+import { ArchetypeAnalyzer } from '@/components/analytics/ArchetypeAnalyzer';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { generatePageMetadata } from '@/lib/config/metadata-helpers';
 import { getSiteConfig } from '@/lib/config/site-config';
 
@@ -14,7 +16,7 @@ export async function generateMetadata() {
     `Comprehensive statistics and analytics for ${config.websiteName}. View detailed demographics, distributions, and insights about characters, worlds, and content.`,
     '/stats'
   );
-};
+}
 
 export const revalidate = 300; // Revalidate every 5 minutes
 
@@ -69,12 +71,15 @@ export default async function StatsPage() {
     `)
     .eq('is_public', true);
 
+  const allOCsForAnalytics = allOCs || [];
+
   const { data: allWorlds } = await supabase
     .from('worlds')
     .select('id, name, slug, series_type, is_public')
     .eq('is_public', true);
 
-  // Calculate distributions
+  // ========== CONTENT DISTRIBUTION CALCULATIONS ==========
+  
   // World distribution (OCs per world)
   const worldOCCounts: Record<string, { name: string; count: number; slug: string }> = {};
   allOCs?.forEach(oc => {
@@ -108,6 +113,11 @@ export default async function StatsPage() {
     }))
     .sort((a, b) => b.count - a.count);
 
+  const seriesTypePieData = seriesTypeDistribution.map(item => ({
+    name: item.label,
+    value: item.count,
+  }));
+
   // Template type distribution
   const templateCounts: Record<string, number> = {};
   allOCs?.forEach(oc => {
@@ -122,68 +132,18 @@ export default async function StatsPage() {
     }))
     .sort((a, b) => b.count - a.count);
 
-  // Status distribution
-  const statusCounts: Record<string, number> = {};
-  allOCs?.forEach(oc => {
-    const status = oc.status || 'unknown';
-    statusCounts[status] = (statusCounts[status] || 0) + 1;
-  });
-  const statusDistribution: DistributionItem[] = Object.entries(statusCounts)
-    .map(([label, count]) => ({
-      label: label.charAt(0).toUpperCase() + label.slice(1).replace('-', ' '),
-      count,
-      percentage: publicOCCount > 0 ? Math.round((count / publicOCCount) * 100) : 0,
-    }))
-    .sort((a, b) => b.count - a.count);
+  // Public vs Private pie data
+  const publicPrivatePieData = [
+    { name: 'Public', value: publicOCCount },
+    { name: 'Private', value: allOCCount - publicOCCount },
+  ].filter(item => item.value > 0);
 
-  // Species distribution (top 10)
-  const speciesCounts: Record<string, number> = {};
-  allOCs?.forEach(oc => {
-    // Check both direct species field and modular_fields for custom input species
-    const species = oc.species || (oc.modular_fields as any)?.species || 'not specified';
-    speciesCounts[species] = (speciesCounts[species] || 0) + 1;
-  });
-  const speciesDistribution: DistributionItem[] = Object.entries(speciesCounts)
-    .map(([label, count]) => ({
-      label: label,
-      count,
-      percentage: publicOCCount > 0 ? Math.round((count / publicOCCount) * 100) : 0,
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
+  const avgOCsPerWorld = publicWorldCount > 0 ? (publicOCCount / publicWorldCount).toFixed(1) : '0';
+  const publicPrivateRatio = allOCCount > 0 
+    ? Math.round((publicOCCount / allOCCount) * 100) 
+    : 0;
 
-  // Age distribution (if available)
-  const ages = allOCs?.map(oc => oc.age).filter((age): age is number => age !== null && age !== undefined) || [];
-  const avgAge = ages.length > 0 ? ages.reduce((sum, age) => sum + age, 0) / ages.length : 0;
-  const minAge = ages.length > 0 ? Math.min(...ages) : 0;
-  const maxAge = ages.length > 0 ? Math.max(...ages) : 0;
-  const ageRanges: Record<string, number> = {
-    '0-10': 0,
-    '11-20': 0,
-    '21-30': 0,
-    '31-40': 0,
-    '41-50': 0,
-    '51-60': 0,
-    '61-70': 0,
-    '71+': 0,
-  };
-  ages.forEach(age => {
-    if (age <= 10) ageRanges['0-10']++;
-    else if (age <= 20) ageRanges['11-20']++;
-    else if (age <= 30) ageRanges['21-30']++;
-    else if (age <= 40) ageRanges['31-40']++;
-    else if (age <= 50) ageRanges['41-50']++;
-    else if (age <= 60) ageRanges['51-60']++;
-    else if (age <= 70) ageRanges['61-70']++;
-    else ageRanges['71+']++;
-  });
-  const ageDistribution: DistributionItem[] = Object.entries(ageRanges)
-    .filter(([, count]) => count > 0)
-    .map(([label, count]) => ({
-      label,
-      count,
-      percentage: ages.length > 0 ? Math.round((count / ages.length) * 100) : 0,
-    }));
+  // ========== DEMOGRAPHICS CALCULATIONS ==========
 
   // Gender distribution
   const genderCounts: Record<string, number> = {};
@@ -249,6 +209,41 @@ export default async function StatsPage() {
       percentage: publicOCCount > 0 ? Math.round((count / publicOCCount) * 100) : 0,
     }))
     .sort((a, b) => b.count - a.count);
+
+  // Age distribution
+  const ages = allOCs?.map(oc => oc.age).filter((age): age is number => age !== null && age !== undefined) || [];
+  const avgAge = ages.length > 0 ? ages.reduce((sum, age) => sum + age, 0) / ages.length : 0;
+  const minAge = ages.length > 0 ? Math.min(...ages) : 0;
+  const maxAge = ages.length > 0 ? Math.max(...ages) : 0;
+  const ageRanges: Record<string, number> = {
+    '0-10': 0,
+    '11-20': 0,
+    '21-30': 0,
+    '31-40': 0,
+    '41-50': 0,
+    '51-60': 0,
+    '61-70': 0,
+    '71+': 0,
+  };
+  ages.forEach(age => {
+    if (age <= 10) ageRanges['0-10']++;
+    else if (age <= 20) ageRanges['11-20']++;
+    else if (age <= 30) ageRanges['21-30']++;
+    else if (age <= 40) ageRanges['31-40']++;
+    else if (age <= 50) ageRanges['41-50']++;
+    else if (age <= 60) ageRanges['51-60']++;
+    else if (age <= 70) ageRanges['61-70']++;
+    else ageRanges['71+']++;
+  });
+  const ageDistribution: DistributionItem[] = Object.entries(ageRanges)
+    .filter(([, count]) => count > 0)
+    .map(([label, count]) => ({
+      label,
+      count,
+      percentage: ages.length > 0 ? Math.round((count / ages.length) * 100) : 0,
+    }));
+
+  // ========== BIRTHDAY & ASTROLOGY CALCULATIONS ==========
 
   // Birthday statistics
   const withBirthday = allOCs?.filter(oc => oc.date_of_birth).length || 0;
@@ -328,6 +323,37 @@ export default async function StatsPage() {
     .sort((a, b) => b.count - a.count)
     .slice(0, 8);
 
+  // ========== CHARACTER ATTRIBUTES CALCULATIONS ==========
+
+  // Status distribution
+  const statusCounts: Record<string, number> = {};
+  allOCs?.forEach(oc => {
+    const status = oc.status || 'unknown';
+    statusCounts[status] = (statusCounts[status] || 0) + 1;
+  });
+  const statusDistribution: DistributionItem[] = Object.entries(statusCounts)
+    .map(([label, count]) => ({
+      label: label.charAt(0).toUpperCase() + label.slice(1).replace('-', ' '),
+      count,
+      percentage: publicOCCount > 0 ? Math.round((count / publicOCCount) * 100) : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  // Species distribution (top 10)
+  const speciesCounts: Record<string, number> = {};
+  allOCs?.forEach(oc => {
+    const species = oc.species || (oc.modular_fields as any)?.species || 'not specified';
+    speciesCounts[species] = (speciesCounts[species] || 0) + 1;
+  });
+  const speciesDistribution: DistributionItem[] = Object.entries(speciesCounts)
+    .map(([label, count]) => ({
+      label: label,
+      count,
+      percentage: publicOCCount > 0 ? Math.round((count / publicOCCount) * 100) : 0,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
   // Personality metrics averages
   const personalityMetrics = [
     'sociability',
@@ -352,61 +378,61 @@ export default async function StatsPage() {
     }
   });
 
-  // Media statistics
+  // D&D Stats
+  const withDnDStats = allOCs?.filter(oc => 
+    oc.stat_strength || oc.stat_dexterity || oc.stat_constitution ||
+    oc.stat_intelligence || oc.stat_wisdom || oc.stat_charisma
+  ) || [];
+
+  let avgStats = {
+    strength: 0,
+    dexterity: 0,
+    constitution: 0,
+    intelligence: 0,
+    wisdom: 0,
+    charisma: 0,
+  };
+  
+  if (withDnDStats.length > 0) {
+    withDnDStats.forEach(oc => {
+      if (oc.stat_strength) avgStats.strength += oc.stat_strength;
+      if (oc.stat_dexterity) avgStats.dexterity += oc.stat_dexterity;
+      if (oc.stat_constitution) avgStats.constitution += oc.stat_constitution;
+      if (oc.stat_intelligence) avgStats.intelligence += oc.stat_intelligence;
+      if (oc.stat_wisdom) avgStats.wisdom += oc.stat_wisdom;
+      if (oc.stat_charisma) avgStats.charisma += oc.stat_charisma;
+    });
+
+    const statCount = withDnDStats.length;
+    Object.keys(avgStats).forEach(key => {
+      avgStats[key as keyof typeof avgStats] = Math.round(avgStats[key as keyof typeof avgStats] / statCount);
+    });
+  }
+
+  // ========== MEDIA & ASSETS CALCULATIONS ==========
+
   const withImage = allOCs?.filter(oc => oc.image_url).length || 0;
   const withIcon = allOCs?.filter(oc => oc.icon_url).length || 0;
   const withGallery = allOCs?.filter(oc => oc.gallery && oc.gallery.length > 0).length || 0;
   const withThemeSong = allOCs?.filter(oc => oc.theme_song).length || 0;
   const withVoiceActor = allOCs?.filter(oc => oc.voice_actor || oc.seiyuu).length || 0;
 
-  // Relationship statistics
+  // ========== RELATIONSHIPS CALCULATIONS ==========
+
   const withFamily = allOCs?.filter(oc => oc.family).length || 0;
   const withFriends = allOCs?.filter(oc => oc.friends_allies).length || 0;
   const withRivals = allOCs?.filter(oc => oc.rivals_enemies).length || 0;
   const withRomantic = allOCs?.filter(oc => oc.romantic).length || 0;
 
-  // Calculate averages and ratios
-  const avgOCsPerWorld = publicWorldCount > 0 ? (publicOCCount / publicWorldCount).toFixed(1) : '0';
-  const publicPrivateRatio = allOCCount > 0 
-    ? Math.round((publicOCCount / allOCCount) * 100) 
-    : 0;
-
-  // Pie chart data for series type
-  const seriesTypePieData = seriesTypeDistribution.map(item => ({
-    name: item.label,
-    value: item.count,
-  }));
-
-  // Public vs Private pie data
-  const publicPrivatePieData = [
-    { name: 'Public', value: publicOCCount },
-    { name: 'Private', value: allOCCount - publicOCCount },
-  ].filter(item => item.value > 0);
-
   return (
-    <div className="space-y-8 md:space-y-12">
-      {/* Header */}
-      <div className="text-center">
-        <h1 className="text-4xl md:text-5xl font-bold text-gray-100 mb-3">
-          Statistics
-        </h1>
-        <p className="text-gray-400 text-lg">
-          Comprehensive analytics and insights
-        </p>
-        <Link
-          href="/"
-          className="inline-block mt-4 text-purple-400 hover:text-purple-300 transition-colors"
-        >
-          ← Back to Home
-        </Link>
-      </div>
+    <div className="space-y-12">
+      <PageHeader 
+        title="Statistics & Analytics"
+        breadcrumbs={[{ label: 'Home', href: '/' }, { label: 'Statistics' }]}
+      />
 
-      {/* Overview Stats */}
-      <section>
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-100 mb-6 flex items-center gap-3">
-          <i className="fas fa-chart-line text-purple-400"></i>
-          Overview
-        </h2>
+      {/* Overview */}
+      <StatsSection title="Overview" icon="fas fa-chart-line" iconColor="text-purple-400">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <StatCard
             title="Public Worlds"
@@ -453,15 +479,48 @@ export default async function StatsPage() {
             icon="fas fa-id-card"
           />
         </div>
-      </section>
+      </StatsSection>
 
-      {/* Key Metrics */}
-      <section>
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-100 mb-6 flex items-center gap-3">
-          <i className="fas fa-chart-pie text-pink-400"></i>
-          Key Metrics
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      {/* Content Distribution */}
+      <StatsSection title="Content Distribution" icon="fas fa-chart-bar" iconColor="text-teal-400">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {worldDistribution.length > 0 && (
+            <DistributionChart
+              title="Characters by World (Top 15)"
+              items={worldDistribution}
+              color="#8b5cf6"
+              limit={15}
+              horizontal={true}
+              height={400}
+            />
+          )}
+          {seriesTypeDistribution.length > 0 && (
+            <PieChart
+              title="Worlds by Series Type"
+              data={seriesTypePieData}
+              colors={['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b']}
+              height={400}
+            />
+          )}
+          {templateDistribution.length > 0 && (
+            <DistributionChart
+              title="Characters by Template Type"
+              items={templateDistribution}
+              color="#ec4899"
+              horizontal={true}
+              height={300}
+            />
+          )}
+          {publicPrivatePieData.length > 0 && (
+            <PieChart
+              title="Public vs Private Characters"
+              data={publicPrivatePieData}
+              colors={['#10b981', '#6b7280']}
+              height={300}
+            />
+          )}
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <StatCard
             title="Average Characters per World"
             value={avgOCsPerWorld}
@@ -475,51 +534,19 @@ export default async function StatsPage() {
             color="#3b82f6"
             icon="fas fa-eye"
           />
-          <StatCard
-            title="Characters with Age"
-            value={ages.length}
-            subtitle={publicOCCount > 0 ? `${Math.round((ages.length / publicOCCount) * 100)}%` : '0%'}
-            color="#f59e0b"
-            icon="fas fa-birthday-cake"
-          />
-          {ages.length > 0 && (
-            <>
-              <StatCard
-                title="Average Age"
-                value={avgAge.toFixed(1)}
-                color="#f59e0b"
-                icon="fas fa-calculator"
-              />
-              <StatCard
-                title="Min Age"
-                value={minAge}
-                color="#3b82f6"
-                icon="fas fa-arrow-down"
-              />
-              <StatCard
-                title="Max Age"
-                value={maxAge}
-                color="#ef4444"
-                icon="fas fa-arrow-up"
-              />
-            </>
-          )}
         </div>
-      </section>
+      </StatsSection>
 
-      {/* Demographics */}
-      <section>
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-100 mb-6 flex items-center gap-3">
-          <i className="fas fa-users text-purple-400"></i>
-          Demographics
-        </h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Character Demographics */}
+      <StatsSection title="Character Demographics" icon="fas fa-users" iconColor="text-purple-400">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {genderDistribution.length > 0 && (
             <DistributionChart
               title="Gender Distribution"
               items={genderDistribution}
               color="#ec4899"
               horizontal={true}
+              height={300}
             />
           )}
           {sexDistribution.length > 0 && (
@@ -528,6 +555,7 @@ export default async function StatsPage() {
               items={sexDistribution}
               color="#f472b6"
               horizontal={true}
+              height={300}
             />
           )}
           {pronounDistribution.length > 0 && (
@@ -537,6 +565,7 @@ export default async function StatsPage() {
               color="#a78bfa"
               limit={10}
               horizontal={true}
+              height={300}
             />
           )}
           {alignmentDistribution.length > 0 && (
@@ -545,19 +574,57 @@ export default async function StatsPage() {
               items={alignmentDistribution}
               color="#f59e0b"
               horizontal={true}
+              height={300}
             />
           )}
         </div>
-      </section>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {ageDistribution.length > 0 && (
+            <DistributionChart
+              title="Age Distribution"
+              items={ageDistribution}
+              color="#f59e0b"
+              height={300}
+            />
+          )}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard
+              title="Characters with Age"
+              value={ages.length}
+              subtitle={publicOCCount > 0 ? `${Math.round((ages.length / publicOCCount) * 100)}%` : '0%'}
+              color="#f59e0b"
+              icon="fas fa-birthday-cake"
+            />
+            {ages.length > 0 && (
+              <>
+                <StatCard
+                  title="Average Age"
+                  value={avgAge.toFixed(1)}
+                  color="#f59e0b"
+                  icon="fas fa-calculator"
+                />
+                <StatCard
+                  title="Min Age"
+                  value={minAge}
+                  color="#3b82f6"
+                  icon="fas fa-arrow-down"
+                />
+                <StatCard
+                  title="Max Age"
+                  value={maxAge}
+                  color="#ef4444"
+                  icon="fas fa-arrow-up"
+                />
+              </>
+            )}
+          </div>
+        </div>
+      </StatsSection>
 
-      {/* Birthdays & Star Signs */}
-      {(withBirthday > 0 || starSignDistribution.length > 1) && (
-        <section>
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-100 mb-6 flex items-center gap-3">
-            <i className="fas fa-calendar-day text-pink-400"></i>
-            Birthdays & Star Signs
-          </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Birthday & Astrology */}
+      {(withBirthday > 0 || starSignDistribution.length > 1 || romanticOrientationDistribution.length > 0 || sexualOrientationDistribution.length > 0) && (
+        <StatsSection title="Birthday & Astrology" icon="fas fa-calendar-day" iconColor="text-pink-400">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             {birthdayMonthDistribution.length > 0 && (
               <DistributionChart
                 title="Birthdays by Month"
@@ -575,29 +642,6 @@ export default async function StatsPage() {
                 height={350}
               />
             )}
-          </div>
-          {withBirthday > 0 && (
-            <div className="mt-4">
-              <StatCard
-                title="Characters with Birthday"
-                value={withBirthday}
-                subtitle={publicOCCount > 0 ? `${Math.round((withBirthday / publicOCCount) * 100)}%` : '0%'}
-                color="#ec4899"
-                icon="fas fa-calendar-day"
-              />
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Orientation Statistics */}
-      {(romanticOrientationDistribution.length > 0 || sexualOrientationDistribution.length > 0) && (
-        <section>
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-100 mb-6 flex items-center gap-3">
-            <i className="fas fa-heart text-red-400"></i>
-            Orientation
-          </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {romanticOrientationDistribution.length > 0 && (
               <DistributionChart
                 title="Romantic Orientation (Top 8)"
@@ -605,6 +649,7 @@ export default async function StatsPage() {
                 color="#ec4899"
                 limit={8}
                 horizontal={true}
+                height={300}
               />
             )}
             {sexualOrientationDistribution.length > 0 && (
@@ -614,41 +659,96 @@ export default async function StatsPage() {
                 color="#f472b6"
                 limit={8}
                 horizontal={true}
+                height={300}
               />
             )}
           </div>
-        </section>
+          {withBirthday > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <StatCard
+                title="Characters with Birthday"
+                value={withBirthday}
+                subtitle={publicOCCount > 0 ? `${Math.round((withBirthday / publicOCCount) * 100)}%` : '0%'}
+                color="#ec4899"
+                icon="fas fa-calendar-day"
+              />
+            </div>
+          )}
+        </StatsSection>
       )}
 
-      {/* Personality Metrics */}
-      {Object.keys(personalityAverages).length > 0 && (
-        <section>
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-100 mb-6 flex items-center gap-3">
-            <i className="fas fa-brain text-indigo-400"></i>
-            Average Personality Metrics (1-10 scale)
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {Object.entries(personalityAverages).map(([metric, value]) => (
-              <StatCard
-                key={metric}
-                title={metric.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                value={value.toFixed(1)}
-                subtitle={`/ 10`}
-                color="#8b5cf6"
-                icon="fas fa-chart-line"
-              />
-            ))}
+      {/* Character Attributes */}
+      <StatsSection title="Character Attributes" icon="fas fa-brain" iconColor="text-indigo-400">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {statusDistribution.length > 0 && (
+            <DistributionChart
+              title="Character Status Distribution"
+              items={statusDistribution}
+              color="#ef4444"
+              horizontal={true}
+              height={300}
+            />
+          )}
+          {speciesDistribution.length > 0 && (
+            <DistributionChart
+              title="Top Species (Top 10)"
+              items={speciesDistribution}
+              color="#14b8a6"
+              limit={10}
+              horizontal={true}
+              height={300}
+            />
+          )}
+        </div>
+        {Object.keys(personalityAverages).length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-xl font-semibold text-gray-200 mb-4">Average Personality Metrics (1-10 scale)</h3>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {Object.entries(personalityAverages).map(([metric, value]) => (
+                <StatCard
+                  key={metric}
+                  title={metric.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  value={value.toFixed(1)}
+                  subtitle={`/ 10`}
+                  color="#8b5cf6"
+                  icon="fas fa-chart-line"
+                />
+              ))}
+            </div>
           </div>
-        </section>
-      )}
+        )}
+        {withDnDStats.length > 0 && (
+          <div>
+            <h3 className="text-xl font-semibold text-gray-200 mb-4">D&D Statistics</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <DistributionChart
+                title="Average Ability Scores"
+                items={[
+                  { label: 'STR', count: avgStats.strength, percentage: Math.round((avgStats.strength / 30) * 100) },
+                  { label: 'DEX', count: avgStats.dexterity, percentage: Math.round((avgStats.dexterity / 30) * 100) },
+                  { label: 'CON', count: avgStats.constitution, percentage: Math.round((avgStats.constitution / 30) * 100) },
+                  { label: 'INT', count: avgStats.intelligence, percentage: Math.round((avgStats.intelligence / 30) * 100) },
+                  { label: 'WIS', count: avgStats.wisdom, percentage: Math.round((avgStats.wisdom / 30) * 100) },
+                  { label: 'CHA', count: avgStats.charisma, percentage: Math.round((avgStats.charisma / 30) * 100) },
+                ]}
+                color="#8b5cf6"
+                height={300}
+              />
+              <div className="wiki-card p-4 md:p-6">
+                <h4 className="text-lg font-semibold text-gray-200 mb-4">Characters with D&D Stats</h4>
+                <div className="text-3xl font-bold text-purple-400 mb-2">{withDnDStats.length}</div>
+                <div className="text-gray-400">
+                  {publicOCCount > 0 ? Math.round((withDnDStats.length / publicOCCount) * 100) : 0}% of all characters
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </StatsSection>
 
       {/* Media & Assets */}
-      <section>
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-100 mb-6 flex items-center gap-3">
-          <i className="fas fa-images text-teal-400"></i>
-          Media & Assets
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <StatsSection title="Media & Assets" icon="fas fa-images" iconColor="text-teal-400">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <StatCard
             title="With Image"
             value={withImage}
@@ -685,14 +785,10 @@ export default async function StatsPage() {
             icon="fas fa-microphone"
           />
         </div>
-      </section>
+      </StatsSection>
 
       {/* Relationships */}
-      <section>
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-100 mb-6 flex items-center gap-3">
-          <i className="fas fa-heart text-red-400"></i>
-          Relationships
-        </h2>
+      <StatsSection title="Relationships" icon="fas fa-heart" iconColor="text-red-400">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
             title="With Family"
@@ -723,86 +819,17 @@ export default async function StatsPage() {
             icon="fas fa-heart"
           />
         </div>
-      </section>
+      </StatsSection>
 
-      {/* Distribution Charts */}
-      <section>
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-100 mb-6 flex items-center gap-3">
-          <i className="fas fa-chart-bar text-teal-400"></i>
-          Distributions
-        </h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {worldDistribution.length > 0 && (
-            <DistributionChart
-              title="Characters by World (Top 15)"
-              items={worldDistribution}
-              color="#8b5cf6"
-              limit={15}
-              horizontal={true}
-              height={400}
-            />
-          )}
-          {seriesTypeDistribution.length > 0 && (
-            <PieChart
-              title="Worlds by Series Type"
-              data={seriesTypePieData}
-              colors={['#8b5cf6', '#ec4899']}
-              height={350}
-            />
-          )}
-          {templateDistribution.length > 0 && (
-            <DistributionChart
-              title="Characters by Template Type"
-              items={templateDistribution}
-              color="#ec4899"
-              horizontal={true}
-            />
-          )}
-          {statusDistribution.length > 0 && (
-            <DistributionChart
-              title="Character Status Distribution"
-              items={statusDistribution}
-              color="#ef4444"
-              horizontal={true}
-            />
-          )}
-          {speciesDistribution.length > 0 && (
-            <DistributionChart
-              title="Top Species (Top 10)"
-              items={speciesDistribution}
-              color="#14b8a6"
-              limit={10}
-              horizontal={true}
-              height={350}
-            />
-          )}
-          {ageDistribution.length > 0 && (
-            <DistributionChart
-              title="Age Distribution"
-              items={ageDistribution}
-              color="#f59e0b"
-            />
-          )}
-        </div>
-      </section>
-
-      {/* Public vs Private Visualization */}
-      {publicPrivatePieData.length > 0 && (
-        <section>
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-100 mb-6 flex items-center gap-3">
-            <i className="fas fa-eye text-blue-400"></i>
-            Visibility
-          </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <PieChart
-              title="Public vs Private Characters"
-              data={publicPrivatePieData}
-              colors={['#10b981', '#6b7280']}
-            />
+      {/* Analytics */}
+      {allOCsForAnalytics && allOCsForAnalytics.length > 0 && (
+        <StatsSection title="Analytics" icon="fas fa-chart-line" iconColor="text-purple-400">
+          <AnalyticsDashboard ocs={allOCsForAnalytics} />
+          <div className="mt-6">
+            <ArchetypeAnalyzer ocs={allOCsForAnalytics} />
           </div>
-        </section>
+        </StatsSection>
       )}
     </div>
   );
 }
-

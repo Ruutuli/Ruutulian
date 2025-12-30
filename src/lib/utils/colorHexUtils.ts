@@ -1,30 +1,28 @@
 // Utility functions for color hex codes
-// These functions use the database/JSON as the source of truth
-
-import { csvOptions, colorHexCodes } from './csvOptionsData';
-
-// Try to import colorHexCodes with fallback
-let hexCodesMap: Record<string, Record<string, string>> = {};
-try {
-  const module = require('./csvOptionsData');
-  hexCodesMap = module.colorHexCodes || {};
-} catch {
-  hexCodesMap = {};
-}
+// These functions work with hex codes passed from the database via useDropdownOptions hook
+// The hexCodes should be provided from the hook's hexCodes property
 
 /**
- * Get hex color for a color name from database/JSON
+ * Get hex color for a color name from provided hexCodes map
  * Returns the hex value if found, or null if not found
+ * 
+ * @param hexCodes - Hex codes map from useDropdownOptions hook (field -> option -> hex_code)
+ * @param field - The field name (e.g., 'eye_color', 'hair_color')
+ * @param colorName - The color name to look up
  */
-export function getColorHex(field: string, colorName: string): string | null {
-  return hexCodesMap[field]?.[colorName] || null;
+export function getColorHex(hexCodes: Record<string, string>, field: string, colorName: string): string | null {
+  return hexCodes[colorName] || null;
 }
 
 /**
- * Check if a color name exists in the mapping
+ * Check if a color name exists in the hexCodes mapping
+ * 
+ * @param hexCodes - Hex codes map from useDropdownOptions hook
+ * @param field - The field name (e.g., 'eye_color', 'hair_color')
+ * @param colorName - The color name to check
  */
-export function hasColorHex(field: string, colorName: string): boolean {
-  return field in hexCodesMap && colorName in hexCodesMap[field];
+export function hasColorHex(hexCodes: Record<string, string>, field: string, colorName: string): boolean {
+  return colorName in hexCodes;
 }
 
 /**

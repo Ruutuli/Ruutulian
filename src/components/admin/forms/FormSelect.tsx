@@ -2,7 +2,6 @@
 
 import React, { useMemo } from 'react';
 import { UseFormRegisterReturn } from 'react-hook-form';
-import { csvOptions } from '@/lib/utils/csvOptionsData';
 import { useDropdownOptions } from '@/hooks/useDropdownOptions';
 
 interface FormSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
@@ -10,7 +9,7 @@ interface FormSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> 
   error?: string;
   helpText?: string;
   options?: Array<{ value: string; label: string }>;
-  optionsSource?: keyof typeof csvOptions;
+  optionsSource?: string;
   allowCustom?: boolean;
   placeholder?: string;
 }

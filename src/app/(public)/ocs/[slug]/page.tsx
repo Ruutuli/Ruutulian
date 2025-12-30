@@ -10,11 +10,17 @@ import { TableOfContents } from '@/components/oc/TableOfContents';
 import { OCGallery } from '@/components/oc/OCGallery';
 import { BackToTopButton } from '@/components/oc/BackToTopButton';
 import { Markdown } from '@/lib/utils/markdown';
+import { DnDRadarChart } from '@/components/visualizations/RadarChart';
+import { QuotesSection } from '@/components/content/QuotesSection';
+import { TagsDisplay } from '@/components/content/TagsInput';
+import { StorySnippets } from '@/components/content/StorySnippets';
+import { DevelopmentLog } from '@/components/content/DevelopmentLog';
+import { WritingPromptResponses } from '@/components/content/WritingPromptResponses';
 import { getEffectiveFieldDefinitions, getFieldValue } from '@/lib/fields/worldFields';
 import type { WorldFieldDefinition } from '@/types/oc';
 import { TagList } from '@/components/wiki/TagList';
 import { convertGoogleDriveUrl, getProxyUrl } from '@/lib/utils/googleDriveImage';
-import { extractColorHex, extractColorName, getColorHex } from '@/lib/utils/colorHexUtils';
+import { extractColorHex, extractColorName } from '@/lib/utils/colorHexUtils';
 import { SpotifyEmbed } from '@/components/oc/SpotifyEmbed';
 import { formatHeightWithMetric, formatWeightWithMetric } from '@/lib/utils/unitConversion';
 import { getRelationshipTypeConfig } from '@/lib/relationships/relationshipTypes';
@@ -178,6 +184,54 @@ export default async function OCDetailPage({
     notFound();
   }
 
+  // Fetch quotes
+  const { data: quotes } = await supabase
+    .from('character_quotes')
+    .select('*')
+    .eq('oc_id', oc.id)
+    .order('created_at', { ascending: false });
+
+  // Fetch tags
+  const { data: characterTags } = await supabase
+    .from('character_tags')
+    .select('tag_id, tags(*)')
+    .eq('oc_id', oc.id);
+
+  const tags = characterTags?.map(ct => ct.tags).filter(Boolean) || [];
+
+  // Fetch story snippets
+  const { data: storySnippets } = await supabase
+    .from('story_snippets')
+    .select('*')
+    .eq('oc_id', oc.id)
+    .order('created_at', { ascending: false });
+
+  // Fetch development log
+  const { data: developmentLog } = await supabase
+    .from('character_development_log')
+    .select('*')
+    .eq('oc_id', oc.id)
+    .order('created_at', { ascending: false });
+
+  // Fetch writing prompt responses
+  const { data: writingPromptResponses } = await supabase
+    .from('writing_prompt_responses')
+    .select(`
+      *,
+      other_oc:ocs!other_oc_id(id, name, slug)
+    `)
+    .eq('oc_id', oc.id)
+    .order('created_at', { ascending: false });
+
+  // Increment view count
+  await supabase
+    .from('ocs')
+    .update({ 
+      view_count: (oc.view_count || 0) + 1,
+      last_viewed_at: new Date().toISOString()
+    })
+    .eq('id', oc.id);
+
   // Helper function to render a field value
   const renderFieldValue = (field: WorldFieldDefinition, value: string | number | string[] | null) => {
     if (value === null || value === undefined || value === '' || 
@@ -270,8 +324,15 @@ export default async function OCDetailPage({
         <div className="flex flex-col lg:flex-row gap-4 md:gap-6 lg:gap-8" suppressHydrationWarning>
           <div className="w-full lg:w-96 flex-shrink-0 lg:sticky lg:top-20 lg:self-start lg:h-fit" suppressHydrationWarning>
             <OCInfobox oc={oc} />
+
+            {/* Tags */}
+            {tags.length > 0 && (
+              <div className="mt-4">
+                <TagsDisplay tags={tags as any} />
+              </div>
+            )}
           </div>
-          <div className="flex-1 space-y-4 md:space-y-6" suppressHydrationWarning>
+          <div id="oc-content" className="flex-1 space-y-4 md:space-y-6" suppressHydrationWarning>
             {/* Header - smaller, next to sidebar */}
             <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-gray-800/80 via-gray-800/60 to-gray-900/80 p-3 md:p-4 lg:p-5 border border-gray-700/50 shadow-lg backdrop-blur-sm" suppressHydrationWarning>
               <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-blue-500/5 pointer-events-none" suppressHydrationWarning></div>
@@ -803,6 +864,25 @@ export default async function OCDetailPage({
                     </div>
                   )}
 
+                  {/* D&D Stats Visualization */}
+                  {(oc.stat_strength || oc.stat_dexterity || oc.stat_constitution || oc.stat_intelligence || oc.stat_wisdom || oc.stat_charisma) && (
+                    <div className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 rounded-xl border border-amber-500/20 shadow-lg">
+                      <DnDRadarChart
+                        stats={{
+                          strength: oc.stat_strength || undefined,
+                          dexterity: oc.stat_dexterity || undefined,
+                          constitution: oc.stat_constitution || undefined,
+                          intelligence: oc.stat_intelligence || undefined,
+                          wisdom: oc.stat_wisdom || undefined,
+                          charisma: oc.stat_charisma || undefined,
+                        }}
+                        title=""
+                        height={350}
+                        showModifiers={true}
+                      />
+                    </div>
+                  )}
+
                   {/* Character Info */}
                   {(oc.stat_level || oc.stat_class || oc.stat_subclass) && (
                     <div className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 rounded-xl border border-amber-500/20 shadow-lg">
@@ -955,7 +1035,7 @@ export default async function OCDetailPage({
                         )}
                         {oc.eye_color && (() => {
                           const colorName = extractColorName(oc.eye_color);
-                          const hexCode = extractColorHex(oc.eye_color) || getColorHex('eye_color', colorName);
+                          const hexCode = extractColorHex(oc.eye_color);
                           return (
                             <div className="p-3 bg-gray-800/40 rounded-lg border border-gray-700/30">
                               <div className="text-xs font-medium text-gray-400 mb-1 uppercase tracking-wide">Eye Color</div>
@@ -974,7 +1054,7 @@ export default async function OCDetailPage({
                         })()}
                         {oc.hair_color && (() => {
                           const colorName = extractColorName(oc.hair_color);
-                          const hexCode = extractColorHex(oc.hair_color) || getColorHex('hair_color', colorName);
+                          const hexCode = extractColorHex(oc.hair_color);
                           return (
                             <div className="p-3 bg-gray-800/40 rounded-lg border border-gray-700/30">
                               <div className="text-xs font-medium text-gray-400 mb-1 uppercase tracking-wide">Hair Color</div>
@@ -993,7 +1073,7 @@ export default async function OCDetailPage({
                         })()}
                         {oc.skin_tone && (() => {
                           const colorName = extractColorName(oc.skin_tone);
-                          const hexCode = extractColorHex(oc.skin_tone) || getColorHex('skin_tone', colorName);
+                          const hexCode = extractColorHex(oc.skin_tone);
                           return (
                             <div className="p-3 bg-gray-800/40 rounded-lg border border-gray-700/30">
                               <div className="text-xs font-medium text-gray-400 mb-1 uppercase tracking-wide">Skin Tone</div>
@@ -1166,6 +1246,11 @@ export default async function OCDetailPage({
                   )}
                 </div>
               </div>
+            )}
+
+            {/* Quotes Section - After Personality Traits for character voice */}
+            {quotes && quotes.length > 0 && (
+              <QuotesSection quotes={quotes} ocName={oc.name} />
             )}
 
             {/* Personality Metrics Section */}
@@ -1920,6 +2005,17 @@ export default async function OCDetailPage({
               </div>
             )}
 
+            {/* Story Snippets Section - After History for content-related snippets */}
+            {storySnippets && storySnippets.length > 0 && (
+              <div className="wiki-card p-4 md:p-6 lg:p-8" suppressHydrationWarning>
+                <h2 id="story-snippets" className="wiki-section-header scroll-mt-20" suppressHydrationWarning>
+                  <i className="fas fa-book-open text-purple-400" aria-hidden="true" suppressHydrationWarning></i>
+                  Story Snippets
+                </h2>
+                <StorySnippets snippets={storySnippets} showTitle={false} />
+              </div>
+            )}
+
             {/* Preferences & Habits Section */}
             {(oc.likes || oc.dislikes) && (
               <div className="wiki-card p-4 md:p-6 lg:p-8" suppressHydrationWarning>
@@ -2094,6 +2190,28 @@ export default async function OCDetailPage({
                 <div className="text-gray-300 prose max-w-none">
                   <Markdown content={oc.trivia} />
                 </div>
+              </div>
+            )}
+
+            {/* Development Log Section - After Trivia/Development section */}
+            {developmentLog && developmentLog.length > 0 && (
+              <div className="wiki-card p-4 md:p-6 lg:p-8" suppressHydrationWarning>
+                <h2 id="development-log" className="wiki-section-header scroll-mt-20" suppressHydrationWarning>
+                  <i className="fas fa-history text-purple-400" aria-hidden="true" suppressHydrationWarning></i>
+                  Development Log
+                </h2>
+                <DevelopmentLog entries={developmentLog} showTitle={false} />
+              </div>
+            )}
+
+            {/* Writing Prompt Responses Section */}
+            {writingPromptResponses && writingPromptResponses.length > 0 && (
+              <div className="wiki-card p-4 md:p-6 lg:p-8" suppressHydrationWarning>
+                <h2 id="writing-prompts" className="wiki-section-header scroll-mt-20" suppressHydrationWarning>
+                  <i className="fas fa-pen-fancy text-purple-400" aria-hidden="true" suppressHydrationWarning></i>
+                  Writing Prompt Responses
+                </h2>
+                <WritingPromptResponses responses={writingPromptResponses} showTitle={false} />
               </div>
             )}
 

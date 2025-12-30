@@ -1,8 +1,8 @@
 import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { OCCard } from '@/components/oc/OCCard';
 import { CharacterFilters } from '@/components/filters/CharacterFilters';
+import { OCListView } from '@/components/discovery/OCListView';
 import { generatePageMetadata } from '@/lib/config/metadata-helpers';
 import { getSiteConfig } from '@/lib/config/site-config';
 
@@ -31,11 +31,19 @@ export default async function OCsPage({ searchParams }: OCsPageProps) {
   const seriesType = typeof searchParams.series_type === 'string' ? searchParams.series_type : '';
   const gender = typeof searchParams.gender === 'string' ? searchParams.gender : '';
   const sex = typeof searchParams.sex === 'string' ? searchParams.sex : '';
+  const tagId = typeof searchParams.tag === 'string' ? searchParams.tag : '';
 
-  // Build query
+  // Build query - try with tags first, fallback to without tags if it fails
   let query = supabase
     .from('ocs')
-    .select('*, world:worlds(*)')
+    .select(`
+      *,
+      world:worlds(*),
+      character_tags(
+        tag_id,
+        tags(id, name)
+      )
+    `)
     .eq('is_public', true);
 
   // Apply filters
@@ -56,10 +64,52 @@ export default async function OCsPage({ searchParams }: OCsPageProps) {
     query = query.eq('sex', sex);
   }
 
-  const { data: ocs } = await query.order('name', { ascending: true });
+  let { data: ocs, error: ocsError } = await query.order('name', { ascending: true });
+
+  // If query fails (possibly due to tags relationship), retry without tags
+  if (ocsError) {
+    console.error('Error fetching OCs with tags, retrying without tags:', ocsError);
+    let fallbackQuery = supabase
+      .from('ocs')
+      .select('*, world:worlds(*)')
+      .eq('is_public', true);
+
+    // Reapply filters
+    if (worldId) {
+      if (worldId === 'none') {
+        fallbackQuery = fallbackQuery.is('world_id', null);
+      } else {
+        fallbackQuery = fallbackQuery.eq('world_id', worldId);
+      }
+    }
+    if (seriesType) {
+      fallbackQuery = fallbackQuery.eq('series_type', seriesType);
+    }
+    if (gender) {
+      fallbackQuery = fallbackQuery.eq('gender', gender);
+    }
+    if (sex) {
+      fallbackQuery = fallbackQuery.eq('sex', sex);
+    }
+
+    const fallbackResult = await fallbackQuery.order('name', { ascending: true });
+    ocs = fallbackResult.data;
+    if (fallbackResult.error) {
+      console.error('Error fetching OCs (fallback):', fallbackResult.error);
+    }
+  }
+
+  // Filter by tag (client-side since we need to check character_tags relationship)
+  let filteredByTag = ocs || [];
+  if (tagId) {
+    filteredByTag = filteredByTag.filter(oc => {
+      const tags = (oc as any).character_tags || [];
+      return tags.some((ct: any) => ct.tag_id === tagId);
+    });
+  }
 
   // Filter by search term (name) on the client side since Supabase text search might be complex
-  let filteredOCs = ocs || [];
+  let filteredOCs = filteredByTag;
   if (search) {
     const searchLower = search.toLowerCase();
     filteredOCs = filteredOCs.filter(
@@ -82,11 +132,7 @@ export default async function OCsPage({ searchParams }: OCsPageProps) {
       </Suspense>
 
       {filteredOCs.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-          {filteredOCs.map((oc) => (
-            <OCCard key={oc.id} oc={oc} />
-          ))}
-        </div>
+        <OCListView ocs={filteredOCs} />
       ) : (
         <div className="wiki-card p-12 text-center">
           <p className="text-gray-500 text-lg">

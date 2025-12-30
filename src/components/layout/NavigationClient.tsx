@@ -17,6 +17,7 @@ export function NavigationClient({ isAuthenticated }: NavigationClientProps) {
     { href: '/lore', label: 'Lore', prefetch: true },
     { href: '/timelines', label: 'Timelines', prefetch: true },
     { href: '/stats', label: 'Statistics', prefetch: true },
+    { href: '/tools', label: 'Tools', prefetch: true },
     {
       href: isAuthenticated ? '/admin' : '/admin/login',
       label: isAuthenticated ? 'Admin Page' : 'Login',

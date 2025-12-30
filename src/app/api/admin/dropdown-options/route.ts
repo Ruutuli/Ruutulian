@@ -2,91 +2,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, createClient } from '@/lib/supabase/server';
 import { checkAuth } from '@/lib/auth/require-auth';
 import { logger } from '@/lib/logger';
-import * as fs from 'fs';
-import * as path from 'path';
 
-export const dynamic = 'force-dynamic';
-
-/**
- * Regenerates the csvOptionsData.ts file from the database
- * This ensures form components have the latest options
- */
-async function regenerateTypeScriptFile(supabase: any) {
-  try {
-    // Query all options from database (including hex_code for colors)
-    const { data, error } = await supabase
-      .from('dropdown_options')
-      .select('field, option, hex_code')
-      .order('field', { ascending: true })
-      .order('option', { ascending: true });
-
-    if (error) {
-      logger.error('DropdownOptions', 'Failed to regenerate TypeScript file', { error });
-      return false;
-    }
-
-    // Group options by field, and include hex codes
-    const options: Record<string, string[]> = {};
-    const hexCodes: Record<string, Record<string, string>> = {}; // field -> option -> hex_code
-    if (data) {
-      for (const row of data) {
-        if (!options[row.field]) {
-          options[row.field] = [];
-        }
-        options[row.field].push(row.option);
-        
-        // Store hex code if present
-        if (row.hex_code) {
-          if (!hexCodes[row.field]) {
-            hexCodes[row.field] = {};
-          }
-          hexCodes[row.field][row.option] = row.hex_code;
-        }
-      }
-    }
-
-    // Sort options within each field
-    Object.keys(options).forEach(field => {
-      options[field].sort();
-    });
-
-    // Generate TypeScript file content
-    // This file serves as a fallback when database is unavailable
-    // The useDropdownOptions hook fetches from database first, then falls back to this file
-    const fileContent = `// Auto-generated file - do not edit manually
-// Generated from: dropdown_options table in database
-// This file is a FALLBACK - the database is the primary source of truth
-// The useDropdownOptions hook fetches from database first, then falls back to this file
-// Run: npx tsx scripts/utilities/generate-dropdown-options.ts
-// Last generated: ${new Date().toISOString()}
-
-export const csvOptions: Record<string, string[]> = ${JSON.stringify(options, null, 2)};
-
-// Hex codes for color options (field -> option -> hex_code)
-export const colorHexCodes: Record<string, Record<string, string>> = ${JSON.stringify(hexCodes, null, 2)};
-
-// Individual exports for convenience
-${Object.entries(options).map(([key, values]) => 
-  `export const ${key}Options: string[] = ${JSON.stringify(values)};`
-).join('\n')}
-`;
-
-    // Write to file
-    const outputPath = path.join(process.cwd(), 'src/lib/utils/csvOptionsData.ts');
-    fs.writeFileSync(outputPath, fileContent, 'utf-8');
-
-    return true;
-  } catch (error) {
-    logger.error('DropdownOptions', 'TypeScript regeneration failed', { error });
-    return false;
-  }
+// In-memory cache with TTL
+interface CacheEntry {
+  data: { options: Record<string, string[]>; hexCodes: Record<string, Record<string, string>> };
+  timestamp: number;
 }
+
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+let cache: CacheEntry | null = null;
+
+export const revalidate = 300; // Revalidate every 5 minutes
 
 export async function GET() {
   try {
-    // Use regular client for reading - RLS allows public read access
-    // This ensures options are always available even if auth fails
-    const supabase = await createClient();
+    // Check cache first
+    if (cache && Date.now() - cache.timestamp < CACHE_TTL) {
+      return NextResponse.json(cache.data, {
+        headers: {
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+        },
+      });
+    }
+
+    // Use admin client for reading to bypass RLS and ensure options are always available
+    // This ensures dropdowns work even if RLS policies aren't configured correctly
+    const supabase = createAdminClient();
 
     // Query all options from database - use range to get all rows
     // Supabase defaults to 1000 rows, so we need to explicitly request more
@@ -95,18 +36,38 @@ export async function GET() {
     const pageSize = 1000;
     let hasMore = true;
     
+    // Try to select with 'option' column first, fallback to 'value' if that fails
+    let selectColumns = 'field, option, hex_code';
+    let orderColumn = 'option';
+    
+    // First attempt: try with 'option' column
     while (hasMore) {
       const { data: pageData, error: pageError } = await supabase
         .from('dropdown_options')
-        .select('field, option, hex_code')
+        .select(selectColumns)
         .order('field', { ascending: true })
-        .order('option', { ascending: true })
+        .order(orderColumn, { ascending: true })
         .range(from, from + pageSize - 1);
+      
+      // If error and we haven't tried fallback yet, try with 'value' column
+      if (pageError && selectColumns.includes('option') && !selectColumns.includes('value')) {
+        logger.warn('DropdownOptions', 'Column "option" not found, trying "value" instead', { error: pageError });
+        selectColumns = 'field, value, hex_code';
+        orderColumn = 'value';
+        from = 0; // Reset pagination
+        hasMore = true;
+        continue;
+      }
       
       if (pageError) {
         logger.error('DropdownOptions', 'Error fetching dropdown options', { error: pageError });
+        cache = null; // Clear cache on error
         return NextResponse.json(
-          { error: 'Failed to fetch dropdown options' },
+          { 
+            error: 'Failed to fetch dropdown options', 
+            details: pageError.message,
+            hint: 'Check if the dropdown_options table exists and has the correct schema (field, option, hex_code columns)'
+          },
           { status: 500 }
         );
       }
@@ -126,28 +87,61 @@ export async function GET() {
     const options: Record<string, string[]> = {};
     const hexCodes: Record<string, Record<string, string>> = {}; // field -> option -> hex_code
     
-    if (data) {
+    if (data && data.length > 0) {
       for (const row of data) {
+        // Handle both 'option' and 'value' column names
+        const optionValue = row.option || row.value;
+        if (!optionValue) {
+          logger.warn('DropdownOptions', 'Row missing option/value', { row });
+          continue;
+        }
+        
+        if (!row.field) {
+          logger.warn('DropdownOptions', 'Row missing field', { row });
+          continue;
+        }
+        
         if (!options[row.field]) {
           options[row.field] = [];
         }
-        options[row.field].push(row.option);
+        options[row.field].push(optionValue);
         
         // Store hex code if present
         if (row.hex_code) {
           if (!hexCodes[row.field]) {
             hexCodes[row.field] = {};
           }
-          hexCodes[row.field][row.option] = row.hex_code;
+          hexCodes[row.field][optionValue] = row.hex_code;
         }
       }
+    } else {
+      // Log if no data found and clear cache
+      logger.warn('DropdownOptions', 'No dropdown options found in database - database may be empty');
+      cache = null; // Clear cache if no data
     }
 
-    return NextResponse.json({ options, hexCodes });
+    const responseData = { options, hexCodes };
+    
+    // Update cache
+    cache = {
+      data: responseData,
+      timestamp: Date.now(),
+    };
+
+    return NextResponse.json(responseData, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+      },
+    });
   } catch (error) {
     logger.error('DropdownOptions', 'Failed to fetch dropdown options', { error });
+    cache = null; // Clear cache on error
     return NextResponse.json(
-      { error: 'Failed to fetch dropdown options' },
+      { 
+        error: 'Failed to fetch dropdown options',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        hint: 'Check server logs for more details'
+      },
       { status: 500 }
     );
   }
@@ -336,12 +330,6 @@ export async function PUT(request: NextRequest) {
     }
 
     logger.success('DropdownOptions', `Updated ${updatedFields.length} field(s)`, { fields: updatedFields });
-    
-    // Regenerate TypeScript file so form components have the latest options
-    // Do this asynchronously so it doesn't block the response
-    regenerateTypeScriptFile(supabase).catch(err => {
-      logger.warn('DropdownOptions', 'TypeScript regeneration failed', { error: err });
-    });
 
     return NextResponse.json({ 
       success: true, 
@@ -357,3 +345,4 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+

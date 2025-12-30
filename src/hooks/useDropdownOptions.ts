@@ -1,19 +1,9 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { csvOptions } from '@/lib/utils/csvOptionsData';
+import { useDropdownOptionsContext } from '@/contexts/DropdownOptionsContext';
 
-// Import colorHexCodes with fallback (may not exist until generate script runs)
-let colorHexCodes: Record<string, Record<string, string>> = {};
-try {
-  const colorHexCodesModule = require('@/lib/utils/csvOptionsData');
-  colorHexCodes = colorHexCodesModule.colorHexCodes || {};
-} catch {
-  // Fallback if colorHexCodes doesn't exist yet
-  colorHexCodes = {};
-}
-
-type DropdownField = keyof typeof csvOptions | string; // Allow string for fields not in csvOptions
+type DropdownField = string;
 
 interface UseDropdownOptionsResult {
   options: string[];
@@ -23,53 +13,72 @@ interface UseDropdownOptionsResult {
 }
 
 /**
- * Hook to fetch dropdown options from database first, with fallback to generated file
- * This ensures form components always have the latest data
+ * Hook to fetch dropdown options from database
+ * Uses shared context if available, otherwise falls back to direct API call
  */
 export function useDropdownOptions(field: DropdownField | undefined): UseDropdownOptionsResult {
-  // Initialize with hardcoded options immediately for instant availability
-  const getInitialOptions = (): string[] => {
-    if (field && csvOptions[field]) {
-      return csvOptions[field];
-    }
-    return [];
-  };
-
-  const getInitialHexCodes = (): Record<string, string> => {
-    if (field && colorHexCodes && colorHexCodes[field]) {
-      return colorHexCodes[field];
-    }
-    return {};
-  };
-
-  const [dbOptions, setDbOptions] = useState<string[] | null>(null);
-  const [dbHexCodes, setDbHexCodes] = useState<Record<string, string> | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const context = useDropdownOptionsContext();
+  const [dbOptions, setDbOptions] = useState<string[]>([]);
+  const [dbHexCodes, setDbHexCodes] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [useFallback, setUseFallback] = useState(false);
+
+  // Check if context is available (has data or is loading)
+  const contextAvailable = context.data !== null || context.isLoading;
 
   useEffect(() => {
     if (!field) {
-      setDbOptions(null);
-      setDbHexCodes(null);
+      setDbOptions([]);
+      setDbHexCodes({});
       setIsLoading(false);
       return;
     }
 
-    // Fetch from database in the background
-    // Hardcoded options are already available, so this is just an update
+    // Use context if available
+    if (contextAvailable && !useFallback) {
+      setIsLoading(context.isLoading);
+      setError(context.error);
+
+      if (context.data) {
+        // Extract field-specific data from context
+        let fieldData: string[] | undefined = context.data.options?.[field];
+        let hexCodeData: Record<string, string> | undefined = context.data.hexCodes?.[field];
+
+        if (!fieldData && context.data.options) {
+          // Try case-insensitive match
+          const fieldKeys = Object.keys(context.data.options);
+          const matchingKey = fieldKeys.find(k => k.toLowerCase() === field.toLowerCase());
+          if (matchingKey) {
+            fieldData = context.data.options[matchingKey];
+            hexCodeData = context.data.hexCodes?.[matchingKey];
+          }
+        }
+
+        setDbOptions(fieldData && Array.isArray(fieldData) ? fieldData : []);
+        setDbHexCodes(hexCodeData || {});
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // Fallback to direct API call if context is not available
     setIsLoading(true);
     setError(null);
     
     fetch('/api/admin/dropdown-options')
       .then(res => {
         if (!res.ok) {
-          // Don't throw for 401/403 - just use fallback silently
+          // Don't throw for 401/403 - just return empty
           if (res.status === 401 || res.status === 403) {
-            setDbOptions(null);
-            setDbHexCodes(null);
+            console.warn(`[useDropdownOptions] Auth error for field "${field}":`, res.status);
+            setDbOptions([]);
+            setDbHexCodes({});
             setIsLoading(false);
             return null;
           }
+          // Log error details
+          console.error(`[useDropdownOptions] Failed to fetch options for field "${field}":`, res.status, res.statusText);
           throw new Error(`Failed to fetch options: ${res.statusText}`);
         }
         return res.json();
@@ -91,50 +100,22 @@ export function useDropdownOptions(field: DropdownField | undefined): UseDropdow
           }
         }
         
-        if (fieldData && Array.isArray(fieldData)) {
-          setDbOptions(fieldData);
-          setDbHexCodes(hexCodeData || {});
-        } else {
-          // Field not found in database, keep using hardcoded fallback
-          setDbOptions(null);
-          setDbHexCodes(null);
-        }
+        setDbOptions(fieldData && Array.isArray(fieldData) ? fieldData : []);
+        setDbHexCodes(hexCodeData || {});
         setIsLoading(false);
       })
       .catch(err => {
+        console.error(`[useDropdownOptions] Error fetching options for field "${field}":`, err);
         setError(err);
-        // On error, keep using hardcoded fallback (don't clear dbOptions to null)
-        // This way the hardcoded options remain available
-        setDbOptions(null);
-        setDbHexCodes(null);
+        setDbOptions([]);
+        setDbHexCodes({});
         setIsLoading(false);
       });
-  }, [field]);
-
-  // Return database options if available, otherwise use hardcoded fallback immediately
-  // This ensures options are always available right away
-  const options = useMemo(() => {
-    // If we have database options (not null), use them (even if empty array)
-    // This handles the case where field exists in DB but has no options yet
-    if (dbOptions !== null) {
-      return dbOptions;
-    }
-    // Use hardcoded options immediately (preloaded for instant availability)
-    return getInitialOptions();
-  }, [dbOptions, field]);
-
-  // Return hex codes from database or fallback to hardcoded file
-  const hexCodes = useMemo(() => {
-    if (dbHexCodes !== null) {
-      return dbHexCodes;
-    }
-    // Use hardcoded hex codes immediately
-    return getInitialHexCodes();
-  }, [dbHexCodes, field]);
+  }, [field, contextAvailable, context.data, context.isLoading, context.error, useFallback]);
 
   return {
-    options,
-    hexCodes,
+    options: dbOptions,
+    hexCodes: dbHexCodes,
     isLoading,
     error,
   };

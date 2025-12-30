@@ -33,7 +33,7 @@ function hasUnit(value: string, unit: string): boolean {
  * - "70 in" -> 178 cm
  * - Already in cm (if contains "cm") -> returns as-is
  */
-export function convertHeightToMetric(height: string | null | undefined): string {
+function convertHeightToMetric(height: string | null | undefined): string {
   const trimmed = normalizeUnitString(height);
   if (!trimmed) return '';
 
@@ -92,7 +92,7 @@ export function convertHeightToMetric(height: string | null | undefined): string
  * - "178cm" -> "5'10\""
  * - "178" (assumed cm) -> "5'10\""
  */
-export function convertHeightToImperial(height: string | null | undefined): string {
+function convertHeightToImperial(height: string | null | undefined): string {
   const trimmed = normalizeUnitString(height);
   if (!trimmed) return '';
 
@@ -132,7 +132,7 @@ export function convertHeightToImperial(height: string | null | undefined): stri
  * - "150 pounds" -> 68 kg
  * - Already in kg (if contains "kg") -> returns as-is
  */
-export function convertWeightToMetric(weight: string | null | undefined): string {
+function convertWeightToMetric(weight: string | null | undefined): string {
   const trimmed = normalizeUnitString(weight);
   if (!trimmed) return '';
 
@@ -170,7 +170,7 @@ export function convertWeightToMetric(weight: string | null | undefined): string
  * - "68kg" -> "150 lbs"
  * - "68" (assumed kg) -> "150 lbs"
  */
-export function convertWeightToImperial(weight: string | null | undefined): string {
+function convertWeightToImperial(weight: string | null | undefined): string {
   const trimmed = normalizeUnitString(weight);
   if (!trimmed) return '';
 

@@ -5,14 +5,15 @@ import { TimelineEventsManager } from '@/components/admin/TimelineEventsManager'
 export default async function TimelineEventsPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }> | { id: string };
 }) {
   const supabase = await createClient();
+  const resolvedParams = params instanceof Promise ? await params : params;
 
   const { data: timeline } = await supabase
     .from('timelines')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', resolvedParams.id)
     .single();
 
   if (!timeline) {

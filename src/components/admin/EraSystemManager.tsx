@@ -19,25 +19,39 @@ interface EraSystemManagerProps {
 /**
  * Parse era string (comma-separated or JSON) into EraDefinition array
  */
-function parseEras(value: string | undefined): EraDefinition[] {
-  if (!value || value.trim() === '') return [];
+function parseEras(value: string | undefined | null): EraDefinition[] {
+  // Handle null, undefined, or empty values
+  if (!value || typeof value !== 'string' || value.trim() === '') {
+    return [];
+  }
   
-  try {
-    // Try parsing as JSON first
-    const parsed = JSON.parse(value);
-    if (Array.isArray(parsed)) {
-      return parsed.map((item) => 
-        typeof item === 'string' 
-          ? { name: item.trim() }
-          : { name: item.name?.trim() || '', label: item.label?.trim() }
-      ).filter(e => e.name);
+  const trimmedValue = value.trim();
+  
+  // Check if it looks like JSON (starts with [ or {)
+  if (trimmedValue.startsWith('[') || trimmedValue.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(trimmedValue);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => {
+          if (typeof item === 'string') {
+            return { name: item.trim() };
+          }
+          if (item && typeof item === 'object') {
+            return { 
+              name: item.name?.trim() || '', 
+              label: item.label?.trim() || undefined 
+            };
+          }
+          return null;
+        }).filter((e): e is EraDefinition => e !== null && e.name !== '');
+      }
+    } catch {
+      // Not valid JSON, fall through to comma-separated parsing
     }
-  } catch {
-    // Not JSON, treat as comma-separated
   }
   
   // Parse as comma-separated string
-  return value
+  return trimmedValue
     .split(',')
     .map(era => era.trim())
     .filter(era => era)
@@ -52,11 +66,23 @@ function formatEras(eras: EraDefinition[]): string {
 }
 
 export function EraSystemManager({ value, onChange, disabled }: EraSystemManagerProps) {
-  const [eras, setEras] = useState<EraDefinition[]>(() => parseEras(value));
+  const [eras, setEras] = useState<EraDefinition[]>(() => {
+    try {
+      return parseEras(value);
+    } catch (error) {
+      console.warn('Error parsing eras:', error);
+      return [];
+    }
+  });
 
   useEffect(() => {
-    const parsed = parseEras(value);
-    setEras(parsed);
+    try {
+      const parsed = parseEras(value);
+      setEras(parsed);
+    } catch (error) {
+      console.warn('Error parsing eras in useEffect:', error);
+      setEras([]);
+    }
   }, [value]);
 
   const handleErasChange = (newEras: EraDefinition[]) => {

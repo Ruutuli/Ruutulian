@@ -120,18 +120,23 @@ export function TimelineEvent({ event }: TimelineEventProps) {
               <p className="text-sm text-gray-400 mb-2">
                 Characters:{' '}
                 {event.characters.map((char, index) => {
+                  const characterName = char.custom_name || char.oc?.name;
                   const age = char.oc?.date_of_birth && event.date_data
                     ? calculateAge(char.oc.date_of_birth, event.date_data)
                     : null;
                   
                   return (
                     <span key={char.id}>
-                      <a
-                        href={`/ocs/${char.oc?.slug}`}
-                        className="text-purple-400 hover:text-purple-300"
-                      >
-                        {char.oc?.name}
-                      </a>
+                      {char.oc?.slug ? (
+                        <a
+                          href={`/ocs/${char.oc.slug}`}
+                          className="text-purple-400 hover:text-purple-300"
+                        >
+                          {characterName}
+                        </a>
+                      ) : (
+                        <span className="text-gray-300">{characterName}</span>
+                      )}
                       {age !== null && ` (${age})`}
                       {index < event.characters.length - 1 && ', '}
                     </span>

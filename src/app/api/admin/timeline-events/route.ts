@@ -28,7 +28,7 @@ export async function GET(request: Request) {
         story_alias:story_aliases(id, name, slug, description),
         characters:timeline_event_characters(
           *,
-          oc:ocs(id, name, slug)
+          oc:ocs(id, name, slug, date_of_birth)
         )
       `);
 
@@ -146,11 +146,16 @@ export async function POST(request: Request) {
 
     // Insert character associations if provided
     if (characters && Array.isArray(characters) && characters.length > 0) {
-      const characterInserts = characters.map((char: { oc_id: string; role?: string }) => ({
-        timeline_event_id: event.id,
-        oc_id: char.oc_id,
-        role: char.role || null,
-      }));
+      const characterInserts = characters
+        .filter((char: { oc_id?: string | null; custom_name?: string | null }) => 
+          char.oc_id || char.custom_name
+        )
+        .map((char: { oc_id?: string | null; custom_name?: string | null; role?: string }) => ({
+          timeline_event_id: event.id,
+          oc_id: char.oc_id || null,
+          custom_name: char.custom_name || null,
+          role: char.role || null,
+        }));
 
       const { error: charError } = await supabase
         .from('timeline_event_characters')
@@ -172,7 +177,7 @@ export async function POST(request: Request) {
         story_alias:story_aliases(id, name, slug, description),
         characters:timeline_event_characters(
           *,
-          oc:ocs(id, name, slug)
+          oc:ocs(id, name, slug, date_of_birth)
         )
       `)
       .eq('id', event.id)

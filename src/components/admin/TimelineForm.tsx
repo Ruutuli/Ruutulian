@@ -80,6 +80,10 @@ export function TimelineForm({ timeline }: TimelineFormProps) {
   const watchedWorldId = watch('world_id');
 
   const onSubmit = async (data: TimelineFormData) => {
+    // For new timelines, always navigate to events page
+    if (!timeline) {
+      shouldNavigateAfterSaveRef.current = true;
+    }
     await submit(data);
   };
 
@@ -178,8 +182,11 @@ export function TimelineForm({ timeline }: TimelineFormProps) {
               control={control}
               render={({ field }) => (
                 <EraSystemManager
-                  value={field.value || ''}
-                  onChange={field.onChange}
+                  value={field.value ?? ''}
+                  onChange={(value) => {
+                    // Convert empty string to undefined for optional field
+                    field.onChange(value.trim() === '' ? undefined : value);
+                  }}
                   disabled={isSubmitting}
                 />
               )}

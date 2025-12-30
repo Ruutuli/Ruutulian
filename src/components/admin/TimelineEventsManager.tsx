@@ -255,13 +255,14 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
                       <p className="text-xs text-gray-400 mb-1">
                         Characters:{' '}
                         {event.characters.map((char, index) => {
+                          const characterName = char.custom_name || char.oc?.name;
                           const age = char.oc?.date_of_birth && event.date_data
                             ? calculateAge(char.oc.date_of_birth, event.date_data)
                             : null;
                           
                           return (
                             <span key={char.id}>
-                              {char.oc?.name}
+                              {characterName}
                               {age !== null && ` (${age})`}
                               {index < event.characters.length - 1 && ', '}
                             </span>

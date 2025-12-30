@@ -36,9 +36,13 @@ const eventSchema = z.object({
   location: z.string().optional(),
   image_url: optionalUrl,
   characters: z.array(z.object({
-    oc_id: z.string().uuid(),
+    oc_id: z.string().uuid().optional().nullable(),
+    custom_name: z.string().optional().nullable(),
     role: z.string().optional(),
-  })).default([]),
+  }).refine(
+    (data) => data.oc_id || data.custom_name,
+    { message: "Either select a character or enter a custom name" }
+  )).default([]),
   story_alias_id: optionalUuid,
 });
 
@@ -78,6 +82,8 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
         // Return false to prevent navigation when we have a custom callback
         return false;
       }
+      // Return true to allow default navigation behavior
+      return true;
     },
   });
 
@@ -100,7 +106,8 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
       location: event.location || '',
       image_url: event.image_url || '',
       characters: event.characters?.map(c => ({
-        oc_id: c.oc_id,
+        oc_id: c.oc_id || null,
+        custom_name: c.custom_name || null,
         role: c.role || '',
       })) || [],
       story_alias_id: event.story_alias_id ?? null,
@@ -157,7 +164,7 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
     'characters',
     watch,
     setValue,
-    () => ({ oc_id: characters[0]?.id || '', role: '' })
+    () => ({ oc_id: null, custom_name: null, role: '' })
   );
 
   // Extract year/month/day from date_data for sorting
@@ -353,25 +360,50 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
         {relatedCharacters.items && relatedCharacters.items.length > 0 ? (
           <div className="space-y-2">
             {relatedCharacters.items.map((char, index) => {
-              const selectedCharacter = characters.find(c => c.id === char.oc_id);
+              const isCustomName = !char.oc_id && char.custom_name;
+              const selectedCharacter = char.oc_id ? characters.find(c => c.id === char.oc_id) : null;
               const age = selectedCharacter?.date_of_birth && watchedDateData
                 ? calculateAge(selectedCharacter.date_of_birth, watchedDateData)
                 : null;
               
               return (
-                <div key={index} className="flex gap-2 items-center">
-                  <select
-                    value={char.oc_id}
-                    onChange={(e) => relatedCharacters.updateItemField(index, 'oc_id', e.target.value)}
-                    className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
-                  >
-                    <option value="">Select character</option>
-                    {characters.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                <div key={index} className="flex gap-2 items-center flex-wrap">
+                  <div className="flex gap-2 items-center flex-1 min-w-[200px]">
+                    <select
+                      value={char.oc_id || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value) {
+                          // Selected an OC - clear custom name
+                          relatedCharacters.updateItemField(index, 'oc_id', value);
+                          relatedCharacters.updateItemField(index, 'custom_name', null);
+                        } else {
+                          // Switched to custom name mode
+                          relatedCharacters.updateItemField(index, 'oc_id', null);
+                        }
+                      }}
+                      className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
+                    >
+                      <option value="">Custom name...</option>
+                      {characters.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                    {!char.oc_id && (
+                      <input
+                        type="text"
+                        value={char.custom_name || ''}
+                        onChange={(e) => {
+                          relatedCharacters.updateItemField(index, 'custom_name', e.target.value);
+                          relatedCharacters.updateItemField(index, 'oc_id', null);
+                        }}
+                        placeholder="Enter character name"
+                        className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
+                      />
+                    )}
+                  </div>
                   {selectedCharacter && age !== null && (
                     <span className="text-sm text-gray-400 whitespace-nowrap">
                       Age: {age}
@@ -382,12 +414,12 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
                     value={char.role || ''}
                     onChange={(e) => relatedCharacters.updateItemField(index, 'role', e.target.value)}
                     placeholder="Role (optional)"
-                    className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
+                    className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100 min-w-[150px]"
                   />
                   <button
                     type="button"
                     onClick={() => relatedCharacters.removeItem(index)}
-                    className="px-3 py-2 bg-red-700 text-white rounded hover:bg-red-600"
+                    className="px-3 py-2 bg-red-700 text-white rounded hover:bg-red-600 whitespace-nowrap"
                   >
                     Remove
                   </button>
@@ -396,11 +428,20 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
             })}
           </div>
         ) : (
-          <p className="text-sm text-gray-400">
-            {watchedWorldId
-              ? 'No characters available in this world. Add characters first.'
-              : 'Select a world to add characters.'}
-          </p>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={relatedCharacters.addItem}
+              className="px-4 py-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors"
+            >
+              + Add Character
+            </button>
+            <p className="text-sm text-gray-400">
+              {watchedWorldId
+                ? 'Click "Add Character" to add characters from the database or enter custom names.'
+                : 'Select a world first, then you can add characters.'}
+            </p>
+          </div>
         )}
       </div>
 

@@ -478,7 +478,8 @@ export interface TimelineEventTimeline {
 export interface TimelineEventCharacter {
   id: string;
   timeline_event_id: string;
-  oc_id: string;
+  oc_id?: string | null; // Nullable if custom_name is used
+  custom_name?: string | null; // For characters not in the database
   role?: string | null;
   created_at: string;
   // Joined data

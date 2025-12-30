@@ -111,7 +111,7 @@ export function WritingPromptForm({ prompt }: WritingPromptFormProps) {
   // Merge register ref with our custom ref
   const mergedCategoryRef = useCallback((node: HTMLInputElement | null) => {
     categoryRegister.ref(node);
-    categoryInputRef.current = node;
+    (categoryInputRef as React.MutableRefObject<HTMLInputElement | null>).current = node;
   }, [categoryRegister]);
 
   // Handle click outside to close suggestions

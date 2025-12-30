@@ -22,6 +22,7 @@ export default async function AdminDashboard() {
   const [
     worldsResult,
     ocsResult,
+    fanficsResult,
     timelinesResult,
     loreResult,
     timelineEventsResult,
@@ -29,6 +30,7 @@ export default async function AdminDashboard() {
   ] = await Promise.all([
     supabase.from('worlds').select('*', { count: 'exact', head: true }),
     supabase.from('ocs').select('*', { count: 'exact', head: true }),
+    supabase.from('fanfics').select('*', { count: 'exact', head: true }),
     supabase.from('timelines').select('*', { count: 'exact', head: true }),
     supabase.from('world_lore').select('*', { count: 'exact', head: true }),
     supabase.from('timeline_events').select('*', { count: 'exact', head: true }),
@@ -37,6 +39,7 @@ export default async function AdminDashboard() {
 
   const worldCount = worldsResult.count ?? 0;
   const ocCount = ocsResult.count ?? 0;
+  const fanficCount = fanficsResult.count ?? 0;
   const timelineCount = timelinesResult.count ?? 0;
   const loreCount = loreResult.count ?? 0;
   const timelineEventCount = timelineEventsResult.count ?? 0;
@@ -49,7 +52,7 @@ export default async function AdminDashboard() {
     .order('name', { ascending: true });
 
   // Query recent activity (last 10 items across all tables)
-  const [recentOCs, recentWorlds, recentLore, recentTimelines, recentEvents] = await Promise.all([
+  const [recentOCs, recentWorlds, recentFanfics, recentLore, recentTimelines, recentEvents] = await Promise.all([
     supabase
       .from('ocs')
       .select('id, name, updated_at')
@@ -60,6 +63,11 @@ export default async function AdminDashboard() {
       .select('id, name, updated_at')
       .order('updated_at', { ascending: false })
       .limit(3),
+    supabase
+      .from('fanfics')
+      .select('id, title, updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(2),
     supabase
       .from('world_lore')
       .select('id, name, updated_at')
@@ -92,6 +100,13 @@ export default async function AdminDashboard() {
       type: 'world' as const,
       updated_at: item.updated_at,
       href: `/admin/worlds/${item.id}`,
+    })),
+    ...(recentFanfics.data || []).map((item) => ({
+      id: item.id,
+      name: item.title,
+      type: 'fanfic' as const,
+      updated_at: item.updated_at,
+      href: `/admin/fanfics/${item.id}`,
     })),
     ...(recentLore.data || []).map((item) => ({
       id: item.id,
@@ -151,6 +166,13 @@ export default async function AdminDashboard() {
             href="/admin/ocs"
             color="#ec4899"
             icon="fas fa-user"
+          />
+          <StatsCard
+            title="Fanfics"
+            count={fanficCount}
+            href="/admin/fanfics"
+            color="#e91e63"
+            icon="fas fa-book-open"
           />
           <StatsCard
             title="Timelines"
@@ -218,6 +240,14 @@ export default async function AdminDashboard() {
             actionLabel="Create →"
           />
           <FeatureTile
+            title="New Fanfic"
+            description="Create a new fanfiction work"
+            href="/admin/fanfics/new"
+            icon="fas fa-book"
+            color="pink"
+            actionLabel="Create →"
+          />
+          <FeatureTile
             title="New Lore Entry"
             description="Add a new lore/codex entry"
             href="/admin/world-lore/new"
@@ -264,6 +294,15 @@ export default async function AdminDashboard() {
             icon="fas fa-globe"
             color="purple"
             count={worldCount}
+            actionLabel="Browse →"
+          />
+          <FeatureTile
+            title="Browse Fanfics"
+            description="View and manage all fanfics"
+            href="/admin/fanfics"
+            icon="fas fa-book-open"
+            color="pink"
+            count={fanficCount}
             actionLabel="Browse →"
           />
           <FeatureTile

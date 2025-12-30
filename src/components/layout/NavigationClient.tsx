@@ -10,21 +10,23 @@ interface NavigationClientProps {
 
 export function NavigationClient({ isAuthenticated }: NavigationClientProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const navLinks = useMemo(() => [
+  const regularNavLinks = useMemo(() => [
     { href: '/', label: 'Home', prefetch: true },
     { href: '/worlds', label: 'Worlds', prefetch: true },
     { href: '/ocs', label: 'Characters', prefetch: true },
+    { href: '/fanfics', label: 'Fanfics', prefetch: true },
     { href: '/lore', label: 'Lore', prefetch: true },
     { href: '/timelines', label: 'Timelines', prefetch: true },
     { href: '/calendar', label: 'Calendar', prefetch: true },
     { href: '/stats', label: 'Statistics', prefetch: true },
     { href: '/tools', label: 'Tools', prefetch: true },
-    {
-      href: isAuthenticated ? '/admin' : '/admin/login',
-      label: isAuthenticated ? 'Admin Page' : 'Login',
-      prefetch: false,
-    },
-  ], [isAuthenticated]);
+  ], []);
+  
+  const adminLink = useMemo(() => ({
+    href: isAuthenticated ? '/admin' : '/admin/login',
+    label: isAuthenticated ? 'Admin Page' : 'Login',
+    prefetch: false,
+  }), [isAuthenticated]);
 
   const toggleMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -82,8 +84,8 @@ export function NavigationClient({ isAuthenticated }: NavigationClientProps) {
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex space-x-4 lg:space-x-6">
-              {navLinks.map((link) => (
+            <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
+              {regularNavLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -93,6 +95,14 @@ export function NavigationClient({ isAuthenticated }: NavigationClientProps) {
                   {link.label}
                 </Link>
               ))}
+              <span className="text-gray-600">|</span>
+              <Link
+                href={adminLink.href}
+                prefetch={adminLink.prefetch}
+                className="text-gray-500 hover:text-gray-400 transition-colors font-medium text-sm lg:text-base"
+              >
+                {adminLink.label}
+              </Link>
             </div>
 
             {/* Mobile Menu Button */}
@@ -137,7 +147,7 @@ export function NavigationClient({ isAuthenticated }: NavigationClientProps) {
             </div>
             
             <div className="flex flex-col px-4 py-4 space-y-1">
-              {navLinks.map((link) => (
+              {regularNavLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -148,6 +158,15 @@ export function NavigationClient({ isAuthenticated }: NavigationClientProps) {
                   {link.label}
                 </Link>
               ))}
+              <div className="border-t border-gray-700 my-2"></div>
+              <Link
+                href={adminLink.href}
+                prefetch={adminLink.prefetch}
+                onClick={closeMenu}
+                className="text-gray-500 hover:text-gray-400 hover:bg-gray-800 px-4 py-3 rounded-lg transition-colors font-medium text-lg"
+              >
+                {adminLink.label}
+              </Link>
             </div>
           </div>
         </div>

@@ -403,24 +403,38 @@ function StoryAliasItem({
   onConfirmDelete,
   onCancelDelete,
 }: StoryAliasItemProps) {
-  const [usageCounts, setUsageCounts] = useState<{ ocs: number; lore: number; events: number; total: number } | null>(null);
+  const [usageCounts, setUsageCounts] = useState<{ 
+    ocs: number; 
+    lore: number; 
+    events: number; 
+    timelines: number;
+    storyData: number;
+    races: number;
+    total: number;
+  } | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(false);
 
   useEffect(() => {
     async function loadUsage() {
       setLoadingUsage(true);
       const supabase = createClient();
-      const [ocsResult, loreResult, eventsResult] = await Promise.all([
+      const [ocsResult, loreResult, eventsResult, timelinesResult, storyDataResult, racesResult] = await Promise.all([
         supabase.from('ocs').select('id', { count: 'exact', head: true }).eq('story_alias_id', alias.id),
         supabase.from('world_lore').select('id', { count: 'exact', head: true }).eq('story_alias_id', alias.id),
         supabase.from('timeline_events').select('id', { count: 'exact', head: true }).eq('story_alias_id', alias.id),
+        supabase.from('timelines').select('id', { count: 'exact', head: true }).eq('story_alias_id', alias.id),
+        supabase.from('world_story_data').select('id', { count: 'exact', head: true }).eq('story_alias_id', alias.id),
+        supabase.from('world_races').select('id', { count: 'exact', head: true }).eq('story_alias_id', alias.id),
       ]);
 
       setUsageCounts({
         ocs: ocsResult.count || 0,
         lore: loreResult.count || 0,
         events: eventsResult.count || 0,
-        total: (ocsResult.count || 0) + (loreResult.count || 0) + (eventsResult.count || 0),
+        timelines: timelinesResult.count || 0,
+        storyData: storyDataResult.count || 0,
+        races: racesResult.count || 0,
+        total: (ocsResult.count || 0) + (loreResult.count || 0) + (eventsResult.count || 0) + (timelinesResult.count || 0) + (storyDataResult.count || 0) + (racesResult.count || 0),
       });
       setLoadingUsage(false);
     }
@@ -448,8 +462,15 @@ function StoryAliasItem({
           {loadingUsage ? (
             <div className="text-xs text-gray-500 mt-2">Loading usage...</div>
           ) : usageCounts && usageCounts.total > 0 ? (
-            <div className="text-xs text-gray-500 mt-2">
-              Used by: {usageCounts.ocs} OC{usageCounts.ocs !== 1 ? 's' : ''}, {usageCounts.lore} lore entr{usageCounts.lore !== 1 ? 'ies' : 'y'}, {usageCounts.events} event{usageCounts.events !== 1 ? 's' : ''}
+            <div className="text-xs text-gray-500 mt-2 space-y-1">
+              <div>
+                Used by: {usageCounts.ocs} OC{usageCounts.ocs !== 1 ? 's' : ''}, {usageCounts.lore} lore entr{usageCounts.lore !== 1 ? 'ies' : 'y'}, {usageCounts.events} event{usageCounts.events !== 1 ? 's' : ''}, {usageCounts.timelines} timeline{usageCounts.timelines !== 1 ? 's' : ''}
+              </div>
+              {(usageCounts.storyData > 0 || usageCounts.races > 0) && (
+                <div className="text-yellow-400 font-medium">
+                  ⚠️ Warning: {usageCounts.storyData} world story data and {usageCounts.races} race{usageCounts.races !== 1 ? 's' : ''} will be permanently deleted
+                </div>
+              )}
             </div>
           ) : null}
         </div>
@@ -474,24 +495,35 @@ function StoryAliasItem({
               </button>
             </>
           ) : (
-            <>
-              <button
-                type="button"
-                onClick={onConfirmDelete}
-                className="px-3 py-1 text-sm bg-red-700 text-white rounded hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isDeleting}
-              >
-                {isDeleting ? 'Deleting...' : 'Confirm Delete'}
-              </button>
-              <button
-                type="button"
-                onClick={onCancelDelete}
-                className="px-3 py-1 text-sm bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isDeleting}
-              >
-                Cancel
-              </button>
-            </>
+            <div className="flex flex-col gap-2 items-end">
+              {usageCounts && usageCounts.total > 0 && (
+                <div className="text-xs text-yellow-400 mb-1 text-right max-w-xs">
+                  {usageCounts.storyData > 0 || usageCounts.races > 0 ? (
+                    <div>⚠️ This will permanently delete {usageCounts.storyData} world story data and {usageCounts.races} race{usageCounts.races !== 1 ? 's' : ''}. Other references will be cleared.</div>
+                  ) : (
+                    <div>References to this story alias will be cleared from {usageCounts.total} item{usageCounts.total !== 1 ? 's' : ''}.</div>
+                  )}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={onConfirmDelete}
+                  className="px-3 py-1 text-sm bg-red-700 text-white rounded hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Deleting...' : 'Confirm Delete'}
+                </button>
+                <button
+                  type="button"
+                  onClick={onCancelDelete}
+                  className="px-3 py-1 text-sm bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>

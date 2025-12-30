@@ -3,6 +3,26 @@ import { WritingPrompts } from '@/components/creative/WritingPrompts';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { generatePageMetadata } from '@/lib/config/metadata-helpers';
 import { getSiteConfig } from '@/lib/config/site-config';
+import { cookies } from 'next/headers';
+import { cache } from 'react';
+import { getSession } from '@/lib/auth/session-store';
+
+const checkAdminAuth = cache(async () => {
+  try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get('admin-session');
+    
+    if (!sessionCookie?.value) {
+      return false;
+    }
+
+    // Verify session token exists and is valid
+    const session = await getSession(sessionCookie.value);
+    return session !== null;
+  } catch (error) {
+    return false;
+  }
+});
 
 export async function generateMetadata() {
   const config = await getSiteConfig();
@@ -17,6 +37,9 @@ export const revalidate = 60;
 
 export default async function WritingPromptsPage() {
   const supabase = await createClient();
+
+  // Check if admin is authenticated
+  const isAdmin = await checkAdminAuth();
 
   const { data: ocsData, error: ocsError } = await supabase
     .from('ocs')
@@ -50,7 +73,7 @@ export default async function WritingPromptsPage() {
   return (
     <div className="space-y-4">
       <PageHeader title="Writing Prompts" />
-      <WritingPrompts ocs={ocs || []} prompts={prompts || []} />
+      <WritingPrompts ocs={ocs || []} prompts={prompts || []} isAdmin={isAdmin} />
     </div>
   );
 }

@@ -87,6 +87,70 @@ export interface StoryAlias {
   world?: World;
 }
 
+export type FanficRating = 'G' | 'PG' | 'PG-13' | 'R' | 'M' | 'Not Rated';
+
+export interface Fanfic {
+  id: string;
+  title: string;
+  slug: string;
+  summary?: string | null;
+  rating?: FanficRating | null;
+  alternative_titles?: string[] | null;
+  author?: string | null;
+  world_id: string;
+  story_alias_id?: string | null;
+  external_link?: string | null;
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
+  // Joined data
+  world?: World;
+  story_alias?: StoryAlias | null;
+  characters?: FanficCharacter[];
+  relationships?: FanficRelationship[];
+  tags?: Tag[];
+}
+
+export interface FanficCharacter {
+  id: string;
+  fanfic_id: string;
+  oc_id?: string | null;
+  name?: string | null;
+  created_at: string;
+  // Joined data
+  fanfic?: Fanfic;
+  oc?: OC;
+}
+
+export interface FanficRelationship {
+  id: string;
+  fanfic_id: string;
+  relationship_text: string;
+  relationship_type?: 'romantic' | 'platonic' | 'other' | null;
+  created_at: string;
+  // Joined data
+  fanfic?: Fanfic;
+}
+
+export interface FanficTag {
+  id: string;
+  fanfic_id: string;
+  tag_id: string;
+  created_at: string;
+  // Joined data
+  fanfic?: Fanfic;
+  tag?: Tag;
+}
+
+export interface Tag {
+  id: string;
+  name: string;
+  description?: string | null;
+  color?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface WorldStoryData {
   id: string;
   world_id: string;

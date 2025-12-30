@@ -25,6 +25,7 @@ interface WritingPromptsProps {
     requires_two_characters: boolean;
   }>;
   className?: string;
+  isAdmin?: boolean;
 }
 
 interface PromptTemplate {
@@ -268,7 +269,7 @@ function randomElement<T>(array: T[]): T {
   return array[Math.floor(Math.random() * array.length)];
 }
 
-export function WritingPrompts({ ocs, prompts = [], className = '' }: WritingPromptsProps) {
+export function WritingPrompts({ ocs, prompts = [], className = '', isAdmin = false }: WritingPromptsProps) {
   const [promptType, setPromptType] = useState<'single' | 'two'>('two');
   const [prompt, setPrompt] = useState<string | null>(null);
   const [category, setCategory] = useState<string | null>(null);
@@ -365,6 +366,12 @@ export function WritingPrompts({ ocs, prompts = [], className = '' }: WritingPro
   };
 
   const handleSaveResponse = async () => {
+    // Check if admin is logged in
+    if (!isAdmin) {
+      setSaveMessage({ type: 'error', text: 'You must be logged in as admin to save responses.' });
+      return;
+    }
+
     if (!prompt || !category || !character1 || !responseText.trim()) {
       setSaveMessage({ type: 'error', text: 'Please enter a response before saving.' });
       return;
@@ -524,6 +531,15 @@ export function WritingPrompts({ ocs, prompts = [], className = '' }: WritingPro
           </div>
 
           <div className="p-4 bg-gradient-to-br from-gray-900/70 to-gray-800/50 rounded-xl border border-gray-700/60 mb-4">
+            {!isAdmin && (
+              <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/40 rounded-lg">
+                <div className="flex items-center gap-2 text-yellow-300 text-sm">
+                  <i className="fas fa-lock"></i>
+                  <span className="font-medium">Admin login required to save responses</span>
+                </div>
+              </div>
+            )}
+            
             <div className="mb-3">
               <label htmlFor="response-text" className="block text-gray-300 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-2">
                 <i className="fas fa-pen text-purple-400"></i>
@@ -533,9 +549,9 @@ export function WritingPrompts({ ocs, prompts = [], className = '' }: WritingPro
                 id="response-text"
                 value={responseText}
                 onChange={(e) => setResponseText(e.target.value)}
-                placeholder="Write your response to this prompt here..."
-                className="w-full h-40 px-3 py-2 bg-gray-900/60 border border-gray-700/60 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/20 transition-all resize-y text-sm"
-                disabled={isSaving}
+                placeholder={isAdmin ? "Write your response to this prompt here..." : "Admin login required to save responses..."}
+                className="w-full h-40 px-3 py-2 bg-gray-900/60 border border-gray-700/60 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/20 transition-all resize-y text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isSaving || !isAdmin}
               />
             </div>
 
@@ -554,7 +570,7 @@ export function WritingPrompts({ ocs, prompts = [], className = '' }: WritingPro
 
             <button
               onClick={handleSaveResponse}
-              disabled={isSaving || !responseText.trim()}
+              disabled={isSaving || !responseText.trim() || !isAdmin}
               className="w-full px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg shadow-purple-500/25 hover:shadow-xl hover:shadow-purple-500/40 disabled:hover:scale-100 disabled:shadow-none flex items-center justify-center gap-2 text-sm"
             >
               {isSaving ? (

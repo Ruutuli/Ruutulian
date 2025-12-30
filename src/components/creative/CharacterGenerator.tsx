@@ -19,6 +19,9 @@ interface GeneratedCharacter {
   occupation?: string;
   ethnicity?: string;
   setting?: string;
+  trope?: string;
+  weapon?: string;
+  element?: string;
   personality_traits: string[];
   background: string;
   age?: number;
@@ -235,6 +238,9 @@ export function CharacterGenerator({ className = '' }: { className?: string }) {
   const occupationOptions = useDropdownOptions('occupation'); // Occupation field
   const ethnicityOptions = useDropdownOptions('ethnicity_race'); // Ethnicity / Race field
   const settingOptions = useDropdownOptions('setting'); // Setting / Location field
+  const tropeOptions = useDropdownOptions('trope'); // Trope field
+  const weaponOptions = useDropdownOptions('weapon'); // Weapon field
+  const elementOptions = useDropdownOptions('element'); // Element field
   const positiveTraitsOptions = useDropdownOptions('positive_traits'); // Positive traits (FormMultiSelect)
   const neutralTraitsOptions = useDropdownOptions('neutral_traits'); // Neutral traits (FormMultiSelect)
   const negativeTraitsOptions = useDropdownOptions('negative_traits'); // Negative traits (FormMultiSelect)
@@ -258,6 +264,9 @@ export function CharacterGenerator({ className = '' }: { className?: string }) {
     occupationOptions.isLoading ||
     ethnicityOptions.isLoading ||
     settingOptions.isLoading ||
+    tropeOptions.isLoading ||
+    weaponOptions.isLoading ||
+    elementOptions.isLoading ||
     positiveTraitsOptions.isLoading ||
     neutralTraitsOptions.isLoading ||
     negativeTraitsOptions.isLoading ||
@@ -278,6 +287,9 @@ export function CharacterGenerator({ className = '' }: { className?: string }) {
     const occupations = getOptions(occupationOptions);
     const ethnicities = getOptions(ethnicityOptions);
     const settings = getOptions(settingOptions);
+    const tropes = getOptions(tropeOptions);
+    const weapons = getOptions(weaponOptions);
+    const elements = getOptions(elementOptions);
     const positive = getOptions(positiveTraitsOptions);
     const neutral = getOptions(neutralTraitsOptions);
     const negative = getOptions(negativeTraitsOptions);
@@ -304,6 +316,9 @@ export function CharacterGenerator({ className = '' }: { className?: string }) {
       occupation: randomElement(occupations) || undefined,
       ethnicity: randomElement(ethnicities) || undefined,
       setting: randomElement(settings) || undefined,
+      trope: randomElement(tropes) || undefined,
+      weapon: randomElement(weapons) || undefined,
+      element: randomElement(elements) || undefined,
       personality_traits: randomElements(allTraits, Math.min(Math.floor(Math.random() * 3) + 2, allTraits.length)), // 2-4 traits, or all if less
       background: randomElement(backgroundTemplates) || 'A character with an unknown past.',
       age: generateWeightedAge(), // Weighted toward 10-35
@@ -490,7 +505,7 @@ export function CharacterGenerator({ className = '' }: { className?: string }) {
               )}
 
               {/* Status & Role Category */}
-              {(generated.status || generated.occupation || generated.setting) && (
+              {(generated.status || generated.occupation || generated.setting || generated.trope) && (
                 <div className="p-4 rounded-lg border border-purple-500/30 bg-gradient-to-br from-gray-800/30 to-gray-900/20">
                   <div className="text-purple-400 text-xs uppercase tracking-wider mb-3 font-bold flex items-center gap-2">
                     <i className="fas fa-briefcase"></i>
@@ -513,6 +528,36 @@ export function CharacterGenerator({ className = '' }: { className?: string }) {
                       <div className="group">
                         <div className="text-gray-500 text-xs mb-1 font-medium">Setting</div>
                         <div className="text-gray-100 text-sm">{generated.setting}</div>
+                      </div>
+                    )}
+                    {generated.trope && (
+                      <div className="group">
+                        <div className="text-gray-500 text-xs mb-1 font-medium">Trope</div>
+                        <div className="text-gray-100 text-sm">{generated.trope}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Combat & Powers Category */}
+              {(generated.weapon || generated.element) && (
+                <div className="p-4 rounded-lg border border-purple-500/30 bg-gradient-to-br from-gray-800/30 to-gray-900/20">
+                  <div className="text-purple-400 text-xs uppercase tracking-wider mb-3 font-bold flex items-center gap-2">
+                    <i className="fas fa-sword"></i>
+                    Combat & Powers
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {generated.weapon && (
+                      <div className="group">
+                        <div className="text-gray-500 text-xs mb-1 font-medium">Weapon</div>
+                        <div className="text-gray-100 text-sm">{generated.weapon}</div>
+                      </div>
+                    )}
+                    {generated.element && (
+                      <div className="group">
+                        <div className="text-gray-500 text-xs mb-1 font-medium">Element</div>
+                        <div className="text-gray-100 text-sm">{generated.element}</div>
                       </div>
                     )}
                   </div>

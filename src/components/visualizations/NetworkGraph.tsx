@@ -88,11 +88,11 @@ export function NetworkGraph({
         <ForceGraph2D
           ref={graphRef}
           graphData={{ nodes, links }}
-          nodeLabel={(node: Node) => node.name}
-          nodeColor={(node: Node) => getNodeColor(node)}
-          nodeVal={(node: Node) => node.size || 5}
-          linkColor={(link: Link) => getLinkColor(link)}
-          linkWidth={(link: Link) => link.value || 2}
+          nodeLabel={(node: any) => (node as Node).name || node.id || ''}
+          nodeColor={(node: any) => getNodeColor(node as Node)}
+          nodeVal={(node: any) => (node as Node).size || 5}
+          linkColor={(link: any) => getLinkColor(link as Link)}
+          linkWidth={(link: any) => (link as Link).value || 2}
           linkDirectionalArrowLength={6}
           linkDirectionalArrowRelPos={1}
           linkCurvature={0.25}

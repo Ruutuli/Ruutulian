@@ -61,20 +61,19 @@ export function TimelineEvent({ event, isLast }: TimelineEventProps) {
   const displayDate = event.date_data ? formatDateData(event.date_data) : event.date_text;
 
   return (
-    <div className="relative flex gap-6 pb-12 last:pb-0">
-      {/* Timeline column - fixed width */}
-      <div className="flex-shrink-0 flex flex-col items-center w-12 md:w-16">
-        {/* Timeline dot */}
-        <div className="relative z-10 w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 border-2 border-gray-800 shadow-lg flex items-center justify-center">
+    <div className="relative flex items-center gap-6 pb-12 last:pb-0">
+      {/* Timeline column - fixed width, contains only the dot */}
+      <div className="flex-shrink-0 flex items-center justify-center w-12 md:w-16">
+        {/* Timeline dot - vertically centered with event card */}
+        <div className={`relative z-20 w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 border-2 border-gray-800 shadow-lg shadow-purple-500/50 flex items-center justify-center transition-all duration-300 hover:scale-110 ${
+          event.is_key_event 
+            ? 'ring-2 ring-yellow-400/50 ring-offset-2 ring-offset-gray-900 shadow-[0_0_12px_rgba(250,204,21,0.5)]' 
+            : 'hover:shadow-purple-500/70'
+        }`}>
           {event.is_key_event && (
-            <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-yellow-400 animate-pulse" />
+            <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_8px_rgba(250,204,21,0.6)]" />
           )}
         </div>
-        
-        {/* Timeline line - connects to next event */}
-        {!isLast && (
-          <div className="absolute top-5 md:top-6 left-1/2 -translate-x-1/2 w-0.5 h-full bg-gradient-to-b from-purple-500/60 via-purple-400/40 to-transparent" />
-        )}
       </div>
 
       {/* Event content */}

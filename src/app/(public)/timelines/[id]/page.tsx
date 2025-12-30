@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { getSiteConfig } from '@/lib/config/site-config';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -153,31 +154,76 @@ export default async function TimelinePage({
         ]}
       />
 
+      {/* Enhanced header section */}
       <div className="wiki-card p-6 md:p-8 mb-8">
-        {timeline.description_markdown && (
-          <div className="prose max-w-none mb-4">
-            <Markdown content={timeline.description_markdown} />
+        {/* Metadata row */}
+        <div className="flex flex-wrap items-center gap-4 mb-6 pb-6 border-b border-gray-700/50">
+          {timeline.world && (
+            <Link
+              href={`/worlds/${timeline.world.slug}`}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 rounded-lg border border-purple-500/30 transition-colors group"
+            >
+              <i className="fas fa-globe text-sm" aria-hidden="true"></i>
+              <span className="font-medium">{timeline.world.name}</span>
+              <i className="fas fa-arrow-right text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" aria-hidden="true"></i>
+            </Link>
+          )}
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-700/30 text-gray-300 rounded-lg border border-gray-600/30">
+            <i className="fas fa-calendar-alt text-sm text-purple-400" aria-hidden="true"></i>
+            <span className="font-medium">{events.length} {events.length === 1 ? 'Event' : 'Events'}</span>
           </div>
-        )}
-        {timeline.updated_at && (
-          <div className="text-sm text-gray-400 mt-4 pt-4 border-t border-gray-700/60">
-            <i className="fas fa-clock mr-1.5" aria-hidden="true"></i>
-            Last updated: {formatLastUpdated(timeline.updated_at)}
+          {timeline.updated_at && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-700/30 text-gray-400 rounded-lg border border-gray-600/30">
+              <i className="fas fa-clock text-sm" aria-hidden="true"></i>
+              <span className="text-sm">Updated {formatLastUpdated(timeline.updated_at)}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Description */}
+        {timeline.description_markdown && (
+          <div className="prose max-w-none">
+            <Markdown content={timeline.description_markdown} />
           </div>
         )}
       </div>
 
       <div className="mt-8">
         <div className="mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-100 mb-2">
-            <i className="fas fa-history mr-2 text-purple-400" aria-hidden="true"></i>
-            Timeline Events
-          </h2>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-1 h-8 bg-gradient-to-b from-purple-500 to-purple-400 rounded-full"></div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-100">
+                <i className="fas fa-history mr-2 text-purple-400" aria-hidden="true"></i>
+                Timeline Events
+              </h2>
+            </div>
+            {events.length > 0 && (
+              <span className="px-3 py-1 bg-purple-600/20 text-purple-300 rounded-lg text-sm font-medium border border-purple-500/30">
+                {events.length} {events.length === 1 ? 'event' : 'events'}
+              </span>
+            )}
+          </div>
           <div className="h-px w-full bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
         </div>
         
         {events && events.length > 0 ? (
           <div className="relative">
+            {/* Continuous timeline line - spans full height, centered on dot columns */}
+            {/* Mobile: w-12 = 3rem, center = 1.5rem, line width = 0.25rem (w-1), so left = 1.5rem - 0.125rem = 1.375rem */}
+            <div 
+              className="absolute top-0 bottom-0 w-1 bg-gradient-to-b from-purple-500 via-purple-400 to-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.4)] z-10 md:hidden"
+              style={{
+                left: '1.375rem', // Center of w-12 column (1.5rem) minus half line width (0.125rem)
+              }}
+            />
+            {/* Desktop: w-16 = 4rem, center = 2rem, line width = 0.25rem, so left = 2rem - 0.125rem = 1.875rem */}
+            <div 
+              className="hidden md:block absolute top-0 bottom-0 w-1 bg-gradient-to-b from-purple-500 via-purple-400 to-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.4)] z-10"
+              style={{
+                left: '1.875rem', // Center of w-16 column (2rem) minus half line width (0.125rem)
+              }}
+            />
             {events.map((event, index) => (
               <TimelineEvent 
                 key={event.id} 

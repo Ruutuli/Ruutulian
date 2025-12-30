@@ -140,6 +140,32 @@ body {
   .world-bg-accent {
     background-color: var(--world-accent);
   }
+
+  /* Timeline specific styles */
+  .timeline-line {
+    @apply transition-opacity duration-300;
+  }
+
+  .timeline-dot {
+    @apply transition-all duration-300;
+  }
+
+  .timeline-dot:hover {
+    @apply scale-110;
+  }
+
+  .timeline-dot-key-event {
+    animation: keyEventGlow 2s ease-in-out infinite;
+  }
+
+  @keyframes keyEventGlow {
+    0%, 100% {
+      box-shadow: 0 0 8px rgba(250, 204, 21, 0.5), 0 0 12px rgba(250, 204, 21, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 12px rgba(250, 204, 21, 0.7), 0 0 16px rgba(250, 204, 21, 0.5);
+    }
+  }
 }
 
 /* Custom scrollbar for anime wiki feel */

@@ -289,6 +289,15 @@ export function CharacterGenerator({ className = '' }: { className?: string }) {
     const tropes = getOptions(tropeOptions);
     const weapons = getOptions(weaponOptions);
     const elements = getOptions(elementOptions);
+    
+    // Debug logging to verify options are loaded
+    console.log('Character Generator Options:', {
+      settings: settings.length,
+      tropes: tropes.length,
+      weapons: weapons.length,
+      elements: elements.length,
+    });
+    
     const positive = getOptions(positiveTraitsOptions);
     const neutral = getOptions(neutralTraitsOptions);
     const negative = getOptions(negativeTraitsOptions);
@@ -318,6 +327,14 @@ export function CharacterGenerator({ className = '' }: { className?: string }) {
       background: randomElement(backgroundTemplates) || 'A character with an unknown past.',
       age: generateWeightedAge(), // Weighted toward 10-35
     };
+
+    // Debug logging to verify generated values
+    console.log('Generated Character Values:', {
+      setting: character.setting,
+      trope: character.trope,
+      weapon: character.weapon,
+      element: character.element,
+    });
 
     setGenerated(character);
     setHistory((prev) => [character, ...prev].slice(0, 10)); // Keep last 10

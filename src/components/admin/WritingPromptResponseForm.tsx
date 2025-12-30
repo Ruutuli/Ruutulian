@@ -133,16 +133,14 @@ export function WritingPromptResponseForm({ response }: WritingPromptResponseFor
               disabled={isSubmitting}
             />
             {errors.response_text && (
-              <FormMessage type="error">{errors.response_text.message}</FormMessage>
+              <FormMessage type="error" message={errors.response_text.message || ''} />
             )}
           </div>
         </FormSection>
 
-        {error && <FormMessage type="error">{error}</FormMessage>}
+        {error && <FormMessage type="error" message={error} />}
         {success && (
-          <FormMessage type="success">
-            Response updated successfully! Redirecting...
-          </FormMessage>
+          <FormMessage type="success" message="Response updated successfully! Redirecting..." />
         )}
 
         <div className="flex gap-4">

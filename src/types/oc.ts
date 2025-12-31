@@ -100,6 +100,7 @@ export interface Fanfic {
   world_id: string;
   story_alias_id?: string | null;
   external_link?: string | null;
+  image_url?: string | null;
   is_public: boolean;
   created_at: string;
   updated_at: string;
@@ -140,6 +141,7 @@ export interface FanficChapter {
   title?: string | null;
   content?: string | null;
   word_count?: number | null;
+  image_url?: string | null;
   is_published: boolean;
   published_at?: string | null;
   created_at: string;

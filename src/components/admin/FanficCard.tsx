@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { getRatingColorClasses } from '@/lib/utils/fanficRating';
 
 interface FanficCardProps {
   fanfic: {
@@ -37,25 +38,16 @@ export function FanficCard({ fanfic }: FanficCardProps) {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to delete fanfic');
+        const errorData = await response.json().catch(() => ({ error: 'Failed to delete fanfic' }));
+        throw new Error(errorData.error || `Failed to delete fanfic: ${response.statusText}`);
       }
 
+      // Refresh the page to update the list
       router.refresh();
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to delete fanfic');
+      console.error('Error deleting fanfic:', error);
+      alert(error instanceof Error ? error.message : 'Failed to delete fanfic. Please try again.');
       setDeleting(false);
-    }
-  };
-
-  const getRatingColor = (rating?: string | null) => {
-    switch (rating) {
-      case 'G': return 'bg-green-900/50 text-green-300 border-green-700';
-      case 'PG': return 'bg-blue-900/50 text-blue-300 border-blue-700';
-      case 'PG-13': return 'bg-yellow-900/50 text-yellow-300 border-yellow-700';
-      case 'R': return 'bg-orange-900/50 text-orange-300 border-orange-700';
-      case 'M': return 'bg-red-900/50 text-red-300 border-red-700';
-      default: return 'bg-gray-800/50 text-gray-400 border-gray-700';
     }
   };
 
@@ -69,7 +61,7 @@ export function FanficCard({ fanfic }: FanficCardProps) {
               {fanfic.title}
             </h3>
             {fanfic.rating && (
-              <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${getRatingColor(fanfic.rating)} flex-shrink-0`}>
+              <span className={`px-2 py-1 text-xs font-medium rounded border ${getRatingColorClasses(fanfic.rating)} flex-shrink-0`}>
                 {fanfic.rating}
               </span>
             )}

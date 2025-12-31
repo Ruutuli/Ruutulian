@@ -69,6 +69,7 @@ export async function PUT(
       world_id,
       story_alias_id,
       external_link,
+      image_url,
       is_public,
       characters,
       relationships,
@@ -122,6 +123,7 @@ export async function PUT(
         world_id,
         story_alias_id: story_alias_id || null,
         external_link: external_link || null,
+        image_url: image_url || null,
         is_public: is_public !== undefined ? is_public : false,
       })
       .eq('id', id);

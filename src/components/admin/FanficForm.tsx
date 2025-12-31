@@ -20,6 +20,74 @@ import { optionalString, optionalUrl, optionalUuid } from '@/lib/utils/zodSchema
 import { createClient } from '@/lib/supabase/client';
 import { TagsInput } from '@/components/content/TagsInput';
 import { StoryAliasSelector } from './StoryAliasSelector';
+import { getGoogleDriveImageUrls } from '@/lib/utils/googleDriveImage';
+
+// Simple image preview component for URLs
+function ImagePreview({ url, maxHeight = '200px' }: { url: string; maxHeight?: string }) {
+  const [imageError, setImageError] = useState(false);
+  const [isValidUrl, setIsValidUrl] = useState(false);
+  const [currentUrlIndex, setCurrentUrlIndex] = useState(0);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+
+  useEffect(() => {
+    setImageError(false);
+    setCurrentUrlIndex(0);
+    try {
+      const urlObj = new URL(url);
+      const isValid = urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+      setIsValidUrl(isValid);
+      
+      if (isValid) {
+        if (url.includes('drive.google.com')) {
+          const urls = getGoogleDriveImageUrls(url);
+          setImageUrls(urls);
+        } else {
+          setImageUrls([url]);
+        }
+      } else {
+        setImageUrls([]);
+      }
+    } catch {
+      setIsValidUrl(false);
+      setImageUrls([]);
+    }
+  }, [url]);
+
+  if (!url || !isValidUrl || imageUrls.length === 0) {
+    return null;
+  }
+
+  const currentUrl = imageUrls[currentUrlIndex];
+
+  const handleError = () => {
+    if (currentUrlIndex < imageUrls.length - 1) {
+      setCurrentUrlIndex(currentUrlIndex + 1);
+      setImageError(false);
+    } else {
+      setImageError(true);
+    }
+  };
+
+  const handleLoad = () => {
+    setImageError(false);
+  };
+
+  return (
+    <div className="mt-2">
+      <img
+        src={currentUrl}
+        alt="Preview"
+        className="rounded-lg border border-gray-600/60 max-w-full"
+        style={{ maxHeight }}
+        onError={handleError}
+        onLoad={handleLoad}
+      />
+      {imageError && (
+        <p className="text-sm text-red-400 mt-1">Failed to load image. Please check the URL.</p>
+      )}
+    </div>
+  );
+}
 
 const fanficSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -30,7 +98,7 @@ const fanficSchema = z.object({
   author: optionalString,
   world_id: z.string().uuid('Invalid world'),
   story_alias_id: optionalUuid,
-  external_link: optionalUrl,
+  image_url: optionalUrl,
   is_public: z.boolean(),
   characters: z.array(z.object({
     oc_id: z.string().uuid().optional().nullable(),
@@ -136,7 +204,7 @@ export function FanficForm({ fanfic }: FanficFormProps) {
     author: fanfic.author || '',
     world_id: fanfic.world_id,
     story_alias_id: fanfic.story_alias_id || null,
-    external_link: fanfic.external_link || '',
+    image_url: fanfic.image_url || '',
     is_public: fanfic.is_public,
     characters: fanfic.characters?.map(c => ({
       oc_id: c.oc_id ?? null,
@@ -156,7 +224,7 @@ export function FanficForm({ fanfic }: FanficFormProps) {
     author: '',
     world_id: '',
     story_alias_id: null,
-    external_link: '',
+    image_url: '',
     is_public: false,
     characters: [],
     relationships: [],
@@ -266,6 +334,11 @@ export function FanficForm({ fanfic }: FanficFormProps) {
     name: 'relationships',
   });
 
+  // Sync form's tag_ids field with selectedTags state (after form is initialized)
+  useEffect(() => {
+    setValue('tag_ids', selectedTags.map(t => t.id), { shouldDirty: false });
+  }, [selectedTags, setValue]);
+
   const transformData = useCallback((data: FanficFormData) => {
     return {
       title: data.title,
@@ -276,7 +349,7 @@ export function FanficForm({ fanfic }: FanficFormProps) {
       author: data.author || null,
       world_id: data.world_id,
       story_alias_id: data.story_alias_id || null,
-      external_link: data.external_link || null,
+      image_url: data.image_url || null,
       is_public: data.is_public,
       characters: data.characters || [],
       relationships: data.relationships || [],
@@ -287,12 +360,31 @@ export function FanficForm({ fanfic }: FanficFormProps) {
   const { submit, error, success, isSubmitting } = useFormSubmission({
     apiRoute: '/api/admin/fanfics',
     entity: fanfic,
-    successRoute: (data: any) => `/admin/fanfics/${data.slug}`,
+    successRoute: (data: any) => {
+      // Navigate to chapters page after saving
+      if (data?.id) {
+        return `/admin/fanfics/${data.id}/chapters`;
+      }
+      // If we're updating and don't have data.id, use the existing fanfic id
+      if (fanfic?.id) {
+        return `/admin/fanfics/${fanfic.id}/chapters`;
+      }
+      // Fallback to list if no ID available
+      return '/admin/fanfics';
+    },
     transformData,
     shouldNavigateRef: shouldNavigateAfterSaveRef,
   });
 
   const onSubmit = async (data: FanficFormData) => {
+    // Default: don't navigate (save and stay on page)
+    shouldNavigateAfterSaveRef.current = false;
+    await submit(data);
+  };
+
+  const onSubmitAndClose = async (data: FanficFormData) => {
+    // Navigate to chapters page after saving
+    shouldNavigateAfterSaveRef.current = true;
     await submit(data);
   };
 
@@ -404,16 +496,19 @@ export function FanficForm({ fanfic }: FanficFormProps) {
           </div>
 
           <div>
-            <FormLabel htmlFor="external_link">
-              External Link (AO3, FF.net, etc.)
+            <FormLabel htmlFor="image_url">
+              Image URL
             </FormLabel>
             <FormInput
-              {...register('external_link')}
-              type="url"
-              placeholder="https://..."
-              error={errors.external_link?.message}
+              {...register('image_url')}
+              placeholder="https://example.com/image.jpg"
+              error={errors.image_url?.message}
               disabled={isSubmitting}
+              helpText="Optional: Enter a URL to an image for this fanfic"
             />
+            {watch('image_url') && (
+              <ImagePreview url={watch('image_url') || ''} maxHeight="300px" />
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -598,6 +693,8 @@ export function FanficForm({ fanfic }: FanficFormProps) {
                   return fullTag || selectedTags.find(st => st.id === tag.id);
                 }).filter((tag): tag is Tag => tag !== undefined);
                 setSelectedTags(fullTags);
+                // Sync form's tag_ids field with selected tags
+                setValue('tag_ids', fullTags.map(t => t.id), { shouldDirty: true });
               }}
               onCreateTag={async (name) => {
                 const { data, error } = await supabase
@@ -622,8 +719,21 @@ export function FanficForm({ fanfic }: FanficFormProps) {
             isLoading={isSubmitting}
             disabled={isSubmitting}
           >
+            <i className="fas fa-save mr-2"></i>
             {fanfic ? 'Update Fanfic' : 'Create Fanfic'}
           </FormButton>
+          {fanfic && (
+            <FormButton
+              type="button"
+              variant="primary"
+              onClick={handleSubmit(onSubmitAndClose)}
+              isLoading={isSubmitting}
+              disabled={isSubmitting}
+            >
+              <i className="fas fa-save mr-2"></i>
+              Save and Close
+            </FormButton>
+          )}
           <FormButton
             type="button"
             variant="secondary"

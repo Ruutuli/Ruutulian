@@ -1,6 +1,8 @@
+import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { FanficCard } from '@/components/fanfic/FanficCard';
+import { FanficFilters } from '@/components/filters/FanficFilters';
 import { generatePageMetadata } from '@/lib/config/metadata-helpers';
 import { getSiteConfig } from '@/lib/config/site-config';
 import type { Fanfic } from '@/types/oc';
@@ -25,6 +27,7 @@ export default async function FanficsPage({ searchParams }: FanficsPageProps) {
   const supabase = await createClient();
 
   // Extract filter values from searchParams
+  const search = typeof searchParams.search === 'string' ? searchParams.search : '';
   const worldId = typeof searchParams.world === 'string' ? searchParams.world : '';
   const rating = typeof searchParams.rating === 'string' ? searchParams.rating : '';
   const tagId = typeof searchParams.tag === 'string' ? searchParams.tag : '';
@@ -52,8 +55,10 @@ export default async function FanficsPage({ searchParams }: FanficsPageProps) {
   const { data: fanficsData } = await query
     .order('created_at', { ascending: false });
 
-  // Filter by tag on client side if needed (due to complexity of junction table filtering)
+  // Filter by tag and search on client side if needed (due to complexity of junction table filtering)
   let filteredFanfics = fanficsData || [];
+  
+  // Filter by tag
   if (tagId) {
     filteredFanfics = filteredFanfics.filter((fanfic: any) => {
       const tags = fanfic.tags || [];
@@ -61,6 +66,19 @@ export default async function FanficsPage({ searchParams }: FanficsPageProps) {
         const tag = ft.tag;
         return tag && (Array.isArray(tag) ? tag.some((t: any) => t.id === tagId) : tag.id === tagId);
       });
+    });
+  }
+
+  // Filter by search term (title, author, or alternative titles)
+  if (search) {
+    const searchLower = search.toLowerCase();
+    filteredFanfics = filteredFanfics.filter((fanfic: any) => {
+      const title = fanfic.title?.toLowerCase() || '';
+      const author = fanfic.author?.toLowerCase() || '';
+      const altTitles = Array.isArray(fanfic.alternative_titles) 
+        ? fanfic.alternative_titles.join(' ').toLowerCase() 
+        : '';
+      return title.includes(searchLower) || author.includes(searchLower) || altTitles.includes(searchLower);
     });
   }
 
@@ -95,9 +113,17 @@ export default async function FanficsPage({ searchParams }: FanficsPageProps) {
         ]}
       />
 
+      <Suspense fallback={<div className="wiki-card p-6 mb-6">Loading filters...</div>}>
+        <FanficFilters />
+      </Suspense>
+
       {fanfics.length === 0 ? (
         <div className="wiki-card p-12 text-center">
-          <p className="text-gray-500 text-lg">No fanfics available yet.</p>
+          <p className="text-gray-500 text-lg">
+            {fanficsData && fanficsData.length > 0
+              ? 'No fanfics match your filters.'
+              : 'No fanfics available yet.'}
+          </p>
         </div>
       ) : (
         <section className="mt-8">

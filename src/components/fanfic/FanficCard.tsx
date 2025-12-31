@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import type { Fanfic } from '@/types/oc';
+import { getRatingColorClasses } from '@/lib/utils/fanficRating';
 
 interface FanficCardProps {
   fanfic: Fanfic;
@@ -15,25 +16,14 @@ export function FanficCard({ fanfic }: FanficCardProps) {
     setIsLoading(true);
   };
 
-  const getRatingColor = (rating?: string | null) => {
-    switch (rating) {
-      case 'G': return 'bg-green-900/70 text-green-200 border-green-700';
-      case 'PG': return 'bg-blue-900/70 text-blue-200 border-blue-700';
-      case 'PG-13': return 'bg-yellow-900/70 text-yellow-200 border-yellow-700';
-      case 'R': return 'bg-orange-900/70 text-orange-200 border-orange-700';
-      case 'M': return 'bg-red-900/70 text-red-200 border-red-700';
-      default: return 'bg-gray-800/70 text-gray-300 border-gray-700';
-    }
-  };
-
   return (
     <Link
       href={`/fanfics/${fanfic.slug}`}
       prefetch={true}
       onClick={handleClick}
-      className="relative block"
+      className="relative block group"
     >
-      <div className="wiki-card wiki-card-hover overflow-hidden relative">
+      <div className="wiki-card overflow-hidden relative bg-gray-800/95 border border-gray-700/50 hover:border-purple-500/50 transition-all duration-200">
         {isLoading && (
           <div className="absolute inset-0 bg-black/60 z-10 flex items-center justify-center backdrop-blur-sm">
             <div className="flex flex-col items-center gap-3">
@@ -42,44 +32,100 @@ export function FanficCard({ fanfic }: FanficCardProps) {
             </div>
           </div>
         )}
-        <div className="p-4">
-          <div className="flex items-start justify-between gap-3 mb-2">
-            <h3 className="text-xl font-bold text-gray-100 line-clamp-2 flex-1">
-              {fanfic.title}
-            </h3>
-            {fanfic.rating && (
-              <span className={`px-2 py-1 text-xs font-semibold rounded-full border flex-shrink-0 ${getRatingColor(fanfic.rating)}`}>
-                {fanfic.rating}
-              </span>
+        <div className="p-6 space-y-4">
+          {/* Title and Rating */}
+          <div className="space-y-2">
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="text-lg font-semibold text-gray-100 leading-tight line-clamp-2 flex-1 group-hover:text-purple-300 transition-colors">
+                {fanfic.title}
+              </h3>
+              {fanfic.rating && (
+                <span className={`px-2.5 py-1 text-xs font-medium rounded border flex-shrink-0 ${getRatingColorClasses(fanfic.rating)}`}>
+                  {fanfic.rating}
+                </span>
+              )}
+            </div>
+            
+            {/* Author */}
+            {fanfic.author && (
+              <p className="text-sm text-gray-400">
+                by <span className="text-gray-300">{fanfic.author}</span>
+              </p>
             )}
           </div>
+
+          {/* Alternative Titles */}
           {fanfic.alternative_titles && fanfic.alternative_titles.length > 0 && (
-            <div className="mb-2">
-              <p className="text-sm text-gray-400 italic">
-                Also known as: {fanfic.alternative_titles.join(', ')}
+            <div>
+              <p className="text-xs text-gray-500 italic line-clamp-1">
+                {fanfic.alternative_titles.join(', ')}
               </p>
             </div>
           )}
+
+          {/* Summary */}
           {fanfic.summary && (
-            <div className="mb-3">
-              <p className="text-sm text-gray-300 line-clamp-3">
+            <div>
+              <p className="text-sm text-gray-300 leading-relaxed line-clamp-3">
                 {fanfic.summary}
               </p>
             </div>
           )}
-          {fanfic.world && (
-            <div className="mb-2">
-              <span className="px-2 py-1 text-xs bg-purple-600/80 text-white rounded">
-                {fanfic.world.name}
-              </span>
-            </div>
-          )}
-          <div className="flex items-center gap-4 text-xs text-gray-400">
-            {fanfic.characters && fanfic.characters.length > 0 && (
-              <span>{fanfic.characters.length} character{fanfic.characters.length !== 1 ? 's' : ''}</span>
+
+          {/* Metadata Section */}
+          <div className="space-y-3 pt-2 border-t border-gray-700/50">
+            {/* World/Fandom */}
+            {fanfic.world && (
+              <div>
+                <span className="text-xs text-gray-500 uppercase tracking-wide">Fandom:</span>
+                <div className="mt-1">
+                  <span className="inline-block px-2.5 py-1 text-xs font-medium bg-purple-600/20 text-purple-300 border border-purple-600/30 rounded">
+                    {fanfic.world.name}
+                  </span>
+                </div>
+              </div>
             )}
+
+            {/* Characters */}
+            {fanfic.characters && fanfic.characters.length > 0 && (
+              <div>
+                <span className="text-xs text-gray-500 uppercase tracking-wide">Characters:</span>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {fanfic.characters.slice(0, 4).map((char, idx) => (
+                    <span key={idx} className="text-xs text-gray-300">
+                      {char.oc?.name || char.name}
+                      {idx < Math.min(fanfic.characters.length, 4) - 1 ? ',' : ''}
+                    </span>
+                  ))}
+                  {fanfic.characters.length > 4 && (
+                    <span className="text-xs text-gray-500">
+                      +{fanfic.characters.length - 4} more
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Tags - Limited display */}
             {fanfic.tags && fanfic.tags.length > 0 && (
-              <span>{fanfic.tags.length} tag{fanfic.tags.length !== 1 ? 's' : ''}</span>
+              <div>
+                <span className="text-xs text-gray-500 uppercase tracking-wide">Tags:</span>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {fanfic.tags.slice(0, 5).map((tag) => (
+                    <span
+                      key={tag.id}
+                      className="inline-block px-2 py-0.5 text-xs text-gray-400 bg-gray-700/50 border border-gray-600/50 rounded"
+                    >
+                      {tag.name}
+                    </span>
+                  ))}
+                  {fanfic.tags.length > 5 && (
+                    <span className="text-xs text-gray-500">
+                      +{fanfic.tags.length - 5} more
+                    </span>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </div>

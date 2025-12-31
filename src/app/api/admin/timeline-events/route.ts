@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { validateRequiredFields, errorResponse, successResponse, handleError } from '@/lib/api/route-helpers';
 import { checkAuth } from '@/lib/auth/require-auth';
 import { NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -164,7 +165,7 @@ export async function POST(request: Request) {
       if (charError) {
         // Event was created, but character associations failed
         // We'll still return the event, but log the error
-        console.error('Failed to associate characters:', charError);
+        logger.error('API', 'Failed to associate characters', charError);
       }
     }
 

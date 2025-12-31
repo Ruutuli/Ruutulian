@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { logger } from '@/lib/logger';
 
 // Generate a seed based on the current date in EST (same seed for the same day)
 function getDaySeed(): number {
@@ -63,7 +64,7 @@ export async function GET(request: Request) {
       .eq('is_public', true);
 
     if (error) {
-      console.error('Error fetching OCs:', error);
+      logger.error('API', 'Error fetching OCs', error);
       return NextResponse.json({ error: 'Failed to fetch characters' }, { status: 500 });
     }
 
@@ -84,7 +85,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ oc: randomOC });
   } catch (error) {
-    console.error('Error in random character API:', error);
+    logger.error('API', 'Error in random character API', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

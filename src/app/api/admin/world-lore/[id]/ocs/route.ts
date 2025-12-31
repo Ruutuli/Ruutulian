@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { checkAuth } from '@/lib/auth/require-auth';
+import { logger } from '@/lib/logger';
 
 export async function POST(
   request: Request,
@@ -46,7 +47,7 @@ export async function POST(
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error adding OC to lore entry:', error);
+    logger.error('API', 'Error adding OC to lore entry', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
@@ -90,7 +91,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error removing OC from lore entry:', error);
+    logger.error('API', 'Error removing OC from lore entry', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }

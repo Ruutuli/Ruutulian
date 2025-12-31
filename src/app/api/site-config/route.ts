@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { errorResponse, successResponse, handleError } from '@/lib/api/route-helpers';
 import { NextResponse } from 'next/server';
 import { unstable_cache } from 'next/cache';
+import { logger } from '@/lib/logger';
 
 // Cache the site config fetch for 60 seconds
 const getCachedSiteConfig = unstable_cache(
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
     }
 
     if (error || !data) {
-      console.error('[GET /api/site-config] Error fetching site settings:', error);
+      logger.error('API', 'Error fetching site settings', error);
       return NextResponse.json(
         {
           success: false,
@@ -79,7 +80,7 @@ export async function GET(request: Request) {
       }
     );
   } catch (error) {
-    console.error('[GET /api/site-config] Unexpected error:', error);
+    logger.error('API', 'Unexpected error in site-config', error);
     return handleError(error, 'Failed to fetch site config');
   }
 }

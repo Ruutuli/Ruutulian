@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { checkAuth } from '@/lib/auth/require-auth';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
     const { data, error } = await query;
 
     if (error) {
-      console.error('Supabase error:', error);
+      logger.error('API', 'Supabase error fetching identities', error);
       return NextResponse.json(
         { error: error.message || 'Failed to fetch identities' },
         { status: 400 }
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(data || []);
   } catch (error) {
-    console.error('Error fetching identities:', error);
+    logger.error('API', 'Error fetching identities', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      console.error('Supabase error:', error);
+      logger.error('API', 'Supabase error creating identity', error);
       return NextResponse.json(
         { error: error.message || 'Failed to create identity' },
         { status: 400 }
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error creating identity:', error);
+    logger.error('API', 'Error creating identity', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }

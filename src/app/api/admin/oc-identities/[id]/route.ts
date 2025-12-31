@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { checkAuth } from '@/lib/auth/require-auth';
+import { logger } from '@/lib/logger';
 
 export async function GET(
   request: Request,
@@ -32,7 +33,7 @@ export async function GET(
       .single();
 
     if (error) {
-      console.error('Supabase error:', error);
+      logger.error('API', 'Supabase error fetching identity', error);
       return NextResponse.json(
         { error: error.message || 'Failed to fetch identity' },
         { status: 400 }
@@ -45,7 +46,7 @@ export async function GET(
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching identity:', error);
+    logger.error('API', 'Error fetching identity', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
@@ -87,7 +88,7 @@ export async function PUT(
       .single();
 
     if (error) {
-      console.error('Supabase error:', error);
+      logger.error('API', 'Supabase error updating identity', error);
       return NextResponse.json(
         { error: error.message || 'Failed to update identity' },
         { status: 400 }
@@ -100,7 +101,7 @@ export async function PUT(
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error updating identity:', error);
+    logger.error('API', 'Error updating identity', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
@@ -133,7 +134,7 @@ export async function DELETE(
       .limit(1);
 
     if (checkError) {
-      console.error('Supabase error:', checkError);
+      logger.error('API', 'Supabase error checking identity versions', checkError);
       return NextResponse.json(
         { error: checkError.message || 'Failed to check identity versions' },
         { status: 400 }
@@ -153,7 +154,7 @@ export async function DELETE(
       .eq('id', id);
 
     if (error) {
-      console.error('Supabase error:', error);
+      logger.error('API', 'Supabase error deleting identity', error);
       return NextResponse.json(
         { error: error.message || 'Failed to delete identity' },
         { status: 400 }
@@ -162,7 +163,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting identity:', error);
+    logger.error('API', 'Error deleting identity', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }

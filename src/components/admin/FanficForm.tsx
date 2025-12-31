@@ -18,6 +18,7 @@ import { FormMessage } from './forms/FormMessage';
 import { FormAutocomplete } from './forms/FormAutocomplete';
 import { optionalString, optionalUrl, optionalUuid } from '@/lib/utils/zodSchemas';
 import { createClient } from '@/lib/supabase/client';
+import { logger } from '@/lib/logger';
 import { TagsInput } from '@/components/content/TagsInput';
 import { StoryAliasSelector } from './StoryAliasSelector';
 import { getGoogleDriveImageUrls } from '@/lib/utils/googleDriveImage';
@@ -165,13 +166,12 @@ export function FanficForm({ fanfic }: FanficFormProps) {
         .eq('category', 'fanfic')
         .order('name');
       if (tagsError) {
-        console.error('Error loading fanfic tags:', tagsError);
+        logger.error('Component', 'FanficForm: Error loading fanfic tags', tagsError);
       }
       if (tagsData) {
-        console.log('Fanfic tags loaded:', tagsData.length, tagsData.map(t => t.name));
         setAvailableTags(tagsData);
       } else {
-        console.warn('No fanfic tags found in database. Make sure the migration has been run.');
+        logger.warn('Component', 'FanficForm: No fanfic tags found in database. Make sure the migration has been run.');
       }
 
       // If editing, load existing data
@@ -275,7 +275,7 @@ export function FanficForm({ fanfic }: FanficFormProps) {
                 slugParts.push(data.slug);
               }
             } catch (err) {
-              console.error('Error fetching story alias slug:', err);
+              logger.error('Component', 'FanficForm: Error fetching story alias slug', err);
             }
           }
           
@@ -287,7 +287,7 @@ export function FanficForm({ fanfic }: FanficFormProps) {
             previousSlugRef.current = newSlug;
           }
         } catch (err) {
-          console.error('Error generating slug:', err);
+          logger.error('Component', 'FanficForm: Error generating slug', err);
         }
       };
       

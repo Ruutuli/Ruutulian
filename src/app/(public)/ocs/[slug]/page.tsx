@@ -66,11 +66,12 @@ export async function generateMetadata({
   
   // Use history_summary for description, clean up markdown syntax
   const descriptionText = oc.history_summary || '';
+  // Handle world as array (Supabase relationship syntax returns arrays)
+  const worldArray = Array.isArray(oc.world) ? oc.world : (oc.world ? [oc.world] : []);
+  const world = worldArray[0] as { name: string; slug: string } | undefined;
   const description = descriptionText
     ? descriptionText.substring(0, 155).replace(/\n/g, ' ').replace(/[#*`]/g, '').trim() + (descriptionText.length > 155 ? '...' : '')
-    : `${oc.name}${oc.world ? ` from ${(oc.world as { name: string }).name}` : ''} - Original Character on ${config.websiteName}`;
-
-  const world = oc.world as { name: string; slug: string } | null;
+    : `${oc.name}${world ? ` from ${world.name}` : ''} - Original Character on ${config.websiteName}`;
   const ogImageUrl = getAbsoluteUrl(`/api/og/oc/${resolvedParams.slug}`, baseUrl);
 
   return generateDetailPageMetadata({

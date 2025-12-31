@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { validateRequiredFields, checkSlugUniquenessExcluding, errorResponse, successResponse, handleError } from '@/lib/api/route-helpers';
 import { checkAuth } from '@/lib/auth/require-auth';
 import { NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 export async function GET(
   request: Request,
@@ -172,7 +173,7 @@ export async function PUT(
           .insert(ocInserts);
 
         if (ocError) {
-          console.error('Failed to update OC associations:', ocError);
+          logger.error('API', 'Failed to update OC associations', ocError);
         }
       }
     }
@@ -197,7 +198,7 @@ export async function PUT(
           .insert(eventInserts);
 
         if (eventError) {
-          console.error('Failed to update timeline event associations:', eventError);
+          logger.error('API', 'Failed to update timeline event associations', eventError);
         }
       }
     }

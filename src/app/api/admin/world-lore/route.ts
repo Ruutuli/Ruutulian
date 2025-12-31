@@ -3,6 +3,7 @@ import { validateRequiredFields, checkSlugUniqueness, errorResponse, successResp
 
 import { checkAuth } from '@/lib/auth/require-auth';
 import { NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -152,7 +153,7 @@ export async function POST(request: Request) {
       .insert(ocInserts);
 
     if (ocError) {
-      console.error('Failed to associate OCs:', ocError);
+      logger.error('API', 'Failed to associate OCs', ocError);
     }
   }
 
@@ -168,7 +169,7 @@ export async function POST(request: Request) {
       .insert(eventInserts);
 
     if (eventError) {
-      console.error('Failed to associate timeline events:', eventError);
+      logger.error('API', 'Failed to associate timeline events', eventError);
     }
   }
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -18,13 +19,13 @@ export async function GET(request: Request) {
     const { data: ocs, error } = await query.order('name');
 
     if (error) {
-      console.error('Error fetching OCs:', error);
+      logger.error('API', 'Error fetching OCs', error);
       return NextResponse.json({ error: 'Failed to fetch characters' }, { status: 500 });
     }
 
     return NextResponse.json({ ocs: ocs || [] });
   } catch (error) {
-    console.error('Error in OCs API:', error);
+    logger.error('API', 'Error in OCs API', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

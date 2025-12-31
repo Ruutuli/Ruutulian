@@ -8,6 +8,7 @@ import { FormInput } from './forms/FormInput';
 import { FormTextarea } from './forms/FormTextarea';
 import { FormMessage } from './forms/FormMessage';
 import { getGoogleDriveImageUrls } from '@/lib/utils/googleDriveImage';
+import { logger } from '@/lib/logger';
 
 interface FanficChaptersManagerProps {
   fanficId: string;
@@ -115,7 +116,7 @@ export function FanficChaptersManager({ fanficId }: FanficChaptersManagerProps) 
       const data = await response.json();
       setChapters(data.chapters || []);
     } catch (err) {
-      console.error('Error loading chapters:', err);
+      logger.error('Component', 'FanficChaptersManager: Error loading chapters', err);
       setError(err instanceof Error ? err.message : 'Failed to load chapters');
     } finally {
       setIsLoading(false);

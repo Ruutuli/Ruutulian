@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -24,13 +25,13 @@ export async function GET(request: Request) {
       .eq('is_public', true);
 
     if (error) {
-      console.error('Error fetching OCs:', error);
+      logger.error('API', 'Error fetching OCs', error);
       return NextResponse.json({ error: 'Failed to fetch characters' }, { status: 500 });
     }
 
     return NextResponse.json({ ocs: ocs || [] });
   } catch (error) {
-    console.error('Error in batch OCs API:', error);
+    logger.error('API', 'Error in batch OCs API', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

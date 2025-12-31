@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { errorResponse, successResponse, handleError } from '@/lib/api/route-helpers';
 import { checkAuth } from '@/lib/auth/require-auth';
 import { NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 export async function GET(
   request: Request,
@@ -147,7 +148,7 @@ export async function PUT(
           .insert(characterInserts);
 
         if (charError) {
-          console.error('Failed to update character associations:', charError);
+          logger.error('API', 'Failed to update character associations', charError);
         }
       }
     }

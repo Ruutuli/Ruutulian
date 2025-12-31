@@ -146,13 +146,20 @@ function calculateOCProgress(oc: OC): OCProgressItem {
   };
 }
 
-// Generate a seed based on the current date (same seed for the same day)
+// Generate a seed based on the current date in EST (same seed for the same day)
 function getDaySeed(): number {
   const today = new Date();
-  // Use ISO date string (YYYY-MM-DD) for consistent day-based seeding
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed, so add 1
-  const day = String(today.getDate()).padStart(2, '0');
+  // Get date components in EST timezone
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', // EST/EDT
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = formatter.formatToParts(today);
+  const year = parts.find(p => p.type === 'year')?.value || '';
+  const month = parts.find(p => p.type === 'month')?.value || '';
+  const day = parts.find(p => p.type === 'day')?.value || '';
   const dateString = `${year}-${month}-${day}`;
   
   // Better hash function to convert date string to number
@@ -165,12 +172,20 @@ function getDaySeed(): number {
   return Math.abs(hash);
 }
 
-// Get a unique day identifier for comparison
+// Get a unique day identifier for comparison in EST
 function getDayIdentifier(): string {
   const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
+  // Get date components in EST timezone
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', // EST/EDT
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = formatter.formatToParts(today);
+  const year = parts.find(p => p.type === 'year')?.value || '';
+  const month = parts.find(p => p.type === 'month')?.value || '';
+  const day = parts.find(p => p.type === 'day')?.value || '';
   return `${year}-${month}-${day}`;
 }
 

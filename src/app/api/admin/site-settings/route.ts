@@ -6,6 +6,9 @@ import { NextResponse } from 'next/server';
 // Ensure runtime is set to nodejs for proper route handler execution
 export const runtime = 'nodejs';
 
+// Force dynamic rendering to ensure route handlers are properly recognized
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const supabase = createAdminClient();

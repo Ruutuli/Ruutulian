@@ -34,7 +34,7 @@ export function FanficCard({ fanfic }: FanficCardProps) {
         )}
         {/* Fanfic Image */}
         {fanfic.image_url && (
-          <div className="w-full h-[250px] overflow-hidden">
+          <div className="w-full h-[100px] overflow-hidden">
             <img
               src={fanfic.image_url}
               alt={fanfic.title}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, FormProvider, useFieldArray, Controller, Path } from 'react-hook-form';
+import { useForm, FormProvider, useFieldArray, Controller, Path, FieldArrayPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { Fanfic, World, OC, Tag, StoryAlias } from '@/types/oc';
@@ -253,7 +253,7 @@ export function FanficForm({ fanfic }: FanficFormProps) {
 
   const { fields: altTitleFields, append: appendAltTitle, remove: removeAltTitle } = useFieldArray({
     control,
-    name: 'alternative_titles' as const,
+    name: 'alternative_titles' as any,
   });
 
   const { fields: characterFields, append: appendCharacter, remove: removeCharacter } = useFieldArray({

@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS ocs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   slug TEXT NOT NULL,
-  world_id UUID NOT NULL REFERENCES worlds(id) ON DELETE CASCADE,
+  world_id UUID REFERENCES worlds(id) ON DELETE CASCADE,
   world_name TEXT, -- Denormalized for easier querying
   identity_id UUID REFERENCES oc_identities(id) ON DELETE SET NULL,
   series_type TEXT CHECK (series_type IN ('canon', 'original')),

@@ -9,27 +9,38 @@ ALTER TABLE timeline_event_characters
   CHECK (oc_id IS NOT NULL OR custom_name IS NOT NULL);
 
 -- Update unique constraint to allow multiple custom names per event
--- Drop the constraint (which will also drop the underlying index)
--- Handle both constraint and index cases
+-- Drop the unique constraint on (timeline_event_id, oc_id) if it exists
+-- This finds the constraint by checking the columns, not the name
 DO $$ 
+DECLARE
+  constraint_name TEXT;
 BEGIN
-  -- Try to drop as constraint first
-  IF EXISTS (
-    SELECT 1 FROM pg_constraint 
-    WHERE conname = 'timeline_event_characters_timeline_event_id_oc_id_key'
-    AND conrelid = 'timeline_event_characters'::regclass
-  ) THEN
-    ALTER TABLE timeline_event_characters 
-    DROP CONSTRAINT timeline_event_characters_timeline_event_id_oc_id_key;
-  END IF;
+  -- Find the unique constraint on (timeline_event_id, oc_id)
+  SELECT conname INTO constraint_name
+  FROM pg_constraint c
+  JOIN pg_class t ON c.conrelid = t.oid
+  JOIN pg_namespace n ON t.relnamespace = n.oid
+  WHERE n.nspname = 'public'
+    AND t.relname = 'timeline_event_characters'
+    AND c.contype = 'u'
+    AND array_length(c.conkey, 1) = 2
+    AND EXISTS (
+      SELECT 1 FROM pg_attribute a1
+      WHERE a1.attrelid = c.conrelid
+        AND a1.attnum = c.conkey[1]
+        AND a1.attname = 'timeline_event_id'
+    )
+    AND EXISTS (
+      SELECT 1 FROM pg_attribute a2
+      WHERE a2.attrelid = c.conrelid
+        AND a2.attnum = c.conkey[2]
+        AND a2.attname = 'oc_id'
+    )
+  LIMIT 1;
   
-  -- If it exists as an index (without constraint), drop it
-  IF EXISTS (
-    SELECT 1 FROM pg_indexes 
-    WHERE indexname = 'timeline_event_characters_timeline_event_id_oc_id_key'
-    AND tablename = 'timeline_event_characters'
-  ) THEN
-    DROP INDEX IF EXISTS timeline_event_characters_timeline_event_id_oc_id_key;
+  -- Drop the constraint if found
+  IF constraint_name IS NOT NULL THEN
+    EXECUTE format('ALTER TABLE timeline_event_characters DROP CONSTRAINT %I', constraint_name);
   END IF;
 END $$;
 

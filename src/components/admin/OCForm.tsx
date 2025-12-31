@@ -641,20 +641,20 @@ function OCAutocompleteInput({
     setInputValue(newValue);
     setShowSuggestions(true);
     setHighlightedIndex(-1);
-    setValue(`${fieldPath}.${index}.name`, newValue);
+    setValue(`${fieldPath}.${index}.name` as any, newValue);
     // Clear OC link if name is manually changed
     if (ocIdValue) {
-      setValue(`${fieldPath}.${index}.oc_id`, '');
-      setValue(`${fieldPath}.${index}.oc_slug`, '');
+      setValue(`${fieldPath}.${index}.oc_id` as any, '');
+      setValue(`${fieldPath}.${index}.oc_slug` as any, '');
     }
   };
 
   const handleSelectOC = (oc: { id: string; name: string; slug: string }) => {
     setInputValue(oc.name);
     setShowSuggestions(false);
-    setValue(`${fieldPath}.${index}.name`, oc.name);
-    setValue(`${fieldPath}.${index}.oc_id`, oc.id);
-    setValue(`${fieldPath}.${index}.oc_slug`, oc.slug);
+    setValue(`${fieldPath}.${index}.name` as any, oc.name);
+    setValue(`${fieldPath}.${index}.oc_id` as any, oc.id);
+    setValue(`${fieldPath}.${index}.oc_slug` as any, oc.slug);
     inputRef.current?.focus();
   };
 

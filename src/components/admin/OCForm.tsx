@@ -2397,8 +2397,8 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
             });
           }
         });
-      } else if (error?.message) {
-        errorMessages.push(`${field}: ${error.message}`);
+      } else if (error && typeof error === 'object' && 'message' in error && typeof (error as any).message === 'string') {
+        errorMessages.push(`${field}: ${(error as any).message}`);
       }
     });
     

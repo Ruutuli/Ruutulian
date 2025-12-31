@@ -2391,8 +2391,8 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
         error.forEach((item, index) => {
           if (item && typeof item === 'object') {
             Object.entries(item).forEach(([subField, subError]) => {
-              if (subError?.message) {
-                errorMessages.push(`${field}[${index}].${subField}: ${subError.message}`);
+              if (subError && typeof subError === 'object' && 'message' in subError && typeof (subError as any).message === 'string') {
+                errorMessages.push(`${field}[${index}].${subField}: ${(subError as any).message}`);
               }
             });
           }

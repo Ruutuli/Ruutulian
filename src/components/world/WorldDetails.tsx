@@ -392,7 +392,7 @@ export function WorldDetails({ world }: WorldDetailsProps) {
       )}
 
       {/* Additional Information Section */}
-      {(world.themes || world.inspirations || world.current_era_status || world.notes || world.theme_song || world.playlist) && (
+      {(world.themes || world.inspirations || world.current_era_status || world.notes || world.theme_song || world.playlist || world.pinterest_board) && (
         <SectionWithImage
           title="Additional Information"
           icon="fas fa-info"
@@ -489,6 +489,22 @@ export function WorldDetails({ world }: WorldDetailsProps) {
                   </>
                 ) : (
                   <span>{world.playlist}</span>
+                )}
+              </div>
+            )}
+            {world.pinterest_board && (
+              <div>
+                <h3 className="text-lg font-bold text-gray-100 mb-2 flex items-center gap-2">
+                  <i className="fab fa-pinterest text-red-500"></i>
+                  Pinterest Board
+                </h3>
+                {world.pinterest_board.startsWith('http') ? (
+                  <a href={world.pinterest_board} target="_blank" rel="noopener noreferrer" className="text-red-400 hover:text-red-300 underline flex items-center gap-2">
+                    <i className="fab fa-pinterest text-sm"></i>
+                    View Pinterest Board
+                  </a>
+                ) : (
+                  <span>{world.pinterest_board}</span>
                 )}
               </div>
             )}

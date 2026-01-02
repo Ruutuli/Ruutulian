@@ -2091,7 +2091,7 @@ export default async function OCDetailPage({
             )}
 
             {/* Media Section - Additional Fields */}
-            {(oc.seiyuu || oc.voice_actor || oc.theme_song || oc.inspirations || oc.design_notes || oc.name_meaning_etymology || oc.creator_notes) && (
+            {(oc.seiyuu || oc.voice_actor || oc.theme_song || oc.pinterest_board || oc.inspirations || oc.design_notes || oc.name_meaning_etymology || oc.creator_notes) && (
               <div className="wiki-card p-4 md:p-6 lg:p-8" suppressHydrationWarning>
                 <h2 id="media" className="wiki-section-header scroll-mt-20">
                   <i className="fas fa-film text-purple-400"></i>
@@ -2143,6 +2143,22 @@ export default async function OCDetailPage({
                         </>
                       ) : (
                         <span>{oc.theme_song}</span>
+                      )}
+                    </div>
+                  )}
+                  {oc.pinterest_board && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-200 mb-2 flex items-center gap-2">
+                        <i className="fab fa-pinterest text-red-500"></i>
+                        Pinterest Board
+                      </h3>
+                      {oc.pinterest_board.startsWith('http') ? (
+                        <a href={oc.pinterest_board} target="_blank" rel="noopener noreferrer" className="text-red-400 hover:text-red-300 underline flex items-center gap-2">
+                          <i className="fab fa-pinterest text-sm"></i>
+                          View Pinterest Board
+                        </a>
+                      ) : (
+                        <span>{oc.pinterest_board}</span>
                       )}
                     </div>
                   )}

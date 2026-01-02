@@ -102,7 +102,7 @@ export function TableOfContents({ oc }: TableOfContentsProps) {
       id: 'media',
       title: 'Media & Additional Information',
       icon: 'fas fa-film',
-      exists: !!(oc.seiyuu || oc.voice_actor || oc.theme_song || oc.inspirations || oc.design_notes || oc.name_meaning_etymology || oc.creator_notes)
+      exists: !!(oc.seiyuu || oc.voice_actor || oc.theme_song || oc.pinterest_board || oc.inspirations || oc.design_notes || oc.name_meaning_etymology || oc.creator_notes)
     },
     {
       id: 'trivia',

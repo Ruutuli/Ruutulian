@@ -77,6 +77,7 @@ const worldSchema = z.object({
   // Media
   theme_song: optionalString,
   playlist: optionalString,
+  pinterest_board: optionalString,
   // World field system (definitions - read-only in this form)
   world_fields: z.any().optional(),
   // Modular fields for world field system values
@@ -235,6 +236,7 @@ export function WorldForm({ world }: WorldFormProps) {
         notes: data.notes || null,
         theme_song: data.theme_song || null,
         playlist: data.playlist || null,
+        pinterest_board: data.pinterest_board || null,
         canon_status: data.canon_status || null,
         timeline_era: data.timeline_era || null,
         power_source: data.power_source || null,
@@ -289,6 +291,7 @@ export function WorldForm({ world }: WorldFormProps) {
         notes: storyData.notes ?? world.notes,
         theme_song: world.theme_song ?? null,
         playlist: world.playlist ?? null,
+        pinterest_board: world.pinterest_board ?? null,
         canon_status: storyData.canon_status ?? world.canon_status,
         timeline_era: storyData.timeline_era ?? world.timeline_era,
         power_source: storyData.power_source ?? world.power_source,
@@ -345,6 +348,7 @@ export function WorldForm({ world }: WorldFormProps) {
       notes: getDefaultValue(mergedWorldData.notes),
       theme_song: getDefaultValue(mergedWorldData.theme_song),
       playlist: getDefaultValue(mergedWorldData.playlist),
+      pinterest_board: getDefaultValue(mergedWorldData.pinterest_board),
       canon_status: getDefaultValue(mergedWorldData.canon_status),
       timeline_era: getDefaultValue(mergedWorldData.timeline_era),
       power_source: getDefaultValue(mergedWorldData.power_source),
@@ -393,6 +397,7 @@ export function WorldForm({ world }: WorldFormProps) {
       notes: '',
       theme_song: '',
       playlist: '',
+      pinterest_board: '',
       canon_status: '',
       timeline_era: '',
       power_source: '',
@@ -450,6 +455,7 @@ export function WorldForm({ world }: WorldFormProps) {
         notes: getDefaultValue(mergedWorldData.notes),
         theme_song: getDefaultValue(mergedWorldData.theme_song),
         playlist: getDefaultValue(mergedWorldData.playlist),
+        pinterest_board: getDefaultValue(mergedWorldData.pinterest_board),
         canon_status: getDefaultValue(mergedWorldData.canon_status),
         timeline_era: getDefaultValue(mergedWorldData.timeline_era),
         power_source: getDefaultValue(mergedWorldData.power_source),
@@ -540,6 +546,7 @@ export function WorldForm({ world }: WorldFormProps) {
           notes: data.notes || null,
           theme_song: data.theme_song || null,
           playlist: data.playlist || null,
+          pinterest_board: data.pinterest_board || null,
           canon_status: data.canon_status || null,
           timeline_era: data.timeline_era || null,
           power_source: data.power_source || null,
@@ -1238,6 +1245,19 @@ export function WorldForm({ world }: WorldFormProps) {
             disabled={isSubmitting}
           />
           <p className="mt-1 text-xs text-gray-400">Optional playlist URL (Spotify, YouTube, etc.)</p>
+        </div>
+
+        <div>
+          <FormLabel htmlFor="pinterest_board">
+            Pinterest Board
+          </FormLabel>
+          <FormInput
+            type="url"
+            {...register('pinterest_board')}
+            placeholder="https://www.pinterest.com/username/board-name/"
+            disabled={isSubmitting}
+          />
+          <p className="mt-1 text-xs text-gray-400">Optional Pinterest board URL</p>
         </div>
 
         <div>

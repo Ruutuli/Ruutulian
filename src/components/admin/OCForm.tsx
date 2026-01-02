@@ -1241,6 +1241,7 @@ const ocSchema = z.object({
   seiyuu: z.string().optional(),
   voice_actor: z.string().optional(),
   theme_song: z.string().optional(),
+  pinterest_board: z.string().optional(),
   inspirations: z.string().optional(),
   design_notes: z.string().optional(),
   name_meaning_etymology: z.string().optional(),
@@ -1509,6 +1510,7 @@ function getDefaultValues(oc?: OC, reverseRelationships?: ReverseRelationships):
       seiyuu: '',
       voice_actor: '',
       theme_song: '',
+      pinterest_board: '',
       inspirations: '',
       design_notes: '',
       name_meaning_etymology: '',
@@ -1669,6 +1671,7 @@ function getDefaultValues(oc?: OC, reverseRelationships?: ReverseRelationships):
     seiyuu: oc.seiyuu ?? '',
     voice_actor: oc.voice_actor ?? '',
     theme_song: oc.theme_song ?? '',
+    pinterest_board: oc.pinterest_board ?? '',
     inspirations: oc.inspirations ?? '',
     design_notes: oc.design_notes ?? '',
     name_meaning_etymology: oc.name_meaning_etymology ?? '',
@@ -2195,6 +2198,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
         seiyuu: data.seiyuu || null,
         voice_actor: data.voice_actor || null,
         theme_song: data.theme_song || null,
+        pinterest_board: data.pinterest_board || null,
         inspirations: data.inspirations || null,
         design_notes: data.design_notes || null,
         name_meaning_etymology: data.name_meaning_etymology || null,
@@ -3733,6 +3737,19 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
             placeholder="Song name or link (e.g., https://youtube.com/watch?v=... or Spotify link)"
             disabled={isSubmitting}
             helpText="Enter the song name or paste a link to the song (YouTube, Spotify, SoundCloud, etc.)"
+          />
+        </div>
+
+        <div>
+          <FormLabel htmlFor="pinterest_board">
+            Pinterest Board
+          </FormLabel>
+          <FormInput
+            {...register('pinterest_board')}
+            type="url"
+            placeholder="https://www.pinterest.com/username/board-name/"
+            disabled={isSubmitting}
+            helpText="Optional Pinterest board URL for this character"
           />
         </div>
 

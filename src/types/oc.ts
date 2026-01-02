@@ -287,6 +287,7 @@ export interface World {
   // Media
   theme_song?: string | null;
   playlist?: string | null;
+  pinterest_board?: string | null;
   template_type?: string | null; // Template type for this world (e.g., naruto, pokemon, dragonball, original)
   oc_templates?: Record<string, { fields: Array<{ key: string; label: string; type: 'text' | 'array' | 'number' }> }> | null;
   // World field system
@@ -414,6 +415,7 @@ export interface OC {
   seiyuu?: string | null;
   voice_actor?: string | null;
   theme_song?: string | null;
+  pinterest_board?: string | null;
   inspirations?: string | null;
   design_notes?: string | null;
   name_meaning_etymology?: string | null;

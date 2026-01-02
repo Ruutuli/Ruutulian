@@ -251,7 +251,7 @@ export async function PUT(
       .from('worlds')
       .update(cleanedBody)
       .eq('id', id)
-      .select('id, name, slug, series_type, summary, description_markdown, primary_color, accent_color, header_image_url, icon_url, is_public, genre, setting, lore, the_world_society, culture, politics, technology, environment, races_species, power_systems, religion, government, important_factions, notable_figures, languages, trade_economy, travel_transport, themes, inspirations, current_era_status, notes, canon_status, timeline_era, power_source, central_conflicts, world_rules_limitations, oc_integration_notes, oc_templates, world_fields, created_at, updated_at');
+      .select('id, name, slug, series_type, summary, description_markdown, primary_color, accent_color, header_image_url, icon_url, is_public, genre, setting, lore, the_world_society, culture, politics, technology, environment, races_species, power_systems, religion, government, important_factions, notable_figures, languages, trade_economy, travel_transport, themes, inspirations, current_era_status, notes, theme_song, playlist, canon_status, timeline_era, power_source, central_conflicts, world_rules_limitations, oc_integration_notes, oc_templates, world_fields, created_at, updated_at');
 
     if (updateError) {
       logger.error('World', 'Update error', updateError);

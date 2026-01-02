@@ -284,6 +284,9 @@ export interface World {
   history_image_url?: string | null;
   // History field
   history?: string | null;
+  // Media
+  theme_song?: string | null;
+  playlist?: string | null;
   template_type?: string | null; // Template type for this world (e.g., naruto, pokemon, dragonball, original)
   oc_templates?: Record<string, { fields: Array<{ key: string; label: string; type: 'text' | 'array' | 'number' }> }> | null;
   // World field system

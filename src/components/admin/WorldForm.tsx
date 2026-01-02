@@ -74,6 +74,9 @@ const worldSchema = z.object({
   history_image_url: optionalUrl,
   // History field
   history: optionalString,
+  // Media
+  theme_song: optionalString,
+  playlist: optionalString,
   // World field system (definitions - read-only in this form)
   world_fields: z.any().optional(),
   // Modular fields for world field system values
@@ -230,6 +233,8 @@ export function WorldForm({ world }: WorldFormProps) {
         inspirations: data.inspirations || null,
         current_era_status: data.current_era_status || null,
         notes: data.notes || null,
+        theme_song: data.theme_song || null,
+        playlist: data.playlist || null,
         canon_status: data.canon_status || null,
         timeline_era: data.timeline_era || null,
         power_source: data.power_source || null,
@@ -282,6 +287,8 @@ export function WorldForm({ world }: WorldFormProps) {
         inspirations: storyData.inspirations ?? world.inspirations,
         current_era_status: storyData.current_era_status ?? world.current_era_status,
         notes: storyData.notes ?? world.notes,
+        theme_song: world.theme_song ?? null,
+        playlist: world.playlist ?? null,
         canon_status: storyData.canon_status ?? world.canon_status,
         timeline_era: storyData.timeline_era ?? world.timeline_era,
         power_source: storyData.power_source ?? world.power_source,
@@ -336,6 +343,8 @@ export function WorldForm({ world }: WorldFormProps) {
       inspirations: getDefaultValue(mergedWorldData.inspirations),
       current_era_status: getDefaultValue(mergedWorldData.current_era_status),
       notes: getDefaultValue(mergedWorldData.notes),
+      theme_song: getDefaultValue(mergedWorldData.theme_song),
+      playlist: getDefaultValue(mergedWorldData.playlist),
       canon_status: getDefaultValue(mergedWorldData.canon_status),
       timeline_era: getDefaultValue(mergedWorldData.timeline_era),
       power_source: getDefaultValue(mergedWorldData.power_source),
@@ -382,6 +391,8 @@ export function WorldForm({ world }: WorldFormProps) {
       inspirations: '',
       current_era_status: '',
       notes: '',
+      theme_song: '',
+      playlist: '',
       canon_status: '',
       timeline_era: '',
       power_source: '',
@@ -437,6 +448,8 @@ export function WorldForm({ world }: WorldFormProps) {
         inspirations: getDefaultValue(mergedWorldData.inspirations),
         current_era_status: getDefaultValue(mergedWorldData.current_era_status),
         notes: getDefaultValue(mergedWorldData.notes),
+        theme_song: getDefaultValue(mergedWorldData.theme_song),
+        playlist: getDefaultValue(mergedWorldData.playlist),
         canon_status: getDefaultValue(mergedWorldData.canon_status),
         timeline_era: getDefaultValue(mergedWorldData.timeline_era),
         power_source: getDefaultValue(mergedWorldData.power_source),
@@ -525,6 +538,8 @@ export function WorldForm({ world }: WorldFormProps) {
           inspirations: data.inspirations || null,
           current_era_status: data.current_era_status || null,
           notes: data.notes || null,
+          theme_song: data.theme_song || null,
+          playlist: data.playlist || null,
           canon_status: data.canon_status || null,
           timeline_era: data.timeline_era || null,
           power_source: data.power_source || null,
@@ -1197,6 +1212,32 @@ export function WorldForm({ world }: WorldFormProps) {
             placeholder="Any additional notes, behind-the-scenes information, or reminders that don't fit in other categories."
             disabled={isSubmitting}
           />
+        </div>
+
+        <div>
+          <FormLabel htmlFor="theme_song">
+            Theme Song
+          </FormLabel>
+          <FormInput
+            type="url"
+            {...register('theme_song')}
+            placeholder="https://open.spotify.com/track/... or https://youtube.com/watch?v=..."
+            disabled={isSubmitting}
+          />
+          <p className="mt-1 text-xs text-gray-400">Optional theme song URL (Spotify, YouTube, etc.)</p>
+        </div>
+
+        <div>
+          <FormLabel htmlFor="playlist">
+            Playlist
+          </FormLabel>
+          <FormInput
+            type="url"
+            {...register('playlist')}
+            placeholder="https://open.spotify.com/playlist/... or https://youtube.com/playlist?list=..."
+            disabled={isSubmitting}
+          />
+          <p className="mt-1 text-xs text-gray-400">Optional playlist URL (Spotify, YouTube, etc.)</p>
         </div>
 
         <div>

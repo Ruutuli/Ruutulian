@@ -2,6 +2,7 @@ import type { World } from '@/types/oc';
 import { Markdown } from '@/lib/utils/markdown';
 import Image from 'next/image';
 import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl } from '@/lib/utils/googleDriveImage';
+import { SpotifyEmbed } from '@/components/oc/SpotifyEmbed';
 
 interface WorldDetailsProps {
   world: World;
@@ -229,7 +230,7 @@ export function WorldDetails({ world }: WorldDetailsProps) {
                             : (convertGoogleDriveUrl(race.picture_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png')}
                           alt={race.name}
                           fill
-                          className="object-cover"
+                          className="object-cover object-top"
                           sizes="(max-width: 768px) 100vw, 256px"
                           unoptimized={race.picture_url.includes('drive.google.com') || isGoogleSitesUrl(race.picture_url)}
                         />
@@ -391,7 +392,7 @@ export function WorldDetails({ world }: WorldDetailsProps) {
       )}
 
       {/* Additional Information Section */}
-      {(world.themes || world.inspirations || world.current_era_status || world.notes) && (
+      {(world.themes || world.inspirations || world.current_era_status || world.notes || world.theme_song || world.playlist) && (
         <SectionWithImage
           title="Additional Information"
           icon="fas fa-info"
@@ -433,6 +434,62 @@ export function WorldDetails({ world }: WorldDetailsProps) {
                   Notes
                 </h3>
                 <Markdown content={world.notes} />
+              </div>
+            )}
+            {world.theme_song && (
+              <div>
+                <h3 className="text-lg font-bold text-gray-100 mb-2 flex items-center gap-2">
+                  <i className="fas fa-music text-purple-400"></i>
+                  Theme Song
+                </h3>
+                {world.theme_song.startsWith('http') ? (
+                  <>
+                    {world.theme_song.includes('spotify.com') ? (
+                      <>
+                        <a href={world.theme_song} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline flex items-center gap-2 mb-2">
+                          <i className="fab fa-spotify text-sm"></i>
+                          Open in Spotify
+                        </a>
+                        <SpotifyEmbed url={world.theme_song} />
+                      </>
+                    ) : (
+                      <a href={world.theme_song} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline flex items-center gap-2">
+                        <i className="fas fa-external-link-alt text-sm"></i>
+                        {world.theme_song}
+                      </a>
+                    )}
+                  </>
+                ) : (
+                  <span>{world.theme_song}</span>
+                )}
+              </div>
+            )}
+            {world.playlist && (
+              <div>
+                <h3 className="text-lg font-bold text-gray-100 mb-2 flex items-center gap-2">
+                  <i className="fas fa-list-music text-purple-400"></i>
+                  Playlist
+                </h3>
+                {world.playlist.startsWith('http') ? (
+                  <>
+                    {world.playlist.includes('spotify.com') ? (
+                      <>
+                        <a href={world.playlist} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline flex items-center gap-2 mb-2">
+                          <i className="fab fa-spotify text-sm"></i>
+                          Open in Spotify
+                        </a>
+                        <SpotifyEmbed url={world.playlist} />
+                      </>
+                    ) : (
+                      <a href={world.playlist} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline flex items-center gap-2">
+                        <i className="fas fa-external-link-alt text-sm"></i>
+                        {world.playlist}
+                      </a>
+                    )}
+                  </>
+                ) : (
+                  <span>{world.playlist}</span>
+                )}
               </div>
             )}
           </div>

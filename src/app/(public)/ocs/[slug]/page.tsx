@@ -200,11 +200,21 @@ export default async function OCDetailPage({
   const tags = characterTags?.map(ct => ct.tags).filter(Boolean) || [];
 
   // Fetch story snippets
-  const { data: storySnippets } = await supabase
+  const { data: storySnippets, error: storySnippetsError } = await supabase
     .from('story_snippets')
     .select('*')
     .eq('oc_id', oc.id)
     .order('created_at', { ascending: false });
+  
+  if (storySnippetsError) {
+    logger.error('OCDetailPage', 'Failed to fetch story snippets', {
+      oc_id: oc.id,
+      error: storySnippetsError.message,
+    });
+  }
+  
+  // Ensure storySnippets is always an array
+  const validStorySnippets = Array.isArray(storySnippets) ? storySnippets : [];
 
   // Fetch development log
   const { data: developmentLog } = await supabase
@@ -442,7 +452,7 @@ export default async function OCDetailPage({
             })()}
 
             {/* Table of Contents */}
-            <TableOfContents oc={oc} storySnippets={storySnippets || undefined} />
+            <TableOfContents oc={oc} storySnippets={validStorySnippets.length > 0 ? validStorySnippets : undefined} />
 
             {/* Overview Section */}
             {((oc.aliases || oc.affiliations || oc.romantic_orientation || oc.sexual_orientation || oc.story_alias || oc.species || oc.occupation || oc.development_status) || 
@@ -2010,13 +2020,15 @@ export default async function OCDetailPage({
             )}
 
             {/* Story Snippets Section - After History for content-related snippets */}
-            {storySnippets && storySnippets.length > 0 && (
+            {validStorySnippets.length > 0 && (
               <div className="wiki-card p-4 md:p-6 lg:p-8" suppressHydrationWarning>
                 <h2 id="story-snippets" className="wiki-section-header scroll-mt-20" suppressHydrationWarning>
                   <i className="fas fa-book-open text-purple-400" aria-hidden="true" suppressHydrationWarning></i>
                   Story Snippets
                 </h2>
-                <StorySnippets snippets={storySnippets} showTitle={false} />
+                <div className="mt-4">
+                  <StorySnippets snippets={validStorySnippets} showTitle={false} />
+                </div>
               </div>
             )}
 

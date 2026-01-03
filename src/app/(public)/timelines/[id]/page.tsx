@@ -145,8 +145,15 @@ export default async function TimelinePage({
     if (associations) {
       const eventIdsWithStoryAlias = associations
         .map(a => a.event)
-        .filter((e): e is { id: string; story_alias_id: string } => 
-          e?.id !== undefined && e?.story_alias_id !== null && e?.story_alias_id !== undefined
+        .filter((e): e is TimelineEventType => 
+          e !== null && 
+          !Array.isArray(e) &&
+          typeof e === 'object' &&
+          'id' in e &&
+          typeof e.id === 'string' &&
+          'story_alias_id' in e &&
+          e.story_alias_id !== null &&
+          e.story_alias_id !== undefined
         )
         .map(e => ({ id: e.id, story_alias_id: e.story_alias_id }));
       

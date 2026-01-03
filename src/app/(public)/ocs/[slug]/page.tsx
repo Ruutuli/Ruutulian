@@ -88,6 +88,7 @@ export async function generateMetadata({
     ],
     entityName: oc.name,
     entityImage: oc.image_url || null,
+    entityIconUrl: oc.image_url || null,
     entityType: 'profile',
     imageUrl: ogImageUrl,
     imageAlt: oc.name,

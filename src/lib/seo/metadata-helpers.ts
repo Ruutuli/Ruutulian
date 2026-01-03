@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type { SiteConfig } from '@/lib/config/site-config';
-import { convertGoogleDriveUrl, getGoogleDriveFileId } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, getGoogleDriveFileId, getAbsoluteIconUrl as getAbsoluteIconUrlFromUrl } from '@/lib/utils/googleDriveImage';
 
 /**
  * Get absolute URL from a relative or absolute URL
@@ -66,6 +66,7 @@ export function generateBaseMetadata(
     path?: string;
     isAdmin?: boolean;
     keywords?: string[];
+    customIconUrl?: string | null;
   } = {}
 ): Metadata {
   const {
@@ -74,13 +75,17 @@ export function generateBaseMetadata(
     path = '/',
     isAdmin = false,
     keywords = [],
+    customIconUrl,
   } = options;
 
   const baseUrl = config.siteUrl || process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
   const fullTitle = title
     ? `${title} | ${config.websiteName}`
     : `${config.websiteName} - ${config.websiteDescription.split('.')[0]}`;
-  const iconUrl = getAbsoluteIconUrl(config, baseUrl, isAdmin, true);
+  // Use custom icon URL if provided, otherwise use default from config
+  const iconUrl = customIconUrl 
+    ? getAbsoluteIconUrlFromUrl(customIconUrl, baseUrl, true)
+    : getAbsoluteIconUrl(config, baseUrl, isAdmin, true);
 
   const defaultKeywords = [
     'original characters',

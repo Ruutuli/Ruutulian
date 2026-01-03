@@ -17,6 +17,7 @@ export interface PageMetadataOptions {
   imageAlt?: string;
   ogType?: 'website' | 'article' | 'profile';
   noIndex?: boolean;
+  customIconUrl?: string | null;
 }
 
 /**
@@ -36,6 +37,7 @@ export async function generatePageMetadata(
     imageAlt,
     ogType = 'website',
     noIndex = false,
+    customIconUrl,
   } = options;
 
   const fullTitle = `${title} | ${config.websiteName}`;
@@ -47,6 +49,7 @@ export async function generatePageMetadata(
     description,
     path,
     keywords,
+    customIconUrl,
   });
 
   // Generate OpenGraph image
@@ -99,12 +102,14 @@ export async function generateDetailPageMetadata(
   options: PageMetadataOptions & {
     entityName: string;
     entityImage?: string | null;
+    entityIconUrl?: string | null;
     entityType?: 'profile' | 'article' | 'website';
   }
 ): Promise<Metadata> {
   const {
     entityName,
     entityImage,
+    entityIconUrl,
     entityType = 'website',
     imageAlt,
     ...baseOptions
@@ -116,6 +121,7 @@ export async function generateDetailPageMetadata(
     imageAlt: imageAlt || entityName,
     ogType: entityType,
     keywords: [entityName, ...(baseOptions.keywords || [])],
+    customIconUrl: entityIconUrl || baseOptions.customIconUrl,
   });
 }
 

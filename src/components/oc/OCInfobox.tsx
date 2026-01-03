@@ -20,7 +20,7 @@ export async function OCInfobox({ oc }: OCInfoboxProps) {
             src={oc.image_url}
             alt={oc.name}
             className="wiki-image w-full h-full object-contain"
-            style={{ position: 'absolute', inset: 0 }}
+            style={{ position: 'absolute', inset: 0, objectPosition: 'center 10%' }}
           />
         ) : (
           <Image
@@ -30,6 +30,7 @@ export async function OCInfobox({ oc }: OCInfoboxProps) {
             sizes="(max-width: 768px) 100vw, 384px"
             priority
             className="wiki-image"
+            style={{ objectPosition: 'center 10%' }}
             unoptimized={isGoogleSitesUrl(oc.image_url)}
           />
         )}

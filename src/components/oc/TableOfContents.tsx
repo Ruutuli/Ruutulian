@@ -5,6 +5,7 @@ import type { OC } from '@/types/oc';
 
 interface TableOfContentsProps {
   oc: OC;
+  storySnippets?: Array<{ id: string; title: string; snippet_text: string }>;
 }
 
 interface Section {
@@ -14,7 +15,7 @@ interface Section {
   exists: boolean;
 }
 
-export function TableOfContents({ oc }: TableOfContentsProps) {
+export function TableOfContents({ oc, storySnippets }: TableOfContentsProps) {
   const [activeSection, setActiveSection] = useState<string>('');
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
 
@@ -85,6 +86,12 @@ export function TableOfContents({ oc }: TableOfContentsProps) {
       title: 'History',
       icon: 'fas fa-history',
       exists: !!(oc.origin || oc.formative_years || oc.major_life_events)
+    },
+    {
+      id: 'story-snippets',
+      title: 'Story Snippets',
+      icon: 'fas fa-book-open',
+      exists: !!(storySnippets && storySnippets.length > 0)
     },
     {
       id: 'preferences',

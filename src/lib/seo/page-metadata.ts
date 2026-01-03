@@ -18,6 +18,7 @@ export interface PageMetadataOptions {
   ogType?: 'website' | 'article' | 'profile';
   noIndex?: boolean;
   customIconUrl?: string | null;
+  omitImageDimensions?: boolean; // For icons to prevent stretching in OG previews
 }
 
 /**
@@ -38,6 +39,7 @@ export async function generatePageMetadata(
     ogType = 'website',
     noIndex = false,
     customIconUrl,
+    omitImageDimensions = false,
   } = options;
 
   const fullTitle = `${title} | ${config.websiteName}`;
@@ -58,6 +60,7 @@ export async function generatePageMetadata(
     height: 630,
     alt: imageAlt || `${title} - ${config.websiteName}`,
     fallbackToOgImage: true,
+    omitDimensions: omitImageDimensions,
   });
 
   // Generate Twitter card
@@ -115,6 +118,9 @@ export async function generateDetailPageMetadata(
     ...baseOptions
   } = options;
 
+  // If using icon as the image, omit dimensions to prevent stretching
+  const isUsingIcon = !!entityIconUrl && entityImage === entityIconUrl;
+
   return generatePageMetadata({
     ...baseOptions,
     imageUrl: entityImage || baseOptions.imageUrl,
@@ -122,6 +128,7 @@ export async function generateDetailPageMetadata(
     ogType: entityType,
     keywords: [entityName, ...(baseOptions.keywords || [])],
     customIconUrl: entityIconUrl || baseOptions.customIconUrl,
+    omitImageDimensions: isUsingIcon,
   });
 }
 

@@ -442,7 +442,7 @@ export default async function OCDetailPage({
             })()}
 
             {/* Table of Contents */}
-            <TableOfContents oc={oc} />
+            <TableOfContents oc={oc} storySnippets={storySnippets || undefined} />
 
             {/* Overview Section */}
             {((oc.aliases || oc.affiliations || oc.romantic_orientation || oc.sexual_orientation || oc.story_alias || oc.species || oc.occupation || oc.development_status) || 

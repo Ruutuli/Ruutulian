@@ -150,9 +150,10 @@ export function generateOpenGraphImage(
     height?: number;
     alt?: string;
     fallbackToOgImage?: boolean;
+    omitDimensions?: boolean; // For icons to prevent stretching
   } = {}
 ): Array<{ url: string; width?: number; height?: number; alt?: string }> {
-  const { width = 1200, height = 630, alt = 'Image', fallbackToOgImage = true } = options;
+  const { width = 1200, height = 630, alt = 'Image', fallbackToOgImage = true, omitDimensions = false } = options;
 
   if (imageUrl) {
     // Convert Google Drive URLs
@@ -161,8 +162,8 @@ export function generateOpenGraphImage(
     return [
       {
         url: absoluteUrl,
-        width,
-        height,
+        // Omit dimensions for icons to prevent stretching - let platform use actual image dimensions
+        ...(omitDimensions ? {} : { width, height }),
         alt,
       },
     ];

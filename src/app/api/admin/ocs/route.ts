@@ -107,14 +107,14 @@ export async function POST(request: Request) {
       }
     }
 
-    // Try with foreign key hint first, fallback to inferred relationship if it fails
-    let { data, error } = await supabase
+    // Use inferred relationship (PostgREST will automatically detect the FK)
+    const { data, error } = await supabase
       .from('ocs')
       .insert({ ...ocData, identity_id: identityId })
       .select(`
         *,
         world:worlds(*),
-        story_alias:story_aliases!fk_ocs_story_alias_id(id, name, slug, description),
+        story_alias:story_aliases(id, name, slug, description),
         identity:oc_identities(
           *,
           versions:ocs(
@@ -127,48 +127,6 @@ export async function POST(request: Request) {
         )
       `)
       .single();
-
-    // If FK hint fails with PGRST200 error, retry without the hint
-    // Only do this if the error is specifically about the FK relationship, not the insert itself
-    if (error && error.code === 'PGRST200' && 
-        error.message?.includes('story_aliases') &&
-        error.details?.includes('fk_ocs_story_alias_id')) {
-      logger.info('OC', 'FK hint failed on select, falling back to inferred relationship');
-      
-      // Check if the insert actually succeeded by querying for the new record
-      const insertedData = await supabase
-        .from('ocs')
-        .select('id')
-        .eq('slug', ocData.slug)
-        .single();
-      
-      if (insertedData.data && !insertedData.error) {
-        // Insert succeeded, just the select with FK hint failed - retry select without hint
-        const fallbackResult = await supabase
-          .from('ocs')
-          .select(`
-            *,
-            world:worlds(*),
-            story_alias:story_aliases(id, name, slug, description),
-            identity:oc_identities(
-              *,
-              versions:ocs(
-                id,
-                name,
-                slug,
-                world_id,
-                world:worlds(id, name, slug)
-              )
-            )
-          `)
-          .eq('id', insertedData.data.id)
-          .single();
-        
-        data = fallbackResult.data;
-        error = fallbackResult.error;
-      }
-      // If insert also failed, keep the original error
-    }
 
     if (error) {
       logger.error('OC', 'Supabase error creating OC', { error });

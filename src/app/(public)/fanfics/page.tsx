@@ -32,7 +32,7 @@ export default async function FanficsPage({ searchParams }: FanficsPageProps) {
   const rating = typeof searchParams.rating === 'string' ? searchParams.rating : '';
   const tagId = typeof searchParams.tag === 'string' ? searchParams.tag : '';
 
-  // Build query
+  // Build query - try with story_alias first
   let query = supabase
     .from('fanfics')
     .select(`
@@ -52,8 +52,60 @@ export default async function FanficsPage({ searchParams }: FanficsPageProps) {
     query = query.eq('rating', rating);
   }
 
-  const { data: fanficsData } = await query
+  let { data: fanficsData, error: fanficsError } = await query
     .order('created_at', { ascending: false });
+
+  // If error is related to story_aliases relationship, retry without it
+  if (fanficsError && fanficsError.code === 'PGRST200' && 
+      (fanficsError.message?.includes('story_aliases') || fanficsError.details?.includes('story_alias'))) {
+    let retryQuery = supabase
+      .from('fanfics')
+      .select(`
+        *,
+        world:worlds(id, name, slug, is_public),
+        characters:fanfic_characters(id, oc_id, name, oc:ocs(id, name, slug)),
+        tags:fanfic_tags(tag:tags(id, name))
+      `)
+      .eq('is_public', true);
+    
+    if (worldId) {
+      retryQuery = retryQuery.eq('world_id', worldId);
+    }
+    if (rating) {
+      retryQuery = retryQuery.eq('rating', rating);
+    }
+    
+    const retryResult = await retryQuery.order('created_at', { ascending: false });
+    fanficsData = retryResult.data;
+    fanficsError = retryResult.error;
+    
+    // Fetch story_aliases separately for fanfics that need them
+    if (fanficsData) {
+      const fanficIdsWithStoryAlias = fanficsData
+        .filter(f => f.story_alias_id !== null && f.story_alias_id !== undefined)
+        .map(f => f.story_alias_id as string);
+      
+      if (fanficIdsWithStoryAlias.length > 0) {
+        const storyAliasIds = [...new Set(fanficIdsWithStoryAlias)];
+        const { data: storyAliases } = await supabase
+          .from('story_aliases')
+          .select('id, name, slug')
+          .in('id', storyAliasIds);
+        
+        if (storyAliases) {
+          const storyAliasMap = new Map(storyAliases.map(sa => [sa.id, sa]));
+          fanficsData.forEach(fanfic => {
+            if (fanfic.story_alias_id) {
+              const storyAlias = storyAliasMap.get(fanfic.story_alias_id);
+              if (storyAlias) {
+                fanfic.story_alias = storyAlias;
+              }
+            }
+          });
+        }
+      }
+    }
+  }
 
   // Filter by tag and search on client side if needed (due to complexity of junction table filtering)
   let filteredFanfics = fanficsData || [];

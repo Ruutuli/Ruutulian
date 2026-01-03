@@ -362,13 +362,19 @@ function NameAutocompleteInput({
 
       try {
         const supabase = createClient();
-        const { data, error } = await supabase
+        let query = supabase
           .from('ocs')
           .select('id, name, icon_url')
-          .neq('id', currentOCId || '') // Exclude current OC
           .ilike('name', `%${inputValue}%`)
           .order('name', { ascending: true })
           .limit(15);
+        
+        // Only exclude current OC if we have a valid ID
+        if (currentOCId) {
+          query = query.neq('id', currentOCId);
+        }
+        
+        const { data, error } = await query;
 
         if (error) {
           logger.error('OCForm', 'Error fetching OCs', error);
@@ -598,13 +604,19 @@ function OCAutocompleteInput({
 
       try {
         const supabase = createClient();
-        const { data, error } = await supabase
+        let query = supabase
           .from('ocs')
           .select('id, name, slug')
-          .neq('id', currentOCId || '') // Exclude current OC
           .ilike('name', `%${inputValue}%`)
           .order('name', { ascending: true })
           .limit(15);
+        
+        // Only exclude current OC if we have a valid ID
+        if (currentOCId) {
+          query = query.neq('id', currentOCId);
+        }
+        
+        const { data, error } = await query;
 
         if (error) {
           logger.error('OCForm', 'Error fetching OCs', error);
@@ -2433,11 +2445,21 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
         <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-4">
           <p className="text-red-400 font-semibold mb-2">Form Validation Errors:</p>
           <ul className="list-disc list-inside text-red-300 text-sm">
-            {Object.entries(errors).map(([key, error]: [string, any]) => (
-              <li key={key}>
-                {key}: {error?.message || JSON.stringify(error)}
-              </li>
-            ))}
+            {Object.entries(errors).map(([key, error]: [string, any]) => {
+              let errorText = error?.message;
+              if (!errorText && error) {
+                try {
+                  errorText = JSON.stringify(error);
+                } catch {
+                  errorText = String(error);
+                }
+              }
+              return (
+                <li key={key}>
+                  {key}: {errorText || 'Unknown error'}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

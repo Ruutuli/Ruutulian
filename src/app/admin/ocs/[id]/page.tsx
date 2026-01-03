@@ -129,13 +129,13 @@ export default async function EditOCPage({
   const supabase = await createClient();
 
   // Support both ID (UUID) and slug
-  // Try with foreign key hint first, fallback to inferred relationship if it fails
+  // Use inferred relationship (PostgREST will automatically detect the FK)
   let baseQuery = supabase
     .from('ocs')
     .select(`
       *,
       world:worlds(*),
-      story_alias:story_aliases!fk_ocs_story_alias_id(id, name, slug, description),
+      story_alias:story_aliases(id, name, slug, description),
       identity:oc_identities(
         *,
         versions:ocs(
@@ -152,38 +152,7 @@ export default async function EditOCPage({
     ? baseQuery.eq('id', params.id)
     : baseQuery.eq('slug', params.id);
 
-  let { data: oc, error: ocError } = await query.single();
-  
-  // If FK hint fails with PGRST200 error, retry without the hint
-  if (ocError && ocError.code === 'PGRST200' && 
-      ocError.message?.includes('story_aliases') &&
-      ocError.details?.includes('fk_ocs_story_alias_id')) {
-    baseQuery = supabase
-      .from('ocs')
-      .select(`
-        *,
-        world:worlds(*),
-        story_alias:story_aliases(id, name, slug, description),
-        identity:oc_identities(
-          *,
-          versions:ocs(
-            id,
-            name,
-            slug,
-            world_id,
-            world:worlds(id, name, slug)
-          )
-        )
-      `);
-    
-    query = isUUID(params.id)
-      ? baseQuery.eq('id', params.id)
-      : baseQuery.eq('slug', params.id);
-    
-    const fallbackResult = await query.single();
-    oc = fallbackResult.data;
-    ocError = fallbackResult.error;
-  }
+  const { data: oc, error: ocError } = await query.single();
 
   if (ocError) {
     logger.error('Page', 'admin/ocs/[id]: Supabase OC query error', {

@@ -101,7 +101,8 @@ export default async function FanficDetailPage({
   const resolvedParams = await params;
   const supabase = await createClient();
 
-  const { data: fanficData, error } = await supabase
+  // Try query with story_alias first
+  let { data: fanficData, error } = await supabase
     .from('fanfics')
     .select(`
       *,
@@ -115,6 +116,40 @@ export default async function FanficDetailPage({
     .eq('slug', resolvedParams.slug)
     .eq('is_public', true)
     .single();
+
+  // If error is related to story_aliases relationship, retry without it
+  if (error && error.code === 'PGRST200' && 
+      (error.message?.includes('story_aliases') || error.details?.includes('story_alias'))) {
+    const retryResult = await supabase
+      .from('fanfics')
+      .select(`
+        *,
+        world:worlds(id, name, slug, is_public),
+        characters:fanfic_characters(id, oc_id, name, oc:ocs(id, name, slug)),
+        relationships:fanfic_relationships(id, relationship_text, relationship_type),
+        tags:fanfic_tags(tag:tags(id, name)),
+        chapters:fanfic_chapters(id, chapter_number, title, content, word_count, image_url, is_published, published_at, created_at, updated_at)
+      `)
+      .eq('slug', resolvedParams.slug)
+      .eq('is_public', true)
+      .single();
+    
+    fanficData = retryResult.data;
+    error = retryResult.error;
+    
+    // If we have story_alias_id, fetch story_alias separately
+    if (fanficData?.story_alias_id) {
+      const { data: storyAlias } = await supabase
+        .from('story_aliases')
+        .select('id, name, slug, world_id')
+        .eq('id', fanficData.story_alias_id)
+        .single();
+      
+      if (storyAlias) {
+        fanficData.story_alias = storyAlias;
+      }
+    }
+  }
 
   if (error || !fanficData) {
     notFound();

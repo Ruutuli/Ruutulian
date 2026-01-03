@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, queryOCWithFallback } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { OCInfobox } from '@/components/oc/OCInfobox';
 import { OCPageLayout } from '@/components/oc/OCPageLayout';
@@ -17,7 +17,7 @@ import { StorySnippets } from '@/components/content/StorySnippets';
 import { DevelopmentLog } from '@/components/content/DevelopmentLog';
 import { WritingPromptResponses } from '@/components/content/WritingPromptResponses';
 import { getEffectiveFieldDefinitions, getFieldValue } from '@/lib/fields/worldFields';
-import type { WorldFieldDefinition } from '@/types/oc';
+import type { WorldFieldDefinition, OC } from '@/types/oc';
 import { TagList } from '@/components/wiki/TagList';
 import { convertGoogleDriveUrl, getProxyUrl } from '@/lib/utils/googleDriveImage';
 import { extractColorHex, extractColorName } from '@/lib/utils/colorHexUtils';
@@ -102,62 +102,19 @@ export default async function OCDetailPage({
   const supabase = await createClient();
   const resolvedParams = await params;
 
-  // Try with foreign key hint first, fallback to inferred relationship if it fails
-  let { data: oc, error } = await supabase
-    .from('ocs')
-    .select(`
-      *,
-      likes,
-      dislikes,
-      world:worlds(*),
-      story_alias:story_aliases!fk_ocs_story_alias_id(id, name, slug, description),
-      identity:oc_identities(
-        *,
-        versions:ocs(
-          id,
-          name,
-          slug,
-          world_id,
-          is_public,
-          world:worlds(id, name, slug)
-        )
-      )
-    `)
-    .eq('slug', resolvedParams.slug)
-    .eq('is_public', true)
-    .single();
-
-  // If FK hint fails with PGRST200 error, retry without the hint
-  if (error && error.code === 'PGRST200' && 
-      error.message?.includes('story_aliases') &&
-      error.details?.includes('fk_ocs_story_alias_id')) {
-    const fallbackResult = await supabase
-      .from('ocs')
-      .select(`
-        *,
-        likes,
-        dislikes,
-        world:worlds(*),
-        story_alias:story_aliases(id, name, slug, description),
-        identity:oc_identities(
-          *,
-          versions:ocs(
-            id,
-            name,
-            slug,
-            world_id,
-            is_public,
-            world:worlds(id, name, slug)
-          )
-        )
-      `)
-      .eq('slug', resolvedParams.slug)
-      .eq('is_public', true)
-      .single();
-    
-    oc = fallbackResult.data;
-    error = fallbackResult.error;
-  }
+  // Use fallback helper to handle story_aliases relationship errors gracefully
+  const { data: oc, error } = await queryOCWithFallback<OC>(
+    async (selectQuery: string) => {
+      return await supabase
+        .from('ocs')
+        .select(selectQuery)
+        .eq('slug', resolvedParams.slug)
+        .eq('is_public', true)
+        .single();
+    },
+    supabase,
+    'OCDetailPage'
+  );
 
   if (error) {
     logger.error('OCDetailPage', 'Supabase query error', {
@@ -172,15 +129,18 @@ export default async function OCDetailPage({
     notFound();
   }
   
+  // Type assertion: queryOCWithFallback returns OC type but TypeScript infers a narrower type
+  const typedOc: OC = oc as OC;
+  
   const config = await getSiteConfig();
   const baseUrl = config.siteUrl || process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
-  const imageUrl = oc.image_url ? getAbsoluteUrl(convertGoogleDriveUrl(oc.image_url), baseUrl) : null;
+  const imageUrl = typedOc.image_url ? getAbsoluteUrl(convertGoogleDriveUrl(typedOc.image_url), baseUrl) : null;
   
   // Generate structured data for OC profile page
-  const profileSchema = generateProfilePageSchema(oc.name, {
-    description: oc.history_summary || undefined,
+  const profileSchema = generateProfilePageSchema(typedOc.name, {
+    description: typedOc.history_summary || undefined,
     image: imageUrl ? [imageUrl] : undefined,
-    mainEntityName: oc.name,
+    mainEntityName: typedOc.name,
     mainEntityImage: imageUrl || undefined,
   });
 
@@ -188,14 +148,14 @@ export default async function OCDetailPage({
   const { data: quotes } = await supabase
     .from('character_quotes')
     .select('*')
-    .eq('oc_id', oc.id)
+    .eq('oc_id', typedOc.id)
     .order('created_at', { ascending: false });
 
   // Fetch tags
   const { data: characterTags } = await supabase
     .from('character_tags')
     .select('tag_id, tags(*)')
-    .eq('oc_id', oc.id);
+    .eq('oc_id', typedOc.id);
 
   const tags = characterTags?.map(ct => ct.tags).filter(Boolean) || [];
 
@@ -203,12 +163,12 @@ export default async function OCDetailPage({
   const { data: storySnippets, error: storySnippetsError } = await supabase
     .from('story_snippets')
     .select('*')
-    .eq('oc_id', oc.id)
+    .eq('oc_id', typedOc.id)
     .order('created_at', { ascending: false });
   
   if (storySnippetsError) {
     logger.error('OCDetailPage', 'Failed to fetch story snippets', {
-      oc_id: oc.id,
+      oc_id: typedOc.id,
       error: storySnippetsError.message,
     });
   }
@@ -220,7 +180,7 @@ export default async function OCDetailPage({
   const { data: developmentLog } = await supabase
     .from('character_development_log')
     .select('*')
-    .eq('oc_id', oc.id)
+    .eq('oc_id', typedOc.id)
     .order('created_at', { ascending: false });
 
   // Fetch writing prompt responses
@@ -230,17 +190,17 @@ export default async function OCDetailPage({
       *,
       other_oc:ocs!other_oc_id(id, name, slug)
     `)
-    .eq('oc_id', oc.id)
+    .eq('oc_id', typedOc.id)
     .order('created_at', { ascending: false });
 
   // Increment view count
   await supabase
     .from('ocs')
     .update({ 
-      view_count: (oc.view_count || 0) + 1,
+      view_count: (typedOc.view_count || 0) + 1,
       last_viewed_at: new Date().toISOString()
     })
-    .eq('id', oc.id);
+    .eq('id', typedOc.id);
 
   // Helper function to render a field value
   const renderFieldValue = (field: WorldFieldDefinition, value: string | number | string[] | null) => {
@@ -263,7 +223,7 @@ export default async function OCDetailPage({
   };
 
   // Get all field definitions and group by category
-  const fieldDefinitions = getEffectiveFieldDefinitions(oc.world, oc);
+  const fieldDefinitions = getEffectiveFieldDefinitions(typedOc.world, typedOc);
   const fieldsByCategory = new Map<string, WorldFieldDefinition[]>();
   
   fieldDefinitions.forEach(field => {
@@ -278,7 +238,7 @@ export default async function OCDetailPage({
   const hasCategoryFields = (category: string): boolean => {
     const fields = fieldsByCategory.get(category) || [];
     return fields.some(field => {
-      const value = getFieldValue(field, oc.modular_fields);
+      const value = getFieldValue(field, typedOc.modular_fields);
       return value !== null && value !== undefined && value !== '' && 
         (Array.isArray(value) ? value.length > 0 : true);
     });
@@ -288,7 +248,7 @@ export default async function OCDetailPage({
   const renderCategoryFields = (category: string) => {
     const fields = fieldsByCategory.get(category) || [];
     const fieldsWithValues = fields.filter(field => {
-      const value = getFieldValue(field, oc.modular_fields);
+      const value = getFieldValue(field, typedOc.modular_fields);
       return value !== null && value !== undefined && value !== '' && 
         (Array.isArray(value) ? value.length > 0 : true);
     });
@@ -298,7 +258,7 @@ export default async function OCDetailPage({
     return (
       <div className="space-y-3 mt-3">
         {fieldsWithValues.map((field) => {
-          const value = getFieldValue(field, oc.modular_fields);
+          const value = getFieldValue(field, typedOc.modular_fields);
           const rendered = renderFieldValue(field, value);
           if (!rendered) return null;
           
@@ -331,13 +291,13 @@ export default async function OCDetailPage({
           Characters
         </Link>
         <span className="mx-2 text-gray-500">/</span>
-        <span>{oc.name}</span>
+        <span>{typedOc.name}</span>
       </nav>
 
-      <OCPageLayout oc={oc}>
+      <OCPageLayout oc={typedOc}>
         <div className="flex flex-col lg:flex-row gap-4 md:gap-6 lg:gap-8" suppressHydrationWarning>
           <div className="w-full lg:w-96 flex-shrink-0 lg:sticky lg:top-20 lg:self-start lg:h-fit" suppressHydrationWarning>
-            <OCInfobox oc={oc} />
+            <OCInfobox oc={typedOc} />
 
             {/* Tags */}
             {tags.length > 0 && (
@@ -351,19 +311,19 @@ export default async function OCDetailPage({
             <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-gray-800/80 via-gray-800/60 to-gray-900/80 p-3 md:p-4 lg:p-5 border border-gray-700/50 shadow-lg backdrop-blur-sm" suppressHydrationWarning>
               <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-blue-500/5 pointer-events-none" suppressHydrationWarning></div>
               <div className="relative flex items-start gap-4" suppressHydrationWarning>
-                {oc.world?.icon_url && (
+                {typedOc.world?.icon_url && (
                   <div className="relative w-12 h-12 md:w-14 md:h-14 flex-shrink-0 group">
                     <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-lg blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     <div className="relative w-full h-full">
                       <Image
-                        src={oc.world.icon_url?.includes('drive.google.com')
-                          ? getProxyUrl(oc.world.icon_url)
-                          : convertGoogleDriveUrl(oc.world.icon_url)}
-                        alt={oc.world.name}
+                        src={typedOc.world.icon_url?.includes('drive.google.com')
+                          ? getProxyUrl(typedOc.world.icon_url)
+                          : convertGoogleDriveUrl(typedOc.world.icon_url)}
+                        alt={typedOc.world.name}
                         fill
                         sizes="(max-width: 768px) 48px, 56px"
                         className="object-contain rounded-lg bg-gray-800/70 p-1.5 border-2 border-gray-600/50 shadow-lg group-hover:border-purple-500/50 transition-all duration-300"
-                        unoptimized={oc.world.icon_url?.includes('drive.google.com') || false}
+                        unoptimized={typedOc.world.icon_url?.includes('drive.google.com') || false}
                       />
                     </div>
                   </div>
@@ -372,26 +332,26 @@ export default async function OCDetailPage({
                   <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-100 mb-2 flex items-center gap-2 leading-tight" suppressHydrationWarning>
                     <i className="fas fa-user text-purple-400 text-xl md:text-2xl lg:text-3xl" aria-hidden="true" suppressHydrationWarning></i>
                     <span className="bg-gradient-to-r from-gray-100 via-gray-50 to-gray-200 bg-clip-text text-transparent">
-                      {oc.name}
+                      {typedOc.name}
                     </span>
                   </h1>
                   <div className="flex flex-wrap items-center gap-3 mt-2">
-                    {oc.world && (
+                    {typedOc.world && (
                       <Link 
-                        href={`/worlds/${oc.world.slug}`}
+                        href={`/worlds/${typedOc.world.slug}`}
                         prefetch={true}
                         className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 transition-all duration-200 border border-blue-500/20 hover:border-blue-500/40 group/link backdrop-blur-sm text-sm"
                         suppressHydrationWarning
                       >
                         <i className="fas fa-globe text-xs group-hover/link:scale-110 transition-transform duration-200" aria-hidden="true" suppressHydrationWarning></i>
-                        <span className="font-semibold">{oc.world.name}</span>
+                        <span className="font-semibold">{typedOc.world.name}</span>
                         <i className="fas fa-arrow-right text-xs opacity-0 group-hover/link:opacity-100 group-hover/link:translate-x-1 transition-all duration-200" aria-hidden="true" suppressHydrationWarning></i>
                       </Link>
                     )}
-                    {oc.updated_at && (
+                    {typedOc.updated_at && (
                       <span className="text-sm text-gray-400" suppressHydrationWarning>
                         <i className="fas fa-clock mr-1.5" aria-hidden="true" suppressHydrationWarning></i>
-                        Last updated: {formatLastUpdated(oc.updated_at)}
+                        Last updated: {formatLastUpdated(typedOc.updated_at)}
                       </span>
                     )}
                   </div>
@@ -400,13 +360,13 @@ export default async function OCDetailPage({
             </div>
 
             {/* Alternative Versions Notice */}
-            {oc.identity?.versions && oc.identity.versions.length > 1 && (() => {
+            {typedOc.identity?.versions && typedOc.identity.versions.length > 1 && (() => {
               // Filter to get only alternative versions (public, different world, not current OC)
-              const alternativeVersions = oc.identity.versions.filter(
+              const alternativeVersions = typedOc.identity.versions.filter(
                 (version: any) => 
                   version.is_public && 
-                  version.id !== oc.id && 
-                  version.world_id !== oc.world_id &&
+                  version.id !== typedOc.id && 
+                  version.world_id !== typedOc.world_id &&
                   version.world
               );
 
@@ -452,10 +412,10 @@ export default async function OCDetailPage({
             })()}
 
             {/* Table of Contents */}
-            <TableOfContents oc={oc} storySnippets={validStorySnippets.length > 0 ? validStorySnippets : undefined} />
+            <TableOfContents oc={typedOc} storySnippets={validStorySnippets.length > 0 ? validStorySnippets : undefined} />
 
             {/* Overview Section */}
-            {((oc.aliases || oc.affiliations || oc.romantic_orientation || oc.sexual_orientation || oc.story_alias || oc.species || oc.occupation || oc.development_status) || 
+            {((typedOc.aliases || typedOc.affiliations || typedOc.romantic_orientation || typedOc.sexual_orientation || typedOc.story_alias || typedOc.species || typedOc.occupation || typedOc.development_status) || 
               hasCategoryFields('Core Identity') || hasCategoryFields('Overview')) && (
               <div className="wiki-card p-4 md:p-6 lg:p-8" suppressHydrationWarning>
                 <h2 id="overview" className="wiki-section-header scroll-mt-20" suppressHydrationWarning>
@@ -464,92 +424,92 @@ export default async function OCDetailPage({
                 </h2>
                 <div className="space-y-4 text-gray-300">
                   {/* Story Alias - Special badge */}
-                  {oc.story_alias && (
+                  {typedOc.story_alias && (
                     <div className="p-4 bg-gradient-to-br from-purple-500/10 to-purple-600/5 rounded-lg border border-purple-500/20">
                       <div className="flex items-center gap-2 mb-2">
                         <i className="fas fa-bookmark text-purple-400" aria-hidden="true" suppressHydrationWarning></i>
                         <span className="font-semibold text-gray-200 text-sm uppercase tracking-wide">Story Alias</span>
                       </div>
                       <span className="px-3 py-1.5 text-sm font-medium bg-purple-600/30 text-purple-300 rounded-lg inline-block border border-purple-500/30">
-                        {oc.story_alias.name}
+                        {typedOc.story_alias.name}
                       </span>
                     </div>
                   )}
                   
                   {/* Core Info Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {oc.species && (
+                    {typedOc.species && (
                       <div className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-600/5 rounded-lg border border-blue-500/20 hover:border-blue-500/40 transition-colors">
                         <div className="flex items-center gap-2 mb-2">
                           <i className="fas fa-dna text-blue-400"></i>
                           <span className="font-semibold text-gray-200">Species</span>
                         </div>
                         <div className="prose max-w-none">
-                          <Markdown content={oc.species} />
+                          <Markdown content={typedOc.species} />
                         </div>
                       </div>
                     )}
-                    {oc.occupation && (
+                    {typedOc.occupation && (
                       <div className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-600/5 rounded-lg border border-blue-500/20 hover:border-blue-500/40 transition-colors">
                         <div className="flex items-center gap-2 mb-2">
                           <i className="fas fa-briefcase text-blue-400" aria-hidden="true" suppressHydrationWarning></i>
                           <span className="font-semibold text-gray-200">Occupation</span>
                         </div>
                         <div className="prose max-w-none">
-                          <Markdown content={oc.occupation} />
+                          <Markdown content={typedOc.occupation} />
                         </div>
                       </div>
                     )}
                   </div>
 
                   {/* Aliases */}
-                  {oc.aliases && (
+                  {typedOc.aliases && (
                     <div className="p-4 bg-gradient-to-br from-gray-700/30 to-gray-800/20 rounded-lg border border-gray-600/30">
                       <div className="flex items-center gap-2 mb-2">
                         <i className="fas fa-tag text-blue-400"></i>
                         <span className="font-semibold text-gray-200">Aliases</span>
                       </div>
                       <div className="prose max-w-none">
-                        <Markdown content={oc.aliases} />
+                        <Markdown content={typedOc.aliases} />
                       </div>
                     </div>
                   )}
 
                   {/* Affiliations */}
-                  {oc.affiliations && (
+                  {typedOc.affiliations && (
                     <div className="p-4 bg-gradient-to-br from-gray-700/30 to-gray-800/20 rounded-lg border border-gray-600/30">
                       <div className="flex items-center gap-2 mb-2">
                         <i className="fas fa-users-cog text-blue-400" aria-hidden="true" suppressHydrationWarning></i>
                         <span className="font-semibold text-gray-200">Affiliations</span>
                       </div>
                       <div className="prose max-w-none mt-1">
-                        <Markdown content={oc.affiliations} />
+                        <Markdown content={typedOc.affiliations} />
                       </div>
                     </div>
                   )}
 
                   {/* Orientation Cards */}
-                  {(oc.romantic_orientation || oc.sexual_orientation) && (
+                  {(typedOc.romantic_orientation || typedOc.sexual_orientation) && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {oc.romantic_orientation && (
+                      {typedOc.romantic_orientation && (
                         <div className="p-4 bg-gradient-to-br from-red-500/10 to-pink-600/5 rounded-lg border border-red-500/20 hover:border-red-500/40 transition-colors">
                           <div className="flex items-center gap-2 mb-2">
                             <i className="fas fa-heart text-red-400"></i>
                             <span className="font-semibold text-gray-200">Romantic Orientation</span>
                           </div>
                           <div className="prose max-w-none">
-                            <Markdown content={oc.romantic_orientation} />
+                            <Markdown content={typedOc.romantic_orientation} />
                           </div>
                         </div>
                       )}
-                      {oc.sexual_orientation && (
+                      {typedOc.sexual_orientation && (
                         <div className="p-4 bg-gradient-to-br from-rose-500/10 to-rose-600/5 rounded-lg border border-rose-500/20 hover:border-rose-500/40 transition-colors">
                           <div className="flex items-center gap-2 mb-2">
                             <i className="fas fa-heart text-rose-400" aria-hidden="true" suppressHydrationWarning></i>
                             <span className="font-semibold text-gray-200">Sexual Orientation</span>
                           </div>
                           <div className="prose max-w-none">
-                            <Markdown content={oc.sexual_orientation} />
+                            <Markdown content={typedOc.sexual_orientation} />
                           </div>
                         </div>
                       )}
@@ -729,7 +689,7 @@ export default async function OCDetailPage({
                   {(() => {
                     const fields = fieldsByCategory.get('Abilities') || [];
                     const fieldsWithValues = fields.filter(field => {
-                      const value = getFieldValue(field, oc.modular_fields);
+                      const value = getFieldValue(field, typedOc.modular_fields);
                       return value !== null && value !== undefined && value !== '' && 
                         (Array.isArray(value) ? value.length > 0 : true);
                     });
@@ -737,7 +697,7 @@ export default async function OCDetailPage({
                     if (fieldsWithValues.length === 0) return null;
 
                     return fieldsWithValues.map((field) => {
-                      const value = getFieldValue(field, oc.modular_fields);
+                      const value = getFieldValue(field, typedOc.modular_fields);
                       const rendered = renderFieldValue(field, value);
                       if (!rendered) return null;
                       
@@ -2265,7 +2225,7 @@ export default async function OCDetailPage({
               
               const hasUncategorizedFields = uncategorizedFields.length > 0 && 
                 uncategorizedFields.some(field => {
-                  const value = getFieldValue(field, oc.modular_fields);
+                  const value = getFieldValue(field, typedOc.modular_fields);
                   return value !== null && value !== undefined && value !== '' && 
                     (Array.isArray(value) ? value.length > 0 : true);
                 });
@@ -2280,7 +2240,7 @@ export default async function OCDetailPage({
                   </h2>
                   <div className="space-y-4 text-gray-300">
                     {uncategorizedFields.map((field) => {
-                      const value = getFieldValue(field, oc.modular_fields);
+                      const value = getFieldValue(field, typedOc.modular_fields);
                       if (value === null || value === undefined || value === '' || 
                           (Array.isArray(value) && value.length === 0)) {
                         return null;

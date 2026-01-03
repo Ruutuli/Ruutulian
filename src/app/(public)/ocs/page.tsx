@@ -66,7 +66,7 @@ export default async function OCsPage({ searchParams }: OCsPageProps) {
 
   // Apply search filter on server-side if provided
   if (search) {
-    query = query.or(`name.ilike.%${search}%,history_summary.ilike.%${search}%`);
+    query = query.or(`name.ilike.*${search}*,history_summary.ilike.*${search}*`);
   }
 
   let { data: ocs, error: ocsError } = await query.order('name', { ascending: true });
@@ -99,7 +99,7 @@ export default async function OCsPage({ searchParams }: OCsPageProps) {
 
     // Reapply search filter
     if (search) {
-      fallbackQuery = fallbackQuery.or(`name.ilike.%${search}%,history_summary.ilike.%${search}%`);
+      fallbackQuery = fallbackQuery.or(`name.ilike.*${search}*,history_summary.ilike.*${search}*`);
     }
 
     const fallbackResult = await fallbackQuery.order('name', { ascending: true });
@@ -116,12 +116,15 @@ export default async function OCsPage({ searchParams }: OCsPageProps) {
   }
 
   // Filter by world name on client-side (since it's a joined field)
-  // Note: name and history_summary are already filtered server-side
+  // Combine with server-side name/history_summary filtering (OR condition)
   let filteredOCs = filteredByTag;
   if (search) {
     const searchLower = search.toLowerCase();
-    filteredOCs = filteredOCs.filter(
-      (oc) => oc.world?.name.toLowerCase().includes(searchLower)
+    filteredOCs = filteredByTag.filter(
+      (oc) => 
+        oc.name.toLowerCase().includes(searchLower) ||
+        oc.history_summary?.toLowerCase().includes(searchLower) ||
+        oc.world?.name.toLowerCase().includes(searchLower)
     );
   }
 

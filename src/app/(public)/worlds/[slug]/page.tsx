@@ -195,7 +195,8 @@ export default async function WorldDetailPage({
       .select('*')
       .eq('world_id', world.id)
       .order('name', { ascending: true }),
-    (() => {
+    (async () => {
+      // Try query with story_alias first
       let loreQuery = supabase
         .from('world_lore')
         .select(`
@@ -220,10 +221,73 @@ export default async function WorldDetailPage({
         loreQuery = loreQuery.is('story_alias_id', null);
       }
       
-      return loreQuery
+      let { data: loreData, error: loreError } = await loreQuery
         .order('lore_type', { ascending: true })
         .order('name', { ascending: true })
         .limit(6); // Show preview of 6 entries
+      
+      // If error is related to story_aliases relationship, retry without it
+      if (loreError && loreError.code === 'PGRST200' && 
+          (loreError.message?.includes('story_aliases') || loreError.details?.includes('story_alias'))) {
+        let retryQuery = supabase
+          .from('world_lore')
+          .select(`
+            *,
+            world:worlds(id, name, slug),
+            related_ocs:world_lore_ocs(
+              *,
+              oc:ocs(id, name, slug)
+            ),
+            related_events:world_lore_timeline_events(
+              *,
+              event:timeline_events(id, title)
+            )
+          `)
+          .eq('world_id', world.id);
+        
+        if (storyAliasId) {
+          retryQuery = retryQuery.or(`story_alias_id.eq.${storyAliasId},story_alias_id.is.null`);
+        } else {
+          retryQuery = retryQuery.is('story_alias_id', null);
+        }
+        
+        const retryResult = await retryQuery
+          .order('lore_type', { ascending: true })
+          .order('name', { ascending: true })
+          .limit(6);
+        
+        loreData = retryResult.data;
+        loreError = retryResult.error;
+        
+        // Fetch story_aliases separately for lore entries that need them
+        if (loreData) {
+          const loreIdsWithStoryAlias = loreData
+            .filter(l => l.story_alias_id !== null && l.story_alias_id !== undefined)
+            .map(l => l.story_alias_id as string);
+          
+          if (loreIdsWithStoryAlias.length > 0) {
+            const storyAliasIds = [...new Set(loreIdsWithStoryAlias)];
+            const { data: storyAliases } = await supabase
+              .from('story_aliases')
+              .select('id, name, slug, description')
+              .in('id', storyAliasIds);
+            
+            if (storyAliases) {
+              const storyAliasMap = new Map(storyAliases.map(sa => [sa.id, sa]));
+              loreData.forEach(lore => {
+                if (lore.story_alias_id) {
+                  const storyAlias = storyAliasMap.get(lore.story_alias_id);
+                  if (storyAlias) {
+                    lore.story_alias = storyAlias;
+                  }
+                }
+              });
+            }
+          }
+        }
+      }
+      
+      return { data: loreData, error: loreError };
     })(),
   ]);
 

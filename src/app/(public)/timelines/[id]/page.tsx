@@ -101,7 +101,8 @@ export default async function TimelinePage({
   }
 
   // Load events via junction table
-  const { data: associations } = await supabase
+  // Try with story_alias first, fallback if relationship fails
+  let { data: associations, error: eventsError } = await supabase
     .from('timeline_event_timelines')
     .select(`
       position,
@@ -117,6 +118,59 @@ export default async function TimelinePage({
     `)
     .eq('timeline_id', timeline.id)
     .order('position', { ascending: true });
+
+  // If error is related to story_aliases relationship, retry without it
+  if (eventsError && eventsError.code === 'PGRST200' && 
+      (eventsError.message?.includes('story_aliases') || eventsError.details?.includes('story_alias'))) {
+    const retryResult = await supabase
+      .from('timeline_event_timelines')
+      .select(`
+        position,
+        event:timeline_events(
+          *,
+          world:worlds(id, name, slug),
+          characters:timeline_event_characters(
+            *,
+            oc:ocs(id, name, slug, date_of_birth)
+          )
+        )
+      `)
+      .eq('timeline_id', timeline.id)
+      .order('position', { ascending: true });
+    
+    associations = retryResult.data;
+    eventsError = retryResult.error;
+    
+    // Fetch story_aliases separately for events that need them
+    if (associations) {
+      const eventIdsWithStoryAlias = associations
+        .map(a => a.event)
+        .filter((e): e is { id: string; story_alias_id: string } => 
+          e?.id !== undefined && e?.story_alias_id !== null && e?.story_alias_id !== undefined
+        )
+        .map(e => ({ id: e.id, story_alias_id: e.story_alias_id }));
+      
+      if (eventIdsWithStoryAlias.length > 0) {
+        const storyAliasIds = [...new Set(eventIdsWithStoryAlias.map(e => e.story_alias_id))];
+        const { data: storyAliases } = await supabase
+          .from('story_aliases')
+          .select('id, name, slug, description')
+          .in('id', storyAliasIds);
+        
+        if (storyAliases) {
+          const storyAliasMap = new Map(storyAliases.map(sa => [sa.id, sa]));
+          associations.forEach(assoc => {
+            if (assoc.event?.story_alias_id) {
+              const storyAlias = storyAliasMap.get(assoc.event.story_alias_id);
+              if (storyAlias && assoc.event) {
+                assoc.event.story_alias = storyAlias;
+              }
+            }
+          });
+        }
+      }
+    }
+  }
 
   // Extract events from associations and sanitize date_data
   const events = (associations as TimelineEventAssociation[] | null)

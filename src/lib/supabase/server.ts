@@ -72,30 +72,6 @@ export function buildOCSelectQuery() {
     likes,
     dislikes,
     world:worlds(*),
-    story_alias:story_aliases!fk_ocs_story_alias_id(id, name, slug, description),
-    identity:oc_identities(
-      *,
-      versions:ocs(
-        id,
-        name,
-        slug,
-        world_id,
-        is_public,
-        world:worlds(id, name, slug)
-      )
-    )
-  `;
-}
-
-/**
- * Helper function to build OC select query without foreign key hint (fallback version).
- */
-export function buildOCSelectQueryFallback() {
-  return `
-    *,
-    likes,
-    dislikes,
-    world:worlds(*),
     story_alias:story_aliases(id, name, slug, description),
     identity:oc_identities(
       *,
@@ -112,30 +88,144 @@ export function buildOCSelectQueryFallback() {
 }
 
 /**
- * Executes an OC query with graceful fallback for story_aliases relationship.
- * Tries with foreign key hint first, falls back to inferred relationship if PGRST200 error occurs.
+ * Helper function to build OC select query without story_aliases relationship (fallback version).
  */
-export async function queryOCWithFallback<T>(
+export function buildOCSelectQueryFallback() {
+  return `
+    *,
+    likes,
+    dislikes,
+    world:worlds(*),
+    identity:oc_identities(
+      *,
+      versions:ocs(
+        id,
+        name,
+        slug,
+        world_id,
+        is_public,
+        world:worlds(id, name, slug)
+      )
+    )
+  `;
+}
+
+/**
+ * Executes an OC query with graceful fallback for story_aliases relationship.
+ * Tries with story_alias relationship first, falls back to query without it if PGRST200 error occurs.
+ * If fallback is used, manually fetches story_alias data separately.
+ */
+export async function queryOCWithFallback<T extends { story_alias_id?: string | null; story_alias?: any }>(
   queryBuilder: (selectQuery: string) => Promise<{ data: T | null; error: any }>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   logContext?: string
 ): Promise<{ data: T | null; error: any }> {
-  // Try with foreign key hint first
+  // Try with story_alias relationship first
   const selectQuery = buildOCSelectQuery();
   const result = await queryBuilder(selectQuery);
   
   // Check if error is related to missing relationship (PGRST200)
   if (result.error && result.error.code === 'PGRST200' && 
-      result.error.message?.includes('story_aliases') &&
-      result.error.details?.includes('fk_ocs_story_alias_id')) {
+      (result.error.message?.includes('story_aliases') || 
+       result.error.details?.includes('fk_ocs_story_alias_id') ||
+       result.error.details?.includes('story_aliases'))) {
     
     if (logContext) {
-      logger.debug('Utility', `${logContext}: FK hint failed, falling back to inferred relationship`);
+      logger.warn('Utility', `${logContext}: story_aliases relationship failed, falling back to query without it`, {
+        error: result.error.message,
+        code: result.error.code,
+      });
     }
     
-    // Retry with fallback query (no FK hint)
+    // Retry without story_alias relationship
     const fallbackQuery = buildOCSelectQueryFallback();
-    return await queryBuilder(fallbackQuery);
+    const fallbackResult = await queryBuilder(fallbackQuery);
+    
+    // If fallback succeeded and we have story_alias_id, fetch story_alias separately
+    if (fallbackResult.data && fallbackResult.data.story_alias_id) {
+      try {
+        const { data: storyAlias } = await supabase
+          .from('story_aliases')
+          .select('id, name, slug, description')
+          .eq('id', fallbackResult.data.story_alias_id)
+          .single();
+        
+        if (storyAlias) {
+          fallbackResult.data.story_alias = storyAlias;
+        }
+      } catch (err) {
+        // Silently fail - story_alias is optional
+        if (logContext) {
+          logger.debug('Utility', `${logContext}: Failed to fetch story_alias separately`, { err });
+        }
+      }
+    }
+    
+    return fallbackResult;
   }
   
   return result;
+}
+
+/**
+ * Helper function to execute a query with graceful fallback for story_aliases relationship.
+ * If the query fails due to missing story_aliases relationship, retries without it and fetches story_alias separately.
+ */
+export async function queryWithStoryAliasFallback<T extends { story_alias_id?: string | null; story_alias?: any }>(
+  queryFn: () => Promise<{ data: T | null; error: any }>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  logContext?: string
+): Promise<{ data: T | null; error: any }> {
+  // Try the query as-is first
+  const result = await queryFn();
+  
+  // Check if error is related to missing story_aliases relationship (PGRST200)
+  if (result.error && result.error.code === 'PGRST200' && 
+      (result.error.message?.includes('story_aliases') || 
+       result.error.details?.includes('fk_') && result.error.details?.includes('story_alias') ||
+       result.error.details?.includes('story_aliases'))) {
+    
+    if (logContext) {
+      logger.warn('Utility', `${logContext}: story_aliases relationship failed, will retry without it`, {
+        error: result.error.message,
+        code: result.error.code,
+      });
+    }
+    
+    // Return the error but don't block - let the calling code handle it
+    // The calling code should retry without story_alias in the select
+    return result;
+  }
+  
+  return result;
+}
+
+/**
+ * Fetches story_alias data separately if story_alias_id is present but story_alias is missing.
+ */
+export async function fetchStoryAliasIfNeeded<T extends { story_alias_id?: string | null; story_alias?: any }>(
+  data: T | null,
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  fields: string = 'id, name, slug, description'
+): Promise<T | null> {
+  if (!data || !data.story_alias_id || data.story_alias) {
+    return data;
+  }
+  
+  try {
+    const { data: storyAlias } = await supabase
+      .from('story_aliases')
+      .select(fields)
+      .eq('id', data.story_alias_id)
+      .single();
+    
+    if (storyAlias) {
+      data.story_alias = storyAlias;
+    }
+  } catch (err) {
+    // Silently fail - story_alias is optional
+    logger.debug('Utility', 'Failed to fetch story_alias separately', { err });
+  }
+  
+  return data;
 }

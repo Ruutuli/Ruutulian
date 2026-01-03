@@ -37,6 +37,37 @@ const getTimestamp = () => {
   });
 };
 
+// Safe JSON stringify that handles circular references and non-serializable values
+const safeStringify = (obj: any, space?: number): string => {
+  const seen = new WeakSet();
+  try {
+    return JSON.stringify(obj, (key, value) => {
+      // Skip circular references
+      if (typeof value === 'object' && value !== null) {
+        if (seen.has(value)) {
+          return '[Circular]';
+        }
+        seen.add(value);
+      }
+      // Handle non-serializable values
+      if (value instanceof Error) {
+        return {
+          name: value.name,
+          message: value.message,
+          stack: value.stack,
+        };
+      }
+      // Skip DOM elements and React fiber nodes
+      if (value && typeof value === 'object' && (value.nodeType || value.__reactFiber$)) {
+        return '[DOM Element or React Fiber]';
+      }
+      return value;
+    }, space);
+  } catch (err) {
+    return String(obj);
+  }
+};
+
 const formatMessage = (level: LogLevel, category: string, message: string, ...args: any[]) => {
   const timestamp = colors.dim + getTimestamp() + colors.reset;
   const categoryTag = colors.cyan + `[${category}]` + colors.reset;
@@ -69,9 +100,9 @@ const formatMessage = (level: LogLevel, category: string, message: string, ...ar
   
   const formattedMessage = messageColor + message + colors.reset;
   
-  // Format additional arguments
+  // Format additional arguments using safe stringify
   const formattedArgs = args.length > 0 
-    ? ' ' + colors.dim + JSON.stringify(args.length === 1 ? args[0] : args, null, 2) + colors.reset
+    ? ' ' + colors.dim + safeStringify(args.length === 1 ? args[0] : args, 2) + colors.reset
     : '';
   
   return `${timestamp} ${levelTag} ${categoryTag} ${formattedMessage}${formattedArgs}`;

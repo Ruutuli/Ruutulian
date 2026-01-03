@@ -23,6 +23,8 @@ export function StorySnippetsFormSection({ ocId }: StorySnippetsFormSectionProps
   const [loading, setLoading] = useState(true);
   const [newSnippet, setNewSnippet] = useState({ title: '', snippet_text: '' });
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -45,35 +47,66 @@ export function StorySnippetsFormSection({ ocId }: StorySnippetsFormSectionProps
   }, [ocId, supabase]);
 
   const handleAddSnippet = async () => {
-    if (!newSnippet.title.trim() || !newSnippet.snippet_text.trim()) return;
+    if (!newSnippet.title.trim() || !newSnippet.snippet_text.trim()) {
+      setError('Please fill in both title and snippet text');
+      return;
+    }
+
+    if (!ocId) {
+      setError('OC ID is missing. Please save the character first before adding story snippets.');
+      return;
+    }
 
     setIsSaving(true);
-    const { data, error } = await supabase
+    setError(null);
+    setSuccessMessage(null);
+
+    const { data, error: insertError } = await supabase
       .from('story_snippets')
       .insert({
         oc_id: ocId,
-        title: newSnippet.title,
-        snippet_text: newSnippet.snippet_text,
+        title: newSnippet.title.trim(),
+        snippet_text: newSnippet.snippet_text.trim(),
       })
       .select()
       .single();
 
-    if (!error && data) {
+    if (insertError) {
+      console.error('Error saving story snippet:', insertError);
+      setError(`Failed to save snippet: ${insertError.message}`);
+      setIsSaving(false);
+      return;
+    }
+
+    if (data) {
       setSnippets([data, ...snippets]);
       setNewSnippet({ title: '', snippet_text: '' });
+      setSuccessMessage('Story snippet saved successfully!');
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000);
     }
     setIsSaving(false);
   };
 
   const handleDeleteSnippet = async (snippetId: string) => {
-    const { error } = await supabase
+    if (!confirm('Are you sure you want to delete this story snippet?')) {
+      return;
+    }
+
+    const { error: deleteError } = await supabase
       .from('story_snippets')
       .delete()
       .eq('id', snippetId);
 
-    if (!error) {
-      setSnippets(snippets.filter(s => s.id !== snippetId));
+    if (deleteError) {
+      console.error('Error deleting story snippet:', deleteError);
+      setError(`Failed to delete snippet: ${deleteError.message}`);
+      return;
     }
+
+    setSnippets(snippets.filter(s => s.id !== snippetId));
+    setSuccessMessage('Story snippet deleted successfully!');
+    setTimeout(() => setSuccessMessage(null), 3000);
   };
 
   if (loading) {
@@ -87,6 +120,22 @@ export function StorySnippetsFormSection({ ocId }: StorySnippetsFormSectionProps
   return (
     <FormSection title="Story Snippets" icon="book" accentColor="content" defaultOpen={false}>
       <div className="space-y-4">
+        {/* Error Message */}
+        {error && (
+          <div className="p-3 bg-red-900/30 border border-red-500/50 rounded-lg text-red-300 text-sm">
+            <i className="fas fa-exclamation-circle mr-2"></i>
+            {error}
+          </div>
+        )}
+
+        {/* Success Message */}
+        {successMessage && (
+          <div className="p-3 bg-green-900/30 border border-green-500/50 rounded-lg text-green-300 text-sm">
+            <i className="fas fa-check-circle mr-2"></i>
+            {successMessage}
+          </div>
+        )}
+
         {/* Existing Snippets */}
         {snippets.length > 0 && (
           <div className="space-y-3">
@@ -118,7 +167,10 @@ export function StorySnippetsFormSection({ ocId }: StorySnippetsFormSectionProps
             id="new-snippet-title"
             type="text"
             value={newSnippet.title}
-            onChange={(e) => setNewSnippet({ ...newSnippet, title: e.target.value })}
+            onChange={(e) => {
+              setNewSnippet({ ...newSnippet, title: e.target.value });
+              setError(null); // Clear error when user types
+            }}
             placeholder="Snippet title..."
             className="mb-3"
           />
@@ -126,7 +178,10 @@ export function StorySnippetsFormSection({ ocId }: StorySnippetsFormSectionProps
           <FormTextarea
             id="new-snippet-text"
             value={newSnippet.snippet_text}
-            onChange={(e) => setNewSnippet({ ...newSnippet, snippet_text: e.target.value })}
+            onChange={(e) => {
+              setNewSnippet({ ...newSnippet, snippet_text: e.target.value });
+              setError(null); // Clear error when user types
+            }}
             placeholder="Enter story excerpt..."
             rows={5}
             className="mb-3"
@@ -135,12 +190,18 @@ export function StorySnippetsFormSection({ ocId }: StorySnippetsFormSectionProps
             type="button"
             variant="secondary"
             onClick={handleAddSnippet}
-            disabled={isSaving || !newSnippet.title.trim() || !newSnippet.snippet_text.trim()}
+            disabled={isSaving || !newSnippet.title.trim() || !newSnippet.snippet_text.trim() || !ocId}
             isLoading={isSaving}
           >
             <i className="fas fa-plus mr-2"></i>
             Add Snippet
           </FormButton>
+          {!ocId && (
+            <p className="mt-2 text-sm text-yellow-400">
+              <i className="fas fa-info-circle mr-1"></i>
+              Please save the character first before adding story snippets.
+            </p>
+          )}
         </div>
       </div>
     </FormSection>

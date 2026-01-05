@@ -124,13 +124,13 @@ export async function PUT(
     }
 
     // Fetch the updated OC with relationships
-    // Use inferred relationship (PostgREST will automatically detect the FK)
+    // Use explicit foreign key constraint to avoid ambiguous relationship errors
     const { data, error: selectError } = await supabase
       .from('ocs')
       .select(`
         *,
         world:worlds(*),
-        story_alias:story_aliases(id, name, slug, description),
+        story_alias:story_aliases!fk_ocs_story_alias_id(id, name, slug, description),
         identity:oc_identities(
           *,
           versions:ocs(

@@ -64,7 +64,7 @@ export function createAdminClient() {
 
 /**
  * Helper function to build OC select query with graceful fallback for story_aliases relationship.
- * Tries with foreign key hint first, falls back to inferred relationship if that fails.
+ * Uses explicit foreign key constraint to avoid ambiguous relationship errors.
  */
 export function buildOCSelectQuery() {
   return `
@@ -72,7 +72,7 @@ export function buildOCSelectQuery() {
     likes,
     dislikes,
     world:worlds(*),
-    story_alias:story_aliases(id, name, slug, description),
+    story_alias:story_aliases!fk_ocs_story_alias_id(id, name, slug, description),
     identity:oc_identities(
       *,
       versions:ocs(
@@ -124,9 +124,10 @@ export async function queryOCWithFallback<T extends { story_alias_id?: string | 
   const selectQuery = buildOCSelectQuery();
   const result = await queryBuilder(selectQuery);
   
-  // Check if error is related to missing relationship (PGRST200)
-  if (result.error && result.error.code === 'PGRST200' && 
+  // Check if error is related to relationship issues (PGRST200 or PGRST201)
+  if (result.error && (result.error.code === 'PGRST200' || result.error.code === 'PGRST201') && 
       (result.error.message?.includes('story_aliases') || 
+       result.error.message?.includes('more than one relationship') ||
        result.error.details?.includes('fk_ocs_story_alias_id') ||
        result.error.details?.includes('story_aliases'))) {
     
@@ -179,9 +180,10 @@ export async function queryWithStoryAliasFallback<T extends { story_alias_id?: s
   // Try the query as-is first
   const result = await queryFn();
   
-  // Check if error is related to missing story_aliases relationship (PGRST200)
-  if (result.error && result.error.code === 'PGRST200' && 
+  // Check if error is related to story_aliases relationship issues (PGRST200 or PGRST201)
+  if (result.error && (result.error.code === 'PGRST200' || result.error.code === 'PGRST201') && 
       (result.error.message?.includes('story_aliases') || 
+       result.error.message?.includes('more than one relationship') ||
        result.error.details?.includes('fk_') && result.error.details?.includes('story_alias') ||
        result.error.details?.includes('story_aliases'))) {
     

@@ -965,7 +965,7 @@ function RelationshipEntryInput({
               <FormTextarea
                 {...register(`${fieldPath}.${index}.description`)}
                 rows={2}
-                placeholder="Additional details about this relationship"
+                placeholder="Additional details about this relationship (supports markdown)"
                 disabled={isSubmitting}
               />
             </div>
@@ -973,11 +973,11 @@ function RelationshipEntryInput({
               <FormLabel htmlFor={`${fieldPath}.${index}.image_url`}>
                 Image URL
               </FormLabel>
-              <FormInput
-                {...register(`${fieldPath}.${index}.image_url`)}
-                placeholder="https://example.com/image.jpg"
-                disabled={isSubmitting}
-              />
+                    <FormInput
+                      {...register(`${fieldPath}.${index}.image_url`)}
+                      placeholder="Please use format: https://example.com/image.jpg"
+                      disabled={isSubmitting}
+                    />
               {watch(`${fieldPath}.${index}.image_url` as any) && (
                 <ImagePreview 
                   url={watch(`${fieldPath}.${index}.image_url` as any)} 
@@ -2697,7 +2697,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
             </FormLabel>
             <FormInput
               {...register('date_of_birth')}
-              placeholder="MM/DD or MM-DD"
+              placeholder="Please use format: MM/DD or MM-DD (e.g., 12/25 or 12-25)"
               disabled={isSubmitting}
               helpText="Format: MM/DD (e.g., 01/15) or MM-DD (e.g., 01-15). Only month and day required. Star sign will be auto-calculated."
             />
@@ -2768,7 +2768,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           <FormTextarea
             {...register('affiliations')}
             rows={2}
-            placeholder="Groups, factions, teams, or organizations"
+            placeholder="Groups, factions, teams, or organizations (supports markdown)"
             disabled={isSubmitting}
           />
         </div>
@@ -2927,12 +2927,12 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           <FormLabel htmlFor="alternate_looks">
             Alternate Looks
           </FormLabel>
-          <FormTextarea
-            {...register('alternate_looks')}
-            rows={3}
-            placeholder="Other outfits, forms, or disguises"
-            disabled={isSubmitting}
-          />
+            <FormTextarea
+              {...register('alternate_looks')}
+              rows={3}
+              placeholder="Other outfits, forms, or disguises (supports markdown)"
+              disabled={isSubmitting}
+            />
         </div>
 
         <div>
@@ -2942,7 +2942,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           <FormTextarea
             {...register('accessories')}
             rows={2}
-            placeholder="Commonly worn, carried, or displayed items"
+            placeholder="Commonly worn, carried, or displayed items (supports markdown)"
             disabled={isSubmitting}
           />
         </div>
@@ -2954,7 +2954,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           <FormTextarea
             {...register('visual_motifs')}
             rows={2}
-            placeholder="Recurring visual themes or symbols"
+            placeholder="Recurring visual themes or symbols (supports markdown)"
             disabled={isSubmitting}
           />
         </div>
@@ -2966,7 +2966,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           <FormTextarea
             {...register('appearance_changes')}
             rows={2}
-            placeholder="Changes by time period, role, or arc"
+            placeholder="Changes by time period, role, or arc (supports markdown)"
             disabled={isSubmitting}
           />
         </div>
@@ -2978,7 +2978,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
             </FormLabel>
             <FormInput
               {...register('height')}
-              placeholder="Physical height"
+              placeholder="Physical height (e.g., 5'10 or 178 cm)"
               disabled={isSubmitting}
             />
           </div>
@@ -2988,7 +2988,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
             </FormLabel>
             <FormInput
               {...register('weight')}
-              placeholder="Physical weight"
+              placeholder="Physical weight (e.g., 150 lbs or 68 kg)"
               disabled={isSubmitting}
             />
           </div>
@@ -3048,7 +3048,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           </FormLabel>
           <FormInput
             {...register('build')}
-            placeholder="Body type or physique"
+            placeholder="Body type or physique (e.g., Athletic, Slender, Muscular)"
             disabled={isSubmitting}
           />
         </div>
@@ -3060,7 +3060,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           <FormTextarea
             {...register('features')}
             rows={2}
-            placeholder="Distinguishing physical traits"
+            placeholder="Distinguishing physical traits (supports markdown)"
             disabled={isSubmitting}
           />
         </div>
@@ -3116,7 +3116,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
                 min="1"
                 max="10"
                 {...register('sociability', { valueAsNumber: true })}
-                placeholder="1-10"
+                placeholder="1 = Friendly, 10 = Reserved"
                 disabled={isSubmitting}
               />
             </div>
@@ -3129,7 +3129,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
                 min="1"
                 max="10"
                 {...register('communication_style', { valueAsNumber: true })}
-                placeholder="1-10"
+                placeholder="1 = Polite, 10 = Blunt"
                 disabled={isSubmitting}
               />
             </div>
@@ -3142,7 +3142,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
                 min="1"
                 max="10"
                 {...register('judgment', { valueAsNumber: true })}
-                placeholder="1-10"
+                placeholder="1 = Clever, 10 = Impulsive"
                 disabled={isSubmitting}
               />
             </div>
@@ -3155,7 +3155,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
                 min="1"
                 max="10"
                 {...register('emotional_resilience', { valueAsNumber: true })}
-                placeholder="1-10"
+                placeholder="1 = Sensitive, 10 = Hardened"
                 disabled={isSubmitting}
               />
             </div>
@@ -3168,7 +3168,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
                 min="1"
                 max="10"
                 {...register('courage', { valueAsNumber: true })}
-                placeholder="1-10"
+                placeholder="1 = Bold, 10 = Hesitant"
                 disabled={isSubmitting}
               />
             </div>
@@ -3181,7 +3181,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
                 min="1"
                 max="10"
                 {...register('risk_behavior', { valueAsNumber: true })}
-                placeholder="1-10"
+                placeholder="1 = Careful, 10 = Reckless"
                 disabled={isSubmitting}
               />
             </div>
@@ -3194,7 +3194,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
                 min="1"
                 max="10"
                 {...register('honesty', { valueAsNumber: true })}
-                placeholder="1-10"
+                placeholder="1 = Sincere, 10 = Deceptive"
                 disabled={isSubmitting}
               />
             </div>
@@ -3207,7 +3207,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
                 min="1"
                 max="10"
                 {...register('discipline', { valueAsNumber: true })}
-                placeholder="1-10"
+                placeholder="1 = Diligent, 10 = Neglectful"
                 disabled={isSubmitting}
               />
             </div>
@@ -3220,7 +3220,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
                 min="1"
                 max="10"
                 {...register('temperament', { valueAsNumber: true })}
-                placeholder="1-10"
+                placeholder="1 = Calm, 10 = Volatile"
                 disabled={isSubmitting}
               />
             </div>
@@ -3233,7 +3233,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
                 min="1"
                 max="10"
                 {...register('humor', { valueAsNumber: true })}
-                placeholder="1-10"
+                placeholder="1 = Lighthearted, 10 = Serious"
                 disabled={isSubmitting}
               />
             </div>
@@ -3292,7 +3292,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           <FormTextarea
             {...register('abilities')}
             rows={3}
-            placeholder="Exceptional capabilities, whether supernatural, enhanced, or naturally extreme"
+            placeholder="Exceptional capabilities, whether supernatural, enhanced, or naturally extreme (supports markdown)"
             disabled={isSubmitting}
           />
         </div>
@@ -3304,7 +3304,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           <FormTextarea
             {...register('skills')}
             rows={3}
-            placeholder="Learned skills, techniques, or areas of expertise"
+            placeholder="Learned skills, techniques, or areas of expertise (supports markdown)"
             disabled={isSubmitting}
           />
         </div>
@@ -3316,7 +3316,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           <FormTextarea
             {...register('aptitudes')}
             rows={2}
-            placeholder="Inborn strengths, talents, or predispositions"
+            placeholder="Inborn strengths, talents, or predispositions (supports markdown)"
             disabled={isSubmitting}
           />
         </div>
@@ -3328,7 +3328,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           <FormTextarea
             {...register('strengths')}
             rows={2}
-            placeholder="Areas where the character performs best"
+            placeholder="Areas where the character performs best (supports markdown)"
             disabled={isSubmitting}
           />
         </div>
@@ -3340,7 +3340,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           <FormTextarea
             {...register('limits')}
             rows={2}
-            placeholder="Weaknesses, strain, or consequences tied to ability use"
+            placeholder="Weaknesses, strain, or consequences tied to ability use (supports markdown)"
             disabled={isSubmitting}
           />
         </div>
@@ -3352,7 +3352,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           <FormTextarea
             {...register('conditions')}
             rows={2}
-            placeholder="Situational requirements or restrictions"
+            placeholder="Situational requirements or restrictions (supports markdown)"
             disabled={isSubmitting}
           />
         </div>
@@ -3640,7 +3640,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
             <FormTextarea
               {...register('likes')}
               rows={3}
-              placeholder="Things the character enjoys"
+              placeholder="Things the character enjoys. Use commas to separate items for a list, or use markdown for formatting"
               disabled={isSubmitting}
             />
           </div>
@@ -3651,7 +3651,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
             <FormTextarea
               {...register('dislikes')}
               rows={3}
-              placeholder="Things the character dislikes"
+              placeholder="Things the character dislikes. Use commas to separate items for a list, or use markdown for formatting"
               disabled={isSubmitting}
             />
           </div>
@@ -3671,7 +3671,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
                     <FormInput
                       {...register(`gallery.${index}`)}
                       type="url"
-                      placeholder="Image URL"
+                      placeholder="Please use format: https://example.com/image.jpg"
                       disabled={isSubmitting}
                       className="w-full"
                     />
@@ -3707,7 +3707,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           <FormInput
             type="url"
             {...register('image_url')}
-            placeholder="Primary image URL"
+            placeholder="Please use format: https://example.com/image.jpg"
             disabled={isSubmitting}
           />
           <ImagePreview url={imageUrl || ''} maxHeight="300px" />
@@ -3720,7 +3720,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           <FormInput
             type="url"
             {...register('icon_url')}
-            placeholder="Icon or avatar URL"
+            placeholder="Please use format: https://example.com/image.jpg"
             disabled={isSubmitting}
           />
           <ImagePreview url={iconUrl || ''} maxHeight="150px" />
@@ -3743,7 +3743,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
             </FormLabel>
             <FormInput
               {...register('voice_actor')}
-              placeholder="Other voice portrayals"
+              placeholder="Other voice portrayals (use commas to separate multiple actors)"
               disabled={isSubmitting}
             />
           </div>
@@ -3782,7 +3782,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           <FormTextarea
             {...register('inspirations')}
             rows={3}
-            placeholder="Real or fictional inspirations"
+            placeholder="Real or fictional inspirations (supports markdown)"
             disabled={isSubmitting}
           />
         </div>

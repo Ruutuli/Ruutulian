@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { FanficChapter } from '@/types/oc';
 import { FormButton } from './forms/FormButton';
 import { FormLabel } from './forms/FormLabel';
@@ -97,6 +97,26 @@ export function FanficChaptersManager({ fanficId }: FanficChaptersManagerProps) 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [chapterErrors, setChapterErrors] = useState<Record<string, string>>({});
+  const successTimeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+
+  const scheduleSuccessClear = (ms: number) => {
+    if (successTimeoutRef.current) {
+      clearTimeout(successTimeoutRef.current);
+    }
+    successTimeoutRef.current = window.setTimeout(() => {
+      setSuccess(null);
+      successTimeoutRef.current = null;
+    }, ms);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+        successTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     loadChapters();
@@ -185,7 +205,7 @@ export function FanficChaptersManager({ fanficId }: FanficChaptersManagerProps) 
       setEditingChapterId(null);
       setEditState(null);
       setSuccess(`Chapter ${data.chapter?.chapter_number || ''} saved successfully!`);
-      setTimeout(() => setSuccess(null), 3000);
+      scheduleSuccessClear(3000);
     } catch (err) {
       logger.error('Component', 'FanficChaptersManager: Error saving chapter', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to save chapter';
@@ -232,7 +252,7 @@ export function FanficChaptersManager({ fanficId }: FanficChaptersManagerProps) 
       if (data.chapter) {
         startEditing(data.chapter);
         setSuccess('New chapter created! Fill in the details below and click Save.');
-        setTimeout(() => setSuccess(null), 5000);
+        scheduleSuccessClear(5000);
       }
     } catch (err) {
       logger.error('Component', 'FanficChaptersManager: Error creating chapter', err);
@@ -271,7 +291,7 @@ export function FanficChaptersManager({ fanficId }: FanficChaptersManagerProps) 
         cancelEditing();
       }
       setSuccess(`Chapter ${chapterNum} deleted successfully!`);
-      setTimeout(() => setSuccess(null), 3000);
+      scheduleSuccessClear(3000);
     } catch (err) {
       logger.error('Component', 'FanficChaptersManager: Error deleting chapter', err);
       setError(err instanceof Error ? err.message : 'Failed to delete chapter');

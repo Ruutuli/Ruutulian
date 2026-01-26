@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { FormSection } from './forms/FormSection';
 import { FormLabel } from './forms/FormLabel';
 import { FormInput } from './forms/FormInput';
@@ -25,9 +25,18 @@ export function StorySnippetsFormSection({ ocId }: StorySnippetsFormSectionProps
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+
+  // Auto-clear success message, with cleanup to avoid unmount leaks
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = window.setTimeout(() => setSuccessMessage(null), 3000);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchSnippets() {
       const { data } = await supabase
         .from('story_snippets')
@@ -35,6 +44,8 @@ export function StorySnippetsFormSection({ ocId }: StorySnippetsFormSectionProps
         .eq('oc_id', ocId)
         .order('created_at', { ascending: false });
       
+      if (cancelled) return;
+
       if (data) {
         setSnippets(data);
       }
@@ -44,6 +55,9 @@ export function StorySnippetsFormSection({ ocId }: StorySnippetsFormSectionProps
     if (ocId) {
       fetchSnippets();
     }
+    return () => {
+      cancelled = true;
+    };
   }, [ocId, supabase]);
 
   const handleAddSnippet = async () => {
@@ -82,8 +96,6 @@ export function StorySnippetsFormSection({ ocId }: StorySnippetsFormSectionProps
       setSnippets([data, ...snippets]);
       setNewSnippet({ title: '', snippet_text: '' });
       setSuccessMessage('Story snippet saved successfully!');
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccessMessage(null), 3000);
     }
     setIsSaving(false);
   };
@@ -106,7 +118,6 @@ export function StorySnippetsFormSection({ ocId }: StorySnippetsFormSectionProps
 
     setSnippets(snippets.filter(s => s.id !== snippetId));
     setSuccessMessage('Story snippet deleted successfully!');
-    setTimeout(() => setSuccessMessage(null), 3000);
   };
 
   if (loading) {

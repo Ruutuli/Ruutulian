@@ -38,12 +38,68 @@ export async function GET(request: NextRequest) {
         `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w1920-h1080`,
         `https://drive.google.com/thumbnail?id=${driveFileId}`,
         `https://drive.google.com/uc?export=view&id=${driveFileId}`,
+        `https://drive.google.com/uc?export=download&id=${driveFileId}`,
+        `https://drive.usercontent.google.com/download?id=${driveFileId}&export=view`,
       ];
 
   const errors: Array<{ url: string; error: string; status?: number; contentType?: string }> = [];
 
+  const detectImageContentType = (buffer: ArrayBuffer): string | null => {
+    const bytes = new Uint8Array(buffer);
+    if (bytes.length < 12) return null;
+
+    // PNG: 89 50 4E 47 0D 0A 1A 0A
+    if (
+      bytes[0] === 0x89 &&
+      bytes[1] === 0x50 &&
+      bytes[2] === 0x4e &&
+      bytes[3] === 0x47 &&
+      bytes[4] === 0x0d &&
+      bytes[5] === 0x0a &&
+      bytes[6] === 0x1a &&
+      bytes[7] === 0x0a
+    ) {
+      return 'image/png';
+    }
+
+    // JPEG: FF D8 FF
+    if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+      return 'image/jpeg';
+    }
+
+    // GIF: "GIF8"
+    if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
+      return 'image/gif';
+    }
+
+    // WebP: "RIFF" .... "WEBP"
+    if (
+      bytes[0] === 0x52 &&
+      bytes[1] === 0x49 &&
+      bytes[2] === 0x46 &&
+      bytes[3] === 0x46 &&
+      bytes[8] === 0x57 &&
+      bytes[9] === 0x45 &&
+      bytes[10] === 0x42 &&
+      bytes[11] === 0x50
+    ) {
+      return 'image/webp';
+    }
+
+    return null;
+  };
+
   // Helper function to fetch a single URL with timeout
-  const fetchImageUrl = async (imageUrl: string): Promise<{ success: boolean; data?: ArrayBuffer; contentType?: string; error?: string }> => {
+  const fetchImageUrl = async (
+    imageUrl: string
+  ): Promise<{
+    success: boolean;
+    data?: ArrayBuffer;
+    contentType?: string;
+    status?: number;
+    responseContentType?: string;
+    error?: string;
+  }> => {
     let timeoutId: NodeJS.Timeout | null = null;
     try {
       // Create abort controller for timeout (reduced to 5 seconds)
@@ -63,44 +119,67 @@ export async function GET(request: NextRequest) {
       
       if (timeoutId) clearTimeout(timeoutId);
 
-      // Check if response is actually an image
-      const contentType = response.headers.get('content-type') || '';
-      const isImage = contentType.startsWith('image/');
-      
-      if (response.ok && isImage) {
-        const imageBuffer = await response.arrayBuffer();
-        
-        // Verify it's actually image data (not HTML error page)
-        if (imageBuffer.byteLength > 100) {
-          // Success - return image data
-          return { success: true, data: imageBuffer, contentType };
-        } else {
-          const errorMsg = `Response too small (${imageBuffer.byteLength} bytes) - likely not an image`;
-          return { success: false, error: errorMsg };
+      const responseContentType = response.headers.get('content-type') || '';
+      const status = response.status;
+
+      if (!response.ok) {
+        let text = '';
+        try {
+          text = await response.text();
+        } catch {
+          // ignore
         }
-      } else {
-        // Check if we got redirected to a login page or error page
-        // Only read text for non-image responses to avoid consuming the body
-        if (!isImage && response.status !== 200) {
-          try {
-            const text = await response.text();
-            const isLoginPage = text.includes('accounts.google.com') || 
-                               text.includes('Sign in') || 
-                               text.includes('Access denied') ||
-                               text.includes('Request Access');
-            
-            if (isLoginPage) {
-              return { success: false, error: 'File not publicly accessible (redirected to login/access page)' };
-            } else {
-              return { success: false, error: 'Non-image response received' };
-            }
-          } catch (textError) {
-            return { success: false, error: 'Failed to read response text' };
-          }
-        } else {
-          return { success: false, error: 'Unexpected response' };
-        }
+
+        const isAccessPage = /accounts\.google\.com|servicelogin|sign in|request access|access denied/i.test(text);
+        return {
+          success: false,
+          status,
+          responseContentType,
+          error: isAccessPage
+            ? 'File not publicly accessible (login/access page)'
+            : `HTTP ${status}${responseContentType ? ` (${responseContentType})` : ''}`,
+        };
       }
+
+      const buffer = await response.arrayBuffer();
+      if (buffer.byteLength <= 100) {
+        return {
+          success: false,
+          status,
+          responseContentType,
+          error: `Response too small (${buffer.byteLength} bytes) - likely not an image`,
+        };
+      }
+
+      const detected = detectImageContentType(buffer);
+      if (detected) {
+        return {
+          success: true,
+          status,
+          responseContentType,
+          data: buffer,
+          contentType: responseContentType.startsWith('image/') ? responseContentType : detected,
+        };
+      }
+
+      // Likely HTML/error body with 200 OK
+      let snippet = '';
+      try {
+        const bytes = new Uint8Array(buffer);
+        snippet = new TextDecoder('utf-8').decode(bytes.slice(0, 2048));
+      } catch {
+        // ignore
+      }
+
+      const isAccessPage = /accounts\.google\.com|servicelogin|sign in|request access|access denied/i.test(snippet);
+      return {
+        success: false,
+        status,
+        responseContentType,
+        error: isAccessPage
+          ? 'File not publicly accessible (login/access page)'
+          : `Non-image response received${responseContentType ? ` (${responseContentType})` : ''}`,
+      };
     } catch (error) {
       // Clear timeout if still active
       if (timeoutId) clearTimeout(timeoutId);
@@ -116,7 +195,12 @@ export async function GET(request: NextRequest) {
     if (result.success && result.data && result.contentType) {
       return { success: true, url: imageUrl, data: result.data, contentType: result.contentType };
     } else {
-      errors.push({ url: imageUrl, error: result.error || 'Unknown error' });
+      errors.push({ 
+        url: imageUrl, 
+        error: result.error || 'Unknown error',
+        status: result.status,
+        contentType: result.responseContentType,
+      });
       return { success: false, url: imageUrl };
     }
   });
@@ -144,11 +228,21 @@ export async function GET(request: NextRequest) {
   // All URLs failed - log comprehensive error details
   const isPublicAccessIssue = errors.some(e => 
     e.error.includes('not publicly accessible') || 
-    e.error.includes('redirected to login') ||
-    e.error.includes('Access denied')
+    e.error.includes('login/access page') ||
+    e.error.toLowerCase().includes('access denied') ||
+    e.error.toLowerCase().includes('request access') ||
+    e.status === 401 ||
+    e.status === 403
   );
 
-  logger.error('ImageProxy', 'Failed to fetch Google Drive image after all attempts', {
+  const shouldLogAsError = errors.some(e => 
+    (typeof e.status === 'number' && e.status >= 500) ||
+    /AbortError|TypeError/i.test(e.error)
+  );
+
+  const logFn = shouldLogAsError ? logger.error : logger.warn;
+
+  logFn('ImageProxy', 'Failed to fetch Google Drive image after all attempts', {
     fileId: driveFileId,
     originalUrl: url,
     totalAttempts: urls.length,

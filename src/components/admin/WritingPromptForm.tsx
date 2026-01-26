@@ -68,6 +68,16 @@ export function WritingPromptForm({ prompt }: WritingPromptFormProps) {
   const [filteredCategories, setFilteredCategories] = useState(commonCategories);
   const categoryInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const navigateTimeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (navigateTimeoutRef.current) {
+        clearTimeout(navigateTimeoutRef.current);
+        navigateTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const {
     register,
@@ -202,8 +212,12 @@ export function WritingPromptForm({ prompt }: WritingPromptFormProps) {
       }
 
       setSuccess(true);
-      setTimeout(() => {
+      if (navigateTimeoutRef.current) {
+        clearTimeout(navigateTimeoutRef.current);
+      }
+      navigateTimeoutRef.current = window.setTimeout(() => {
         router.push('/admin/writing-prompts');
+        navigateTimeoutRef.current = null;
       }, 1000);
     } catch (err: any) {
       logger.error('Component', 'WritingPromptForm: Error saving prompt', err);

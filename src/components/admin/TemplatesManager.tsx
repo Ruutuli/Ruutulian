@@ -28,15 +28,33 @@ export function TemplatesManager({ initialTemplates }: TemplatesManagerProps) {
 
   // Load templates
   useEffect(() => {
+    let cancelled = false;
+
     async function loadTemplates() {
-      const fetchedTemplates = await getTemplates();
-      setTemplates(fetchedTemplates);
-      if (Object.keys(fetchedTemplates).length > 0 && !selectedTemplate) {
-        setSelectedTemplate(Object.keys(fetchedTemplates)[0]);
+      try {
+        const fetchedTemplates = await getTemplates();
+        if (cancelled) return;
+        setTemplates(fetchedTemplates);
+        if (Object.keys(fetchedTemplates).length > 0 && !selectedTemplate) {
+          setSelectedTemplate(Object.keys(fetchedTemplates)[0]);
+        }
+      } catch (err) {
+        if (cancelled) return;
+        logger.error('Component', 'TemplatesManager: Error loading templates', err);
       }
     }
     loadTemplates();
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  // Auto-clear success message, with cleanup to avoid unmount leaks
+  useEffect(() => {
+    if (!success) return;
+    const timer = window.setTimeout(() => setSuccess(false), 3000);
+    return () => clearTimeout(timer);
+  }, [success]);
 
   const selectedTemplateData = templates[selectedTemplate];
 
@@ -119,9 +137,6 @@ export function TemplatesManager({ initialTemplates }: TemplatesManagerProps) {
       setTemplates(fetchedTemplates);
       
       router.refresh();
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       logger.error('Component', 'TemplatesManager: Error saving template', err);
       setError(err instanceof Error ? err.message : 'Failed to save template');

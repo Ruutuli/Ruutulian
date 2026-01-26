@@ -8,8 +8,20 @@ export function SiteName() {
   const [isLoading, setIsLoading] = useState(true);
   const fetchingRef = useRef(false);
   const lastFetchTimeRef = useRef<number>(0);
+  const timeoutsRef = useRef<Set<ReturnType<typeof window.setTimeout>>>(new Set());
 
   useEffect(() => {
+    let cancelled = false;
+
+    const scheduleTimeout = (fn: () => void, ms: number) => {
+      const id = window.setTimeout(() => {
+        timeoutsRef.current.delete(id);
+        fn();
+      }, ms);
+      timeoutsRef.current.add(id);
+      return id;
+    };
+
     async function fetchSiteName() {
       // Prevent concurrent fetches
       if (fetchingRef.current) {
@@ -38,8 +50,10 @@ export function SiteName() {
               // Update the ref after we've verified this is the latest
               if (fetchTime >= lastFetchTimeRef.current) {
                 lastFetchTimeRef.current = fetchTime;
-                setWebsiteName(dbName);
-                setIsLoading(false);
+                if (!cancelled) {
+                  setWebsiteName(dbName);
+                  setIsLoading(false);
+                }
                 fetchingRef.current = false;
                 return;
               } else {
@@ -55,8 +69,10 @@ export function SiteName() {
       
       // Fallback to default if API fails
       const config = getSiteConfigSync();
-      setWebsiteName(config.websiteName);
-      setIsLoading(false);
+      if (!cancelled) {
+        setWebsiteName(config.websiteName);
+        setIsLoading(false);
+      }
       fetchingRef.current = false;
     }
 
@@ -66,8 +82,10 @@ export function SiteName() {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         // Small delay to ensure any pending updates are complete
-        setTimeout(() => {
-          fetchSiteName();
+        scheduleTimeout(() => {
+          if (!cancelled) {
+            fetchSiteName();
+          }
         }, 100);
       }
     };
@@ -79,6 +97,7 @@ export function SiteName() {
       // If the event includes the new websiteName, use it immediately
       const customEvent = event as CustomEvent;
       if (customEvent?.detail?.websiteName) {
+        if (cancelled) return;
         const newName = customEvent.detail.websiteName;
         setWebsiteName(newName);
         setIsLoading(false);
@@ -89,14 +108,22 @@ export function SiteName() {
       }
       
       // If no event data, fetch from API after a delay to ensure database is updated
-      setTimeout(() => {
-        fetchSiteName();
+      scheduleTimeout(() => {
+        if (!cancelled) {
+          fetchSiteName();
+        }
       }, 2000); // Increased delay to ensure database commit is complete
     };
 
     window.addEventListener('site-settings-updated', handleRefresh);
 
     return () => {
+      cancelled = true;
+      fetchingRef.current = false;
+      for (const id of timeoutsRef.current) {
+        clearTimeout(id);
+      }
+      timeoutsRef.current.clear();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('site-settings-updated', handleRefresh);
     };

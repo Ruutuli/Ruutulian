@@ -48,6 +48,13 @@ export function CurrentProjectsEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Auto-clear success messages, with cleanup to avoid unmount leaks
+  useEffect(() => {
+    if (!message || message.type !== 'success') return;
+    const timer = window.setTimeout(() => setMessage(null), 3000);
+    return () => clearTimeout(timer);
+  }, [message]);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -125,7 +132,6 @@ export function CurrentProjectsEditor() {
 
       const result = await response.json();
       setMessage({ type: 'success', text: 'Current projects updated successfully!' });
-      setTimeout(() => setMessage(null), 3000);
     } catch (error) {
       logger.error('Component', 'CurrentProjectsEditor: Error saving current projects', error);
       setMessage({

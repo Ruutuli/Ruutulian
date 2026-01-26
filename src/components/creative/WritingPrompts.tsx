@@ -280,6 +280,13 @@ export function WritingPrompts({ ocs, prompts = [], className = '', isAdmin = fa
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Auto-clear success message, with cleanup to avoid unmount leaks
+  useEffect(() => {
+    if (!saveMessage || saveMessage.type !== 'success') return;
+    const timer = window.setTimeout(() => setSaveMessage(null), 5000);
+    return () => clearTimeout(timer);
+  }, [saveMessage]);
+
   // Group OCs by world_id
   const ocsByWorld = ocs.reduce((acc, oc) => {
     const worldId = oc.world_id || 'no-world';
@@ -399,8 +406,6 @@ export function WritingPrompts({ ocs, prompts = [], className = '', isAdmin = fa
       } else {
         setSaveMessage({ type: 'success', text: 'Response saved! View it on the character\'s page.' });
         setResponseText('');
-        // Clear message after 5 seconds
-        setTimeout(() => setSaveMessage(null), 5000);
       }
     } catch (error) {
       logger.error('Component', 'WritingPrompts: Error saving response', error);

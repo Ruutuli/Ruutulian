@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -49,6 +49,16 @@ export function WritingPromptResponseForm({ response }: WritingPromptResponseFor
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const navigateTimeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (navigateTimeoutRef.current) {
+        clearTimeout(navigateTimeoutRef.current);
+        navigateTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const {
     register,
@@ -85,8 +95,12 @@ export function WritingPromptResponseForm({ response }: WritingPromptResponseFor
       }
 
       setSuccess(true);
-      setTimeout(() => {
+      if (navigateTimeoutRef.current) {
+        clearTimeout(navigateTimeoutRef.current);
+      }
+      navigateTimeoutRef.current = window.setTimeout(() => {
         router.push('/admin/writing-prompt-responses');
+        navigateTimeoutRef.current = null;
       }, 1000);
     } catch (err: any) {
       logger.error('Component', 'WritingPromptResponseForm: Error updating response', err);

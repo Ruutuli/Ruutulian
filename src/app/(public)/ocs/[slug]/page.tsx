@@ -44,7 +44,7 @@ export async function generateMetadata({
     .select('name, slug, history_summary, image_url, icon_url, world:worlds(name, slug)')
     .eq('slug', resolvedParams.slug)
     .eq('is_public', true)
-    .single();
+    .maybeSingle();
 
   if (error) {
     logger.error('OCMetadata', 'Supabase query error', {
@@ -55,7 +55,6 @@ export async function generateMetadata({
   }
 
   if (!oc) {
-    logger.warn('OCMetadata', 'Character not found', { slug: resolvedParams.slug });
     return {
       title: 'Character Not Found',
     };
@@ -110,7 +109,7 @@ export default async function OCDetailPage({
         .select(selectQuery)
         .eq('slug', resolvedParams.slug)
         .eq('is_public', true)
-        .single();
+        .maybeSingle();
     },
     supabase,
     'OCDetailPage'
@@ -125,7 +124,6 @@ export default async function OCDetailPage({
   }
 
   if (!oc) {
-    logger.error('OCDetailPage', 'Character not found', { slug: resolvedParams.slug });
     notFound();
   }
   

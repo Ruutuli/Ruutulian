@@ -14,12 +14,20 @@ export async function GET(
     const supabase = await createClient();
     const config = await getSiteConfig();
 
-    const { data: oc } = await supabase
+    const { data: oc, error } = await supabase
       .from('ocs')
       .select('name, world:worlds(name)')
       .eq('slug', resolvedParams.slug)
       .eq('is_public', true)
-      .single();
+      .maybeSingle();
+
+    if (error) {
+      logger.error('API', 'Supabase query error while generating OC OG image', {
+        slug: resolvedParams.slug,
+        error: error.message,
+        code: error.code,
+      });
+    }
 
     if (!oc) {
       return new Response('Character not found', { status: 404 });

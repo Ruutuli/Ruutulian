@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type React from 'react';
 
@@ -87,8 +87,28 @@ export function useFormSubmission<T = any>(
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const isMountedRef = useRef(false);
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const submitAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+        successTimeoutRef.current = null;
+      }
+      submitAbortRef.current?.abort();
+      submitAbortRef.current = null;
+    };
+  }, []);
 
   const submit = async (data: T) => {
+    submitAbortRef.current?.abort();
+    const abortController = new AbortController();
+    submitAbortRef.current = abortController;
+
     setIsSubmitting(true);
     setError(null);
     setSuccess(false);
@@ -104,6 +124,7 @@ export function useFormSubmission<T = any>(
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestData),
+        signal: abortController.signal,
       });
 
       if (!response.ok) {
@@ -116,6 +137,7 @@ export function useFormSubmission<T = any>(
       // Parse response (some routes return data, some don't)
       const responseData = await response.json().catch(() => null);
 
+      if (!isMountedRef.current) return responseData;
       setSuccess(true);
       const isUpdate = !!entity;
 
@@ -168,32 +190,50 @@ export function useFormSubmission<T = any>(
 
         if (showSuccessMessage) {
           // Wait before navigating to show success message
-          setTimeout(() => {
+          if (successTimeoutRef.current) {
+            clearTimeout(successTimeoutRef.current);
+          }
+          successTimeoutRef.current = setTimeout(() => {
+            // Component might have unmounted during the delay
+            if (!isMountedRef.current) return;
             setIsSubmitting(false);
             router.push(route);
             router.refresh();
           }, successDelay);
         } else {
           // Navigate immediately
-          setIsSubmitting(false);
+          if (isMountedRef.current) {
+            setIsSubmitting(false);
+          }
           router.push(route);
           router.refresh();
         }
       } else {
         // Don't navigate, just refresh the current page
-        setIsSubmitting(false);
+        if (isMountedRef.current) {
+          setIsSubmitting(false);
+        }
         router.refresh();
       }
 
       return responseData;
     } catch (err) {
+      if ((err as any)?.name === 'AbortError') {
+        return;
+      }
       const error = err instanceof Error ? err : new Error('Failed to save. Please try again.');
-      setError(error.message);
-      setIsSubmitting(false);
+      if (isMountedRef.current) {
+        setError(error.message);
+        setIsSubmitting(false);
+      }
       
       // Call onError callback if provided
       if (onError && error instanceof Error) {
         onError(error);
+      }
+    } finally {
+      if (submitAbortRef.current === abortController) {
+        submitAbortRef.current = null;
       }
     }
   };

@@ -35,6 +35,13 @@ export function UnifiedFieldsManager({ worlds: initialWorlds, initialTemplates }
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // Auto-clear success message, with cleanup to avoid unmount leaks
+  useEffect(() => {
+    if (!success) return;
+    const timer = window.setTimeout(() => setSuccess(false), 3000);
+    return () => clearTimeout(timer);
+  }, [success]);
+
   // Load templates
   useEffect(() => {
     async function loadTemplates() {
@@ -168,7 +175,6 @@ export function UnifiedFieldsManager({ worlds: initialWorlds, initialTemplates }
 
       setSuccess(true);
       router.refresh();
-      setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       logger.error('Component', 'UnifiedFieldsManager: Error saving World Custom Fields', err);
       setError(err instanceof Error ? err.message : 'Failed to save World Custom Fields');
@@ -290,7 +296,6 @@ export function UnifiedFieldsManager({ worlds: initialWorlds, initialTemplates }
       setTemplates(fetchedTemplates);
       
       router.refresh();
-      setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       logger.error('Component', 'UnifiedFieldsManager: Error saving Template Fields', err);
       setError(err instanceof Error ? err.message : 'Failed to save Template Fields');

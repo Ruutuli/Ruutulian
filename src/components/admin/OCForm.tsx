@@ -325,6 +325,7 @@ function NameAutocompleteInput({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLUListElement>(null);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fieldValue = watch(fieldName);
 
   // Calculate dropdown position (above or below)
@@ -334,6 +335,16 @@ function NameAutocompleteInput({
     dropdownHeight: 240,
     dependencies: [suggestions.length],
   });
+
+  // Prevent blur timers from firing after unmount
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+        blurTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // Scroll highlighted item into view
   useEffect(() => {
@@ -354,9 +365,13 @@ function NameAutocompleteInput({
 
   // Fetch OCs from database when input changes
   useEffect(() => {
+    let cancelled = false;
+
     const fetchOCs = async () => {
+      if (cancelled) return;
+
       if (!inputValue.trim() || inputValue.length < 2) {
-        setSuggestions([]);
+        if (!cancelled) setSuggestions([]);
         return;
       }
 
@@ -376,6 +391,8 @@ function NameAutocompleteInput({
         
         const { data, error } = await query;
 
+        if (cancelled) return;
+
         if (error) {
           logger.error('OCForm', 'Error fetching OCs', error);
           setSuggestions([]);
@@ -383,13 +400,17 @@ function NameAutocompleteInput({
           setSuggestions(data || []);
         }
       } catch (err) {
+        if (cancelled) return;
         logger.error('OCForm', 'Error fetching OCs', err);
         setSuggestions([]);
       }
     };
 
     const debounceTimer = setTimeout(fetchOCs, 300);
-    return () => clearTimeout(debounceTimer);
+    return () => {
+      cancelled = true;
+      clearTimeout(debounceTimer);
+    };
   }, [inputValue, currentOCId]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -458,8 +479,12 @@ function NameAutocompleteInput({
   };
 
   const handleBlur = () => {
-    setTimeout(() => {
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+    }
+    blurTimeoutRef.current = setTimeout(() => {
       setShowSuggestions(false);
+      blurTimeoutRef.current = null;
     }, 200);
   };
 
@@ -484,6 +509,10 @@ function NameAutocompleteInput({
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
         onFocus={() => {
+          if (blurTimeoutRef.current) {
+            clearTimeout(blurTimeoutRef.current);
+            blurTimeoutRef.current = null;
+          }
           if (inputValue.length >= 2) {
             setShowSuggestions(true);
           }
@@ -547,6 +576,7 @@ function OCAutocompleteInput({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLUListElement>(null);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nameValue = watch(`${fieldPath}.${index}.name` as any);
   const ocIdValue = watch(`${fieldPath}.${index}.oc_id` as any);
 
@@ -596,9 +626,13 @@ function OCAutocompleteInput({
 
   // Fetch OCs from database when input changes
   useEffect(() => {
+    let cancelled = false;
+
     const fetchOCs = async () => {
+      if (cancelled) return;
+
       if (!inputValue.trim() || inputValue.length < 2) {
-        setSuggestions([]);
+        if (!cancelled) setSuggestions([]);
         return;
       }
 
@@ -617,6 +651,8 @@ function OCAutocompleteInput({
         }
         
         const { data, error } = await query;
+
+        if (cancelled) return;
 
         if (error) {
           logger.error('OCForm', 'Error fetching OCs', error);
@@ -639,13 +675,17 @@ function OCAutocompleteInput({
           setSuggestions(suggestionsWithLinked);
         }
       } catch (err) {
+        if (cancelled) return;
         logger.error('OCForm', 'Error fetching OCs', err);
         setSuggestions([]);
       }
     };
 
     const debounceTimer = setTimeout(fetchOCs, 300);
-    return () => clearTimeout(debounceTimer);
+    return () => {
+      cancelled = true;
+      clearTimeout(debounceTimer);
+    };
   }, [inputValue, currentOCId, getLinkedCharacterIds]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -696,10 +736,24 @@ function OCAutocompleteInput({
   };
 
   const handleBlur = () => {
-    setTimeout(() => {
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+    }
+    blurTimeoutRef.current = setTimeout(() => {
       setShowSuggestions(false);
+      blurTimeoutRef.current = null;
     }, 200);
   };
+
+  // Prevent blur timers from firing after unmount
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+        blurTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -721,7 +775,13 @@ function OCAutocompleteInput({
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
-        onFocus={() => setShowSuggestions(true)}
+        onFocus={() => {
+          if (blurTimeoutRef.current) {
+            clearTimeout(blurTimeoutRef.current);
+            blurTimeoutRef.current = null;
+          }
+          setShowSuggestions(true);
+        }}
         disabled={isSubmitting}
         placeholder="Type to search existing OCs..."
         className="w-full px-4 py-2.5 bg-gray-900/60 border border-gray-500/60 rounded-lg text-gray-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/70 focus:border-purple-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1718,12 +1778,25 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const shouldNavigateAfterSaveRef = useRef(false);
+  const isMountedRef = useRef(false);
+  const timeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  const loadWorldRequestIdRef = useRef(0);
+  const submitAbortRef = useRef<AbortController | null>(null);
   const [worlds, setWorlds] = useState<Array<{ id: string; name: string; slug: string; series_type?: 'canon' | 'original' }>>([]);
   const [selectedWorld, setSelectedWorld] = useState<World | null>(null);
   const [lastSavedWorldId, setLastSavedWorldId] = useState<string | null>(null);
   const [templates, setTemplates] = useState<Record<string, TemplateDefinition>>({});
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+
+  const scheduleTimeout = useCallback((fn: () => void, ms: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current.delete(id);
+      fn();
+    }, ms);
+    timeoutsRef.current.add(id);
+    return id;
+  }, []);
 
   const defaultValues = getDefaultValues(oc, reverseRelationships);
   
@@ -1808,16 +1881,40 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
 
   // Fetch templates
   useEffect(() => {
+    let cancelled = false;
+
     async function loadTemplates() {
-      const fetchedTemplates = await getTemplates();
-      setTemplates(fetchedTemplates);
+      try {
+        const fetchedTemplates = await getTemplates();
+        if (cancelled || !isMountedRef.current) return;
+        setTemplates(fetchedTemplates);
+      } catch (err) {
+        if (cancelled || !isMountedRef.current) return;
+        logger.error('OCForm', 'Failed to load templates', err);
+      }
     }
     loadTemplates();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Handle mounted state for portal (SSR safety)
+  // Mounted/unmounted bookkeeping + cleanup (prevents timer/async leaks)
   useEffect(() => {
+    isMountedRef.current = true;
     setIsMounted(true);
+
+    return () => {
+      isMountedRef.current = false;
+
+      submitAbortRef.current?.abort();
+      submitAbortRef.current = null;
+
+      for (const id of timeoutsRef.current) {
+        clearTimeout(id);
+      }
+      timeoutsRef.current.clear();
+    };
   }, []);
 
   // Handle scroll to top button visibility
@@ -1839,32 +1936,55 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
 
   // Fetch worlds
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchWorlds() {
-      const supabase = createClient();
-      const { data } = await supabase.from('worlds').select('id, name, slug, series_type').order('name');
-      if (data) {
-        setWorlds(data as Array<{ id: string; name: string; slug: string; series_type: 'canon' | 'original' }>);
-        // If editing and world_id is set but form is empty, initialize it
-        // Don't override if user has already selected a different world
-        const targetWorldId = oc?.world_id || lastSavedWorldId;
-        if (targetWorldId && (!worldId || worldId === '')) {
-          setValue('world_id', targetWorldId, { shouldDirty: false });
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase.from('worlds').select('id, name, slug, series_type').order('name');
+        if (cancelled || !isMountedRef.current) return;
+
+        if (error) {
+          logger.error('OCForm', 'Failed to fetch worlds', error);
+          return;
         }
+
+        if (data) {
+          setWorlds(data as Array<{ id: string; name: string; slug: string; series_type: 'canon' | 'original' }>);
+          // If editing and world_id is set but form is empty, initialize it
+          // Don't override if user has already selected a different world
+          const targetWorldId = oc?.world_id || lastSavedWorldId;
+          if (targetWorldId && (!worldId || worldId === '')) {
+            setValue('world_id', targetWorldId, { shouldDirty: false });
+          }
+        }
+      } catch (err) {
+        if (cancelled || !isMountedRef.current) return;
+        logger.error('OCForm', 'Failed to fetch worlds', err);
       }
     }
     fetchWorlds();
+    return () => {
+      cancelled = true;
+    };
   }, [oc?.world_id, lastSavedWorldId, setValue]);
 
   // Load world data when worldId changes (for world custom fields)
   useEffect(() => {
+    const requestId = ++loadWorldRequestIdRef.current;
+    let cancelled = false;
+
+    const isStale = () => cancelled || !isMountedRef.current || requestId !== loadWorldRequestIdRef.current;
+
     async function loadWorld() {
       if (!worldId) {
-        setSelectedWorld(null);
+        if (!isStale()) setSelectedWorld(null);
         return;
       }
 
       // If editing and OC has world data, use it
-      if (oc?.world) {
+      if (oc?.world && oc.world.id === worldId) {
+        if (isStale()) return;
         setSelectedWorld(oc.world);
         const templateType = getTemplateTypeFromWorldSlug(oc.world.slug, oc.world) as TemplateType;
         setValue('template_type', templateType, { shouldDirty: false });
@@ -1874,6 +1994,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
       // Immediately update selectedWorld with basic info from worlds array if available
       const worldFromList = worlds.find(w => w.id === worldId);
       if (worldFromList) {
+        if (isStale()) return;
         // Create a partial World object for template type lookup
         const worldForTemplate: Partial<World> = {
           slug: worldFromList.slug,
@@ -1897,23 +2018,35 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
       }
 
       // Fetch the full world data including oc_templates
-      const supabase = createClient();
-      const { data } = await supabase
-        .from('worlds')
-        .select('*')
-        .eq('id', worldId)
-        .single();
-      if (data) {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('worlds')
+          .select('*')
+          .eq('id', worldId)
+          .single();
+
+        if (isStale()) return;
+
+        if (error || !data) {
+          logger.error('OCForm', 'Failed to fetch world data', error);
+          return;
+        }
+
         const worldData = data as World;
         const templateType = getTemplateTypeFromWorldSlug(worldData.slug, worldData) as TemplateType;
         setSelectedWorld(worldData);
         setValue('template_type', templateType, { shouldDirty: false });
         setValue('series_type', worldData.series_type, { shouldDirty: false });
-      } else {
-        logger.error('OCForm', 'Failed to fetch world data');
+      } catch (err) {
+        if (isStale()) return;
+        logger.error('OCForm', 'Failed to fetch world data', err);
       }
     }
     loadWorld();
+    return () => {
+      cancelled = true;
+    };
   }, [worldId, oc, setValue, worlds]);
 
   // Auto-set template_type and series_type when world changes (both create and edit mode)
@@ -2049,6 +2182,10 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
   }, []);
 
   const onSubmit = async (data: OCFormData) => {
+    submitAbortRef.current?.abort();
+    const abortController = new AbortController();
+    submitAbortRef.current = abortController;
+
     setIsSubmitting(true);
     setError(null);
     setSuccess(false);
@@ -2099,8 +2236,9 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           .single();
 
         if (existingOC) {
-          setError(`A character with slug "${data.slug}" already exists in this world. Please use a different slug.`);
-          setIsSubmitting(false);
+          if (isMountedRef.current) {
+            setError(`A character with slug "${data.slug}" already exists in this world. Please use a different slug.`);
+          }
           return;
         }
       }
@@ -2254,6 +2392,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
+        signal: abortController.signal,
       });
 
       if (!response.ok) {
@@ -2267,18 +2406,19 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
       // Check if the response has a data property (some APIs wrap responses)
       const ocData = (savedData as any).data || savedData;
       
+      if (!isMountedRef.current) return;
       setSuccess(true);
 
       // If creating a new character, redirect to the list after showing success message
       // If updating, navigate if shouldNavigateAfterSaveRef.current is true, otherwise stay on the edit page
       if (!oc) {
-        setTimeout(() => {
+        scheduleTimeout(() => {
           router.push('/admin/ocs');
           router.refresh();
         }, 1000);
       } else if (shouldNavigateAfterSaveRef.current) {
         // Navigate back to list after save
-        setTimeout(() => {
+        scheduleTimeout(() => {
           router.push('/admin/ocs');
           router.refresh();
         }, 500);
@@ -2292,10 +2432,10 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
             setLastSavedWorldId(ocData.world_id);
             // Set multiple times to ensure it sticks
             setValue('world_id', ocData.world_id, { shouldDirty: false });
-            setTimeout(() => {
+            scheduleTimeout(() => {
               setValue('world_id', ocData.world_id, { shouldDirty: false });
             }, 50);
-            setTimeout(() => {
+            scheduleTimeout(() => {
               setValue('world_id', ocData.world_id, { shouldDirty: false });
             }, 200);
             
@@ -2317,7 +2457,7 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
           // Explicitly set story_alias_id to ensure it's selected
           if (ocData.story_alias_id !== undefined) {
             setValue('story_alias_id', ocData.story_alias_id || null, { shouldDirty: false });
-            setTimeout(() => {
+            scheduleTimeout(() => {
               setValue('story_alias_id', ocData.story_alias_id || null, { shouldDirty: false });
             }, 50);
           }
@@ -2326,10 +2466,20 @@ export function OCForm({ oc, identityId, reverseRelationships }: OCFormProps) {
         // with potentially stale data. The form is already updated with the saved data above.
       }
     } catch (err) {
+      if ((err as any)?.name === 'AbortError') {
+        return;
+      }
       logger.error('OCForm', 'Error saving OC', err);
-      setError(err instanceof Error ? err.message : 'Failed to save OC. Please try again.');
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Failed to save OC. Please try again.');
+      }
     } finally {
-      setIsSubmitting(false);
+      if (submitAbortRef.current === abortController) {
+        submitAbortRef.current = null;
+      }
+      if (isMountedRef.current) {
+        setIsSubmitting(false);
+      }
       shouldNavigateAfterSaveRef.current = false; // Reset flag after submission completes
     }
   };

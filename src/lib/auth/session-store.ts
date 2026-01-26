@@ -106,9 +106,13 @@ export async function cleanupSessions(): Promise<void> {
 
 // Clean up expired sessions every hour
 if (typeof setInterval !== 'undefined' && typeof window === 'undefined') {
-  setInterval(() => {
-    cleanupSessions().catch((error) => logger.error('Utility', 'session-store: Error in cleanup', error));
-  }, 60 * 60 * 1000);
+  // Guard against multiple intervals in dev/hot-reload environments
+  const globalAny = globalThis as unknown as { __ruutulianSessionCleanupInterval?: ReturnType<typeof setInterval> };
+  if (!globalAny.__ruutulianSessionCleanupInterval) {
+    globalAny.__ruutulianSessionCleanupInterval = setInterval(() => {
+      cleanupSessions().catch((error) => logger.error('Utility', 'session-store: Error in cleanup', error));
+    }, 60 * 60 * 1000);
+  }
 }
 
 

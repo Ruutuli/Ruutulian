@@ -9,8 +9,32 @@ export function NavigationProgress() {
   const [isLoading, setIsLoading] = useState(false)
   const [progress, setProgress] = useState(0)
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const timeoutsRef = useRef<Set<ReturnType<typeof window.setTimeout>>>(new Set())
   const currentPathRef = useRef(pathname)
   const isNavigatingRef = useRef(false)
+
+  const scheduleTimeout = useCallback((fn: () => void, ms: number) => {
+    const id = window.setTimeout(() => {
+      timeoutsRef.current.delete(id)
+      fn()
+    }, ms)
+    timeoutsRef.current.add(id)
+    return id
+  }, [])
+
+  // Ensure intervals/timeouts can't outlive the component
+  useEffect(() => {
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+        progressIntervalRef.current = null
+      }
+      for (const id of timeoutsRef.current) {
+        clearTimeout(id)
+      }
+      timeoutsRef.current.clear()
+    }
+  }, [])
 
   // Start loading progress animation (shared function)
   const startLoadingRef = useRef<() => void>()
@@ -88,7 +112,7 @@ export function NavigationProgress() {
     
     isNavigatingRef.current = false
     setProgress(100)
-    setTimeout(() => {
+    scheduleTimeout(() => {
       setIsLoading(false)
       setProgress(0)
       if (progressIntervalRef.current) {
@@ -96,7 +120,7 @@ export function NavigationProgress() {
         progressIntervalRef.current = null
       }
     }, 200)
-  }, [])
+  }, [scheduleTimeout])
 
   // Initialize pathname ref on mount
   useEffect(() => {
@@ -116,7 +140,7 @@ export function NavigationProgress() {
       // If this is a back/forward navigation (persisted from cache) or we're currently navigating
       if (e.persisted || isNavigatingRef.current) {
         // Give Next.js a moment to update the pathname, then complete loading
-        setTimeout(() => {
+        scheduleTimeout(() => {
           if (isNavigatingRef.current) {
             completeLoading()
           }
@@ -130,7 +154,7 @@ export function NavigationProgress() {
       window.removeEventListener('popstate', handlePopState)
       window.removeEventListener('pageshow', handlePageShow)
     }
-  }, [completeLoading])
+  }, [completeLoading, scheduleTimeout])
 
   // Track navigation completion
   useEffect(() => {

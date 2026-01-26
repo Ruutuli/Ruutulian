@@ -8,6 +8,8 @@ export function getGoogleDriveFileId(url: string | null | undefined): string | n
     /\/file\/d\/([a-zA-Z0-9_-]+)/,
     /[?&]id=([a-zA-Z0-9_-]+)/,
     /\/thumbnail\?id=([a-zA-Z0-9_-]+)/,
+    /^https?:\/\/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/,
+    /^https?:\/\/drive\.usercontent\.google\.com\/download\?id=([a-zA-Z0-9_-]+)/,
   ];
   
   for (const pattern of patterns) {
@@ -69,6 +71,8 @@ export function getGoogleDriveImageUrls(url: string | null | undefined): string[
     `https://drive.google.com/thumbnail?id=${fileId}&sz=w1920-h1080`, // Thumbnail API with size
     `https://drive.google.com/thumbnail?id=${fileId}`, // Thumbnail API
     `https://drive.google.com/uc?export=view&id=${fileId}`, // Direct view
+    `https://drive.google.com/uc?export=download&id=${fileId}`, // Direct download (sometimes more reliable)
+    `https://drive.usercontent.google.com/download?id=${fileId}&export=view`, // Newer direct download host
   ];
 }
 

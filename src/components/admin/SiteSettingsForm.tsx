@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { logger } from '@/lib/logger';
 
 interface SiteSettings {
@@ -24,6 +24,26 @@ export function SiteSettingsForm() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const timeoutsRef = useRef<Set<ReturnType<typeof window.setTimeout>>>(new Set());
+
+  const scheduleTimeout = (fn: () => void, ms: number) => {
+    const id = window.setTimeout(() => {
+      timeoutsRef.current.delete(id);
+      fn();
+    }, ms);
+    timeoutsRef.current.add(id);
+    return id;
+  };
+
+  // Ensure timeouts can't outlive the component
+  useEffect(() => {
+    return () => {
+      for (const id of timeoutsRef.current) {
+        clearTimeout(id);
+      }
+      timeoutsRef.current.clear();
+    };
+  }, []);
 
   useEffect(() => {
     fetchSettings();
@@ -102,11 +122,11 @@ export function SiteSettingsForm() {
       if (result.success) {
         setMessage({ type: 'success', text: 'Settings saved successfully!' });
         // Clear message after 3 seconds
-        setTimeout(() => setMessage(null), 3000);
+        scheduleTimeout(() => setMessage(null), 3000);
         // Dispatch custom event to refresh site name in navigation after a delay
         // to ensure database transaction is fully committed
         // Include the saved websiteName in the event so components can use it immediately
-        setTimeout(() => {
+        scheduleTimeout(() => {
           const event = new CustomEvent('site-settings-updated', {
             detail: { websiteName: settings.websiteName }
           });

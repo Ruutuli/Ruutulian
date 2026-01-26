@@ -66,6 +66,7 @@ export const FormAutocomplete = React.forwardRef<HTMLInputElement, FormAutocompl
     const containerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const suggestionsRef = useRef<HTMLUListElement>(null);
+    const blurTimeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
 
     // Fetch options from database first, fallback to generated file
     // The hook already handles the fallback, so we can use it directly
@@ -203,13 +204,27 @@ export const FormAutocomplete = React.forwardRef<HTMLInputElement, FormAutocompl
     // Handle blur
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
       // Delay to allow click on suggestion to register
-      setTimeout(() => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+      blurTimeoutRef.current = window.setTimeout(() => {
         setShowSuggestions(false);
         if (registerOnBlur) {
           registerOnBlur(e);
         }
+        blurTimeoutRef.current = null;
       }, 200);
     };
+
+    // Prevent blur timers from firing after unmount
+    useEffect(() => {
+      return () => {
+        if (blurTimeoutRef.current) {
+          clearTimeout(blurTimeoutRef.current);
+          blurTimeoutRef.current = null;
+        }
+      };
+    }, []);
 
     // Close suggestions when clicking outside
     useEffect(() => {
@@ -261,7 +276,13 @@ export const FormAutocomplete = React.forwardRef<HTMLInputElement, FormAutocompl
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
-          onFocus={() => setShowSuggestions(true)}
+          onFocus={() => {
+            if (blurTimeoutRef.current) {
+              clearTimeout(blurTimeoutRef.current);
+              blurTimeoutRef.current = null;
+            }
+            setShowSuggestions(true);
+          }}
           disabled={disabled}
           placeholder={placeholder}
           className={`${baseClasses} ${className}`}

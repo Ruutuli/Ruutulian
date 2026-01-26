@@ -36,6 +36,13 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // Auto-clear success message, with cleanup to avoid unmount leaks
+  useEffect(() => {
+    if (!success) return;
+    const timer = window.setTimeout(() => setSuccess(false), 3000);
+    return () => clearTimeout(timer);
+  }, [success]);
+
   // Template creation state
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newTemplateWorld, setNewTemplateWorld] = useState('');
@@ -77,10 +84,13 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
 
   // Load templates
   useEffect(() => {
+    let cancelled = false;
+
     async function loadTemplates() {
       setIsLoadingTemplates(true);
       try {
         const fetchedTemplates = await getTemplates();
+        if (cancelled) return;
         setTemplates(fetchedTemplates);
         
         // Set default selected template for definitions tab
@@ -93,13 +103,17 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
           return prev;
         });
       } catch (err) {
+        if (cancelled) return;
         logger.error('Component', 'TemplatesAndFieldsManager: Error loading templates', err);
         setError('Failed to load templates. Please refresh the page.');
       } finally {
-        setIsLoadingTemplates(false);
+        if (!cancelled) setIsLoadingTemplates(false);
       }
     }
     loadTemplates();
+    return () => {
+      cancelled = true;
+    };
   }, [activeTab]);
 
   // Set default selected world
@@ -239,7 +253,6 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
 
       setSuccess(true);
       router.refresh();
-      setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       logger.error('Component', 'TemplatesAndFieldsManager: Error saving World Custom Fields', err);
       setError(err instanceof Error ? err.message : 'Failed to save World Custom Fields');
@@ -391,7 +404,6 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
       setTemplates(fetchedTemplates);
       
       router.refresh();
-      setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       logger.error('Component', 'TemplatesAndFieldsManager: Error saving template', err);
       setError(err instanceof Error ? err.message : 'Failed to save template');
@@ -520,7 +532,6 @@ export function TemplatesAndFieldsManager({ worlds: initialWorlds }: TemplatesAn
       setNewTemplateFields([]);
 
       router.refresh();
-      setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       logger.error('Component', 'TemplatesAndFieldsManager: Error creating template', err);
       setError(err instanceof Error ? err.message : 'Failed to create template');

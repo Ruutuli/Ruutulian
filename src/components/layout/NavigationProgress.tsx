@@ -8,8 +8,8 @@ export function NavigationProgress() {
   const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
   const [progress, setProgress] = useState(0)
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
-  const timeoutsRef = useRef<Set<ReturnType<typeof window.setTimeout>>>(new Set())
+  const progressIntervalRef = useRef<number | null>(null)
+  const timeoutsRef = useRef<Set<number>>(new Set())
   const currentPathRef = useRef(pathname)
   const isNavigatingRef = useRef(false)
 
@@ -68,7 +68,7 @@ export function NavigationProgress() {
     
     // Start immediately, then continue on interval
     updateProgress()
-    progressIntervalRef.current = setInterval(updateProgress, 100)
+    progressIntervalRef.current = window.setInterval(updateProgress, 100)
   }
 
   // Show loading immediately on link click

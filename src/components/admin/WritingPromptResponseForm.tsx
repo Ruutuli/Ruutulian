@@ -49,7 +49,7 @@ export function WritingPromptResponseForm({ response }: WritingPromptResponseFor
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const navigateTimeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const navigateTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {

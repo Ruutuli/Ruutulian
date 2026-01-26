@@ -68,7 +68,7 @@ export function WritingPromptForm({ prompt }: WritingPromptFormProps) {
   const [filteredCategories, setFilteredCategories] = useState(commonCategories);
   const categoryInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
-  const navigateTimeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const navigateTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {

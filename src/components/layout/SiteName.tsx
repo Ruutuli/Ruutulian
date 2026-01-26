@@ -8,7 +8,7 @@ export function SiteName() {
   const [isLoading, setIsLoading] = useState(true);
   const fetchingRef = useRef(false);
   const lastFetchTimeRef = useRef<number>(0);
-  const timeoutsRef = useRef<Set<ReturnType<typeof window.setTimeout>>>(new Set());
+  const timeoutsRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     let cancelled = false;

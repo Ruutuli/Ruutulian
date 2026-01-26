@@ -97,7 +97,7 @@ export function FanficChaptersManager({ fanficId }: FanficChaptersManagerProps) 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [chapterErrors, setChapterErrors] = useState<Record<string, string>>({});
-  const successTimeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const successTimeoutRef = useRef<number | null>(null);
 
   const scheduleSuccessClear = (ms: number) => {
     if (successTimeoutRef.current) {

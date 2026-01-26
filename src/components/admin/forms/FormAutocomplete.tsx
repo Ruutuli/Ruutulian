@@ -66,7 +66,7 @@ export const FormAutocomplete = React.forwardRef<HTMLInputElement, FormAutocompl
     const containerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const suggestionsRef = useRef<HTMLUListElement>(null);
-    const blurTimeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+    const blurTimeoutRef = useRef<number | null>(null);
 
     // Fetch options from database first, fallback to generated file
     // The hook already handles the fallback, so we can use it directly

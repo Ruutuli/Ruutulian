@@ -24,7 +24,7 @@ export function SiteSettingsForm() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const timeoutsRef = useRef<Set<ReturnType<typeof window.setTimeout>>>(new Set());
+  const timeoutsRef = useRef<Set<number>>(new Set());
 
   const scheduleTimeout = (fn: () => void, ms: number) => {
     const id = window.setTimeout(() => {

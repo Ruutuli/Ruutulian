@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 
+export const dynamic = 'force-dynamic';
+
 // Generate a seed based on the current date in EST (same seed for the same day)
 function getDaySeed(): number {
   const today = new Date();

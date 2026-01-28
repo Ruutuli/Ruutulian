@@ -10,6 +10,8 @@ interface GoogleDriveImageProps {
   className?: string;
   style?: React.CSSProperties;
   fallbackSrc?: string;
+  /** Hero/above-fold images: use priority. Default false = fetchpriority low to reduce decode pressure. */
+  priority?: boolean;
 }
 
 function GoogleDriveImageComponent({ 
@@ -17,7 +19,8 @@ function GoogleDriveImageComponent({
   alt, 
   className = '', 
   style,
-  fallbackSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png'
+  fallbackSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png',
+  priority = false,
 }: GoogleDriveImageProps) {
   // Calculate proxy URL immediately, not in useEffect - memoize to prevent recalculation
   const imageUrl = useMemo(() => {
@@ -87,8 +90,9 @@ function GoogleDriveImageComponent({
       style={style}
       onError={handleError}
       onLoad={handleLoad}
-      loading="lazy"
+      loading={priority ? 'eager' : 'lazy'}
       decoding="async"
+      fetchPriority={priority ? 'high' : 'low'}
     />
   );
 }

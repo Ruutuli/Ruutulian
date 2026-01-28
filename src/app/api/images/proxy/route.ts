@@ -45,6 +45,9 @@ export async function GET(request: NextRequest) {
 
   const errors: Array<{ url: string; error: string; status?: number; contentType?: string }> = [];
 
+  // Cap buffer size to avoid memory spikes (8MB per image)
+  const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
   const detectImageContentType = (buffer: ArrayBuffer): string | null => {
     const bytes = new Uint8Array(buffer);
     if (bytes.length < 12) return null;
@@ -90,9 +93,10 @@ export async function GET(request: NextRequest) {
     return null;
   };
 
-  // Helper function to fetch a single URL with timeout
+  // Helper function to fetch a single URL with timeout. Only one buffer in memory at a time.
   const fetchImageUrl = async (
-    imageUrl: string
+    imageUrl: string,
+    maxBytes: number
   ): Promise<{
     success: boolean;
     data?: ArrayBuffer;
@@ -142,7 +146,28 @@ export async function GET(request: NextRequest) {
         };
       }
 
+      const contentLength = response.headers.get('content-length');
+      if (contentLength) {
+        const len = parseInt(contentLength, 10);
+        if (!Number.isNaN(len) && len > maxBytes) {
+          return {
+            success: false,
+            status,
+            responseContentType,
+            error: `Image too large (${Math.round(len / 1024 / 1024)}MB, max ${Math.round(maxBytes / 1024 / 1024)}MB)`,
+          };
+        }
+      }
+
       const buffer = await response.arrayBuffer();
+      if (buffer.byteLength > maxBytes) {
+        return {
+          success: false,
+          status,
+          responseContentType,
+          error: `Image too large (${Math.round(buffer.byteLength / 1024 / 1024)}MB, max ${Math.round(maxBytes / 1024 / 1024)}MB)`,
+        };
+      }
       if (buffer.byteLength <= 100) {
         return {
           success: false,
@@ -190,40 +215,26 @@ export async function GET(request: NextRequest) {
     }
   };
 
-  // Try all URLs in parallel - first successful response wins
-  const fetchPromises = urls.map(async (imageUrl) => {
-    const result = await fetchImageUrl(imageUrl);
+  // Try URLs sequentially. Only one buffer in memory at a time; return on first success.
+  for (const imageUrl of urls) {
+    const result = await fetchImageUrl(imageUrl, MAX_IMAGE_BYTES);
     if (result.success && result.data && result.contentType) {
-      return { success: true, url: imageUrl, data: result.data, contentType: result.contentType };
-    } else {
-      errors.push({ 
-        url: imageUrl, 
-        error: result.error || 'Unknown error',
-        status: result.status,
-        contentType: result.responseContentType,
-      });
-      return { success: false, url: imageUrl };
-    }
-  });
-
-  // Wait for the first successful response or all to fail
-  const results = await Promise.allSettled(fetchPromises);
-  
-  // Find the first successful result
-  for (const result of results) {
-    if (result.status === 'fulfilled' && result.value.success) {
-      const { data, contentType } = result.value;
-      // Success - return image
-      return new NextResponse(data, {
+      return new NextResponse(result.data, {
         status: 200,
         headers: {
-          'Content-Type': contentType || 'image/png',
-          'Cache-Control': 'public, max-age=31536000, immutable', // Cache for 1 year
+          'Content-Type': result.contentType,
+          'Cache-Control': 'public, max-age=31536000, immutable',
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET',
         },
       });
     }
+    errors.push({
+      url: imageUrl,
+      error: result.error || 'Unknown error',
+      status: result.status,
+      contentType: result.responseContentType,
+    });
   }
 
   // All URLs failed - log comprehensive error details

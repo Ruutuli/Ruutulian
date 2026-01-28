@@ -13,9 +13,12 @@ const nextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
-  // Increase timeout for image optimization
   experimental: {
-    // This helps with slow external image fetches
+    // Limit client-side router cache retention to reduce memory growth
+    staleTimes: {
+      dynamic: 30,   // 30s for on-demand navigations (default 0 in newer Next)
+      static: 60,    // 1 min for prefetched/static (default 5 min)
+    },
   },
   // Disable automatic trailing slash redirects to prevent redirect loops
   trailingSlash: false,

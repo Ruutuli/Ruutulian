@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 
 // Dynamically import react-force-graph to avoid SSR issues
@@ -42,9 +42,17 @@ export function NetworkGraph({
 }: NetworkGraphProps) {
   const [isClient, setIsClient] = useState(false);
   const graphRef = useRef<any>(null);
+  const graphData = useMemo(() => ({ nodes, links }), [nodes, links]);
 
   useEffect(() => {
     setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      const g = graphRef.current as { _destructor?: () => void } | null;
+      if (typeof g?._destructor === 'function') g._destructor();
+    };
   }, []);
 
   if (!isClient || nodes.length === 0) {
@@ -87,7 +95,7 @@ export function NetworkGraph({
       <div className="w-full rounded-lg overflow-hidden bg-gray-900" style={{ height: `${height}px` }}>
         <ForceGraph2D
           ref={graphRef}
-          graphData={{ nodes, links }}
+          graphData={graphData}
           nodeLabel={(node: any) => (node as Node).name || node.id || ''}
           nodeColor={(node: any) => getNodeColor(node as Node)}
           nodeVal={(node: any) => (node as Node).size || 5}

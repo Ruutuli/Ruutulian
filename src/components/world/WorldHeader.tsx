@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import type { World } from '@/types/oc';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
-import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl, isAnimatedImage } from '@/lib/utils/googleDriveImage';
 import { formatLastUpdated } from '@/lib/utils/dateFormat';
 
 interface WorldHeaderProps {
@@ -25,7 +25,7 @@ export function WorldHeader({ world }: WorldHeaderProps) {
           fill
           sizes="100vw"
           className="object-cover"
-          unoptimized={world.header_image_url?.includes('drive.google.com') || isGoogleSitesUrl(world.header_image_url)}
+          unoptimized={world.header_image_url?.includes('drive.google.com') || isGoogleSitesUrl(world.header_image_url) || isAnimatedImage(world.header_image_url)}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
       </div>
@@ -40,7 +40,7 @@ export function WorldHeader({ world }: WorldHeaderProps) {
               fill
               sizes="(max-width: 768px) 64px, 80px"
               className="object-contain rounded-lg bg-white/20 backdrop-blur-sm p-1"
-              unoptimized={world.icon_url?.includes('drive.google.com') || isGoogleSitesUrl(world.icon_url)}
+              unoptimized={world.icon_url?.includes('drive.google.com') || isGoogleSitesUrl(world.icon_url) || isAnimatedImage(world.icon_url)}
             />
           </div>
           <div>

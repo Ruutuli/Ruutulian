@@ -7,7 +7,7 @@ import { Markdown } from '@/lib/utils/markdown';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
 import { getWorldLoreFieldDefinitions, getFieldValue } from '@/lib/fields/worldFields';
 import { TagList } from '@/components/wiki/TagList';
-import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl, isAnimatedImage } from '@/lib/utils/googleDriveImage';
 import { formatLastUpdated } from '@/lib/utils/dateFormat';
 
 interface LoreDetailProps {
@@ -31,7 +31,7 @@ export function LoreDetail({ lore }: LoreDetailProps) {
             fill
             sizes="100vw"
             className="object-cover"
-            unoptimized={lore.banner_image_url.includes('drive.google.com') || isGoogleSitesUrl(lore.banner_image_url)}
+            unoptimized={lore.banner_image_url.includes('drive.google.com') || isGoogleSitesUrl(lore.banner_image_url) || isAnimatedImage(lore.banner_image_url)}
           />
         </div>
       )}

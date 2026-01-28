@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { WorldLore } from '@/types/oc';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
-import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl, isAnimatedImage } from '@/lib/utils/googleDriveImage';
 
 interface SimpleLoreCardProps {
   lore: WorldLore;
@@ -50,7 +50,7 @@ export function SimpleLoreCard({ lore }: SimpleLoreCardProps) {
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
               className="object-cover object-top"
-              unoptimized={lore.banner_image_url?.includes('drive.google.com') || isGoogleSitesUrl(lore.banner_image_url)}
+              unoptimized={lore.banner_image_url?.includes('drive.google.com') || isGoogleSitesUrl(lore.banner_image_url) || isAnimatedImage(lore.banner_image_url)}
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">

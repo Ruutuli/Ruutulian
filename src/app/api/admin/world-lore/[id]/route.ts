@@ -26,7 +26,7 @@ export async function GET(
       .select(`
         *,
         world:worlds(id, name, slug),
-        story_alias:story_aliases(id, name, slug, description),
+        story_alias:story_aliases!fk_world_lore_story_alias_id(id, name, slug, description),
         related_ocs:world_lore_ocs(
           *,
           oc:ocs(id, name, slug)
@@ -209,7 +209,7 @@ export async function PUT(
       .select(`
         *,
         world:worlds(id, name, slug),
-        story_alias:story_aliases(id, name, slug, description),
+        story_alias:story_aliases!fk_world_lore_story_alias_id(id, name, slug, description),
         related_ocs:world_lore_ocs(
           *,
           oc:ocs(id, name, slug)

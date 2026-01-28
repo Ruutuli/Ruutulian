@@ -23,12 +23,27 @@ export async function generateMetadata({
   const supabase = await createClient();
   const resolvedParams = await params;
 
-  const { data: world } = await supabase
+  // Query with limit(1) to prevent PGRST116 when multiple rows exist
+  let { data: world, error } = await supabase
     .from('worlds')
     .select('name, slug, summary, description_markdown, header_image_url, icon_url, series_type')
     .eq('slug', resolvedParams.slug)
     .eq('is_public', true)
-    .single();
+    .limit(1)
+    .maybeSingle();
+
+  // If PGRST116 error (multiple rows), try again with explicit limit and take first
+  if (error && error.code === 'PGRST116') {
+    const { data: worldArray } = await supabase
+      .from('worlds')
+      .select('name, slug, summary, description_markdown, header_image_url, icon_url, series_type')
+      .eq('slug', resolvedParams.slug)
+      .eq('is_public', true)
+      .limit(1);
+    
+    world = worldArray?.[0] || null;
+    error = null;
+  }
 
   if (!world) {
     return {

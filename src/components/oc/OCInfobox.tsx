@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { OC } from '@/types/oc';
 import { Infobox } from '@/components/wiki/Infobox';
 import { InfoRow } from '@/components/wiki/InfoRow';
-import { convertGoogleDriveUrl, isGoogleSitesUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, isGoogleSitesUrl, isAnimatedImage } from '@/lib/utils/googleDriveImage';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
 import { formatDateOfBirth } from '@/lib/utils/dateFormat';
 
@@ -31,7 +31,7 @@ export async function OCInfobox({ oc }: OCInfoboxProps) {
             priority
             className="wiki-image"
             style={{ objectPosition: 'center 10%' }}
-            unoptimized={isGoogleSitesUrl(oc.image_url)}
+            unoptimized={isGoogleSitesUrl(oc.image_url) || isAnimatedImage(oc.image_url)}
           />
         )}
       </div>

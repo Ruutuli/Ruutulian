@@ -9,6 +9,7 @@ export function SiteName() {
   const fetchingRef = useRef(false);
   const lastFetchTimeRef = useRef<number>(0);
   const timeoutsRef = useRef<Set<number>>(new Set());
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -28,6 +29,15 @@ export function SiteName() {
         return;
       }
       
+      // Cancel any previous fetch
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      
+      // Create new abort controller for this fetch
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+      
       fetchingRef.current = true;
       const fetchTime = Date.now();
       
@@ -35,13 +45,19 @@ export function SiteName() {
         // Add cache-busting parameter to ensure fresh data
         const response = await fetch(`/api/site-config?t=${fetchTime}`, {
           cache: 'no-store',
+          signal: abortController.signal,
           headers: {
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache',
           },
         });
+        
+        if (cancelled || abortController.signal.aborted) return;
+        
         if (response.ok) {
           const result = await response.json();
+          if (cancelled || abortController.signal.aborted) return;
+          
           if (result.success && result.data) {
             // Use database value if it exists, even if it's an empty string
             const dbName = result.data.websiteName;
@@ -50,7 +66,7 @@ export function SiteName() {
               // Update the ref after we've verified this is the latest
               if (fetchTime >= lastFetchTimeRef.current) {
                 lastFetchTimeRef.current = fetchTime;
-                if (!cancelled) {
+                if (!cancelled && !abortController.signal.aborted) {
                   setWebsiteName(dbName);
                   setIsLoading(false);
                 }
@@ -64,12 +80,21 @@ export function SiteName() {
           }
         }
       } catch (error) {
-        // Silently handle errors - fallback will be used
+        // Ignore abort errors
+        if (error instanceof Error && error.name === 'AbortError') {
+          return;
+        }
+        // Silently handle other errors - fallback will be used
+      }
+      
+      if (cancelled || abortController.signal.aborted) {
+        fetchingRef.current = false;
+        return;
       }
       
       // Fallback to default if API fails
       const config = getSiteConfigSync();
-      if (!cancelled) {
+      if (!cancelled && !abortController.signal.aborted) {
         setWebsiteName(config.websiteName);
         setIsLoading(false);
       }
@@ -120,6 +145,13 @@ export function SiteName() {
     return () => {
       cancelled = true;
       fetchingRef.current = false;
+      
+      // Abort any pending fetch
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      
       for (const id of timeoutsRef.current) {
         clearTimeout(id);
       }

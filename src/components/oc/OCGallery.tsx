@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl, getGoogleDriveFileId } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl, getGoogleDriveFileId, isAnimatedImage } from '@/lib/utils/googleDriveImage';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
 import { logger } from '@/lib/logger';
 
@@ -259,7 +259,7 @@ export function OCGallery({ images, ocName }: OCGalleryProps) {
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                unoptimized={isGoogleSitesUrl(imageUrl)}
+                unoptimized={isGoogleSitesUrl(imageUrl) || isAnimatedImage(imageUrl)}
               />
             )}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />

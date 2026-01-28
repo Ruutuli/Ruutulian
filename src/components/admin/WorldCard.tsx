@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl, isAnimatedImage } from '@/lib/utils/googleDriveImage';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
 
 interface WorldCardProps {
@@ -70,7 +70,7 @@ export function WorldCard({ world }: WorldCardProps) {
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
               className="object-cover"
-              unoptimized={isGoogleSitesUrl(world.header_image_url)}
+              unoptimized={isGoogleSitesUrl(world.header_image_url) || isAnimatedImage(world.header_image_url)}
             />
           )
         ) : (
@@ -111,7 +111,7 @@ export function WorldCard({ world }: WorldCardProps) {
                     fill
                     sizes="32px"
                     className="object-contain rounded"
-                    unoptimized={isGoogleSitesUrl(world.icon_url)}
+                    unoptimized={isGoogleSitesUrl(world.icon_url) || isAnimatedImage(world.icon_url)}
                   />
                 )}
               </div>

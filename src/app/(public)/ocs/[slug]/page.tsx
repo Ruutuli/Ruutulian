@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { createClient, queryOCWithFallback } from '@/lib/supabase/server';
+import { createClient, queryOCWithFallback, buildOCSelectQueryFallback } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { OCInfobox } from '@/components/oc/OCInfobox';
 import { OCPageLayout } from '@/components/oc/OCPageLayout';
@@ -39,12 +39,34 @@ export async function generateMetadata({
   const supabase = await createClient();
   const resolvedParams = await params;
 
-  const { data: oc, error } = await supabase
+  // Query with limit(1) to prevent PGRST116 when multiple rows exist
+  let { data: oc, error } = await supabase
     .from('ocs')
     .select('name, slug, history_summary, image_url, icon_url, world:worlds(name, slug)')
     .eq('slug', resolvedParams.slug)
     .eq('is_public', true)
+    .limit(1)
     .maybeSingle();
+
+  // If PGRST116 error (multiple rows), try again with explicit limit and take first
+  if (error && error.code === 'PGRST116') {
+    const { data: ocArray } = await supabase
+      .from('ocs')
+      .select('name, slug, history_summary, image_url, icon_url, world:worlds(name, slug)')
+      .eq('slug', resolvedParams.slug)
+      .eq('is_public', true)
+      .limit(1);
+    
+    oc = ocArray?.[0] || null;
+    error = null;
+    
+    if (ocArray && ocArray.length > 1) {
+      logger.warn('OCMetadata', 'Multiple OCs found with same slug, using first', {
+        slug: resolvedParams.slug,
+        count: ocArray.length,
+      });
+    }
+  }
 
   if (error) {
     logger.error('OCMetadata', 'Supabase query error', {
@@ -102,18 +124,67 @@ export default async function OCDetailPage({
   const resolvedParams = await params;
 
   // Use fallback helper to handle story_aliases relationship errors gracefully
-  const { data: oc, error } = await queryOCWithFallback<OC>(
+  let { data: oc, error } = await queryOCWithFallback<OC>(
     async (selectQuery: string) => {
       return await supabase
         .from('ocs')
         .select(selectQuery)
         .eq('slug', resolvedParams.slug)
         .eq('is_public', true)
+        .limit(1)
         .maybeSingle();
     },
     supabase,
     'OCDetailPage'
   );
+
+  // If PGRST116 error (multiple rows), try again with explicit limit and take first
+  if (error && error.code === 'PGRST116') {
+    logger.warn('OCDetailPage', 'PGRST116 error detected, fetching with limit', {
+      slug: resolvedParams.slug,
+    });
+    
+    // Build the select query without story_aliases to avoid relationship issues
+    const selectQuery = buildOCSelectQueryFallback();
+    const { data: ocArray, error: arrayError } = await supabase
+      .from('ocs')
+      .select(selectQuery)
+      .eq('slug', resolvedParams.slug)
+      .eq('is_public', true)
+      .limit(1);
+    
+    if (!arrayError && ocArray && ocArray.length > 0) {
+      oc = ocArray[0] as unknown as OC;
+      error = null;
+      
+      // Fetch story_alias separately if needed
+      if (oc.story_alias_id) {
+        try {
+          const { data: storyAlias } = await supabase
+            .from('story_aliases')
+            .select('id, name, slug, description, world_id, created_at, updated_at')
+            .eq('id', oc.story_alias_id)
+            .single();
+          
+          if (storyAlias) {
+            oc.story_alias = storyAlias;
+          }
+        } catch (err) {
+          // Silently fail - story_alias is optional
+        }
+      }
+      
+      if (ocArray.length > 1) {
+        logger.warn('OCDetailPage', 'Multiple OCs found with same slug, using first', {
+          slug: resolvedParams.slug,
+          count: ocArray.length,
+        });
+      }
+    } else {
+      // If still error, keep the original error
+      error = arrayError || error;
+    }
+  }
 
   if (error) {
     logger.error('OCDetailPage', 'Supabase query error', {

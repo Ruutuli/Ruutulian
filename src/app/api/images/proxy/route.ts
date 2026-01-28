@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getGoogleDriveFileId, getGoogleDriveImageUrls } from '@/lib/utils/googleDriveImage';
+import { getGoogleDriveFileId, getGoogleDriveImageUrls, sanitizeGoogleDriveFileId } from '@/lib/utils/googleDriveImage';
 import { logger } from '@/lib/logger';
 
 /**
@@ -9,21 +9,22 @@ import { logger } from '@/lib/logger';
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const url = searchParams.get('url');
-  const fileId = searchParams.get('fileId');
+  const rawFileId = searchParams.get('fileId');
 
-  if (!url && !fileId) {
-    logger.warn('ImageProxy', 'Missing url or fileId parameter', { url, fileId });
+  if (!url && !rawFileId) {
+    logger.warn('ImageProxy', 'Missing url or fileId parameter', { url, fileId: rawFileId });
     return NextResponse.json(
       { error: 'Missing url or fileId parameter' },
       { status: 400 }
     );
   }
 
-  // Get file ID from URL or use provided fileId
-  const driveFileId = fileId || (url ? getGoogleDriveFileId(url) : null);
+  // Prefer file ID from URL to avoid mangled query params; sanitize if provided as fileId
+  const fromUrl = url ? getGoogleDriveFileId(url) : null;
+  const driveFileId = fromUrl ?? sanitizeGoogleDriveFileId(rawFileId);
   
   if (!driveFileId) {
-    logger.warn('ImageProxy', 'Invalid Google Drive URL or file ID', { url, fileId });
+    logger.warn('ImageProxy', 'Invalid Google Drive URL or file ID', { url, fileId: rawFileId });
     return NextResponse.json(
       { error: 'Invalid Google Drive URL or file ID' },
       { status: 400 }

@@ -1,7 +1,7 @@
 import type { World } from '@/types/oc';
 import { Markdown } from '@/lib/utils/markdown';
 import Image from 'next/image';
-import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl, isAnimatedImage } from '@/lib/utils/googleDriveImage';
 import { SpotifyEmbed } from '@/components/oc/SpotifyEmbed';
 
 interface WorldDetailsProps {
@@ -44,7 +44,7 @@ function SectionWithImage({
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, 320px"
-                unoptimized={imageUrl?.includes('drive.google.com') || isGoogleSitesUrl(imageUrl)}
+                unoptimized={imageUrl?.includes('drive.google.com') || isGoogleSitesUrl(imageUrl) || isAnimatedImage(imageUrl)}
               />
             </div>
           </div>
@@ -232,7 +232,7 @@ export function WorldDetails({ world }: WorldDetailsProps) {
                           fill
                           className="object-cover object-top"
                           sizes="(max-width: 768px) 100vw, 256px"
-                          unoptimized={race.picture_url.includes('drive.google.com') || isGoogleSitesUrl(race.picture_url)}
+                          unoptimized={race.picture_url.includes('drive.google.com') || isGoogleSitesUrl(race.picture_url) || isAnimatedImage(race.picture_url)}
                         />
                       </div>
                     )}

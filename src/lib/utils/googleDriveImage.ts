@@ -1,3 +1,21 @@
+/** Google Drive file IDs are alphanumeric, hyphen, underscore; typically 20–44 chars (legacy can be shorter) */
+const VALID_FILE_ID_REGEX = /^[a-zA-Z0-9_-]{15,50}$/;
+
+/**
+ * Sanitizes a possibly malformed fileId (e.g. "id&url=..." from mangled query strings).
+ * Returns only the first valid Google Drive file ID segment.
+ */
+export function sanitizeGoogleDriveFileId(fileId: string | null | undefined): string | null {
+  if (!fileId || typeof fileId !== 'string') return null;
+  const trimmed = fileId.trim();
+  // If the value contains & it may be a mangled "id&url=..." query string
+  const firstSegment = trimmed.includes('&') ? trimmed.split('&')[0]!.trim() : trimmed;
+  if (VALID_FILE_ID_REGEX.test(firstSegment)) return firstSegment;
+  // Extract first substring that looks like a Drive file ID
+  const match = trimmed.match(/[a-zA-Z0-9_-]{15,50}/);
+  return match ? match[0]! : null;
+}
+
 /**
  * Extracts file ID from Google Drive URL
  */
@@ -84,6 +102,18 @@ export function getGoogleDriveImageUrls(url: string | null | undefined): string[
 export function isGoogleSitesUrl(url: string | null | undefined): boolean {
   if (!url) return false;
   return url.includes('lh3.googleusercontent.com/sitesv');
+}
+
+/**
+ * Checks if a URL is likely an animated image (GIF) that should use unoptimized
+ * @param url - The URL to check
+ * @returns true if the URL appears to be an animated GIF
+ */
+export function isAnimatedImage(url: string | null | undefined): boolean {
+  if (!url) return false;
+  // Check if URL ends with .gif or contains .gif (case-insensitive)
+  const lowerUrl = url.toLowerCase();
+  return lowerUrl.includes('.gif') || lowerUrl.endsWith('.gif');
 }
 
 /**

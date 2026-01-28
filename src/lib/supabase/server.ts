@@ -151,6 +151,9 @@ export async function queryOCWithFallback<T extends { story_alias_id?: string | 
   let selectQuery = buildOCSelectQueryWithExplicitFK();
   let result = await queryBuilder(selectQuery);
   
+  // If PGRST116 (multiple rows), the query builder should handle limit(1), but if it still fails,
+  // we need to handle it at a higher level. For now, we'll let the caller handle PGRST116.
+  
   // If PGRST200 (relationship not found) with explicit FK, try implicit relationship
   if (result.error && result.error.code === 'PGRST200' && 
       result.error.message?.includes('story_aliases') &&

@@ -41,6 +41,8 @@ export function CharacterFilters() {
   }, [worldId, seriesType, gender, sex, tagId]);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchWorlds() {
       const supabase = createClient();
       const { data } = await supabase
@@ -48,12 +50,18 @@ export function CharacterFilters() {
         .select('id, name')
         .eq('is_public', true)
         .order('name');
-      if (data) setWorlds(data);
+      if (!cancelled && data) setWorlds(data);
     }
     fetchWorlds();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchTags() {
       try {
         const supabase = createClient();
@@ -61,19 +69,28 @@ export function CharacterFilters() {
           .from('tags')
           .select('id, name')
           .order('name');
+        if (cancelled) return;
         if (error) {
           logger.error('Component', 'CharacterFilters: Error fetching tags', error);
           return;
         }
         if (data) setTags(data);
       } catch (error) {
-        logger.error('Component', 'CharacterFilters: Error fetching tags', error);
+        if (!cancelled) {
+          logger.error('Component', 'CharacterFilters: Error fetching tags', error);
+        }
       }
     }
     fetchTags();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchFilterOptions() {
       const supabase = createClient();
       
@@ -91,6 +108,8 @@ export function CharacterFilters() {
         .not('sex', 'is', null)
         .not('sex', 'eq', '');
       
+      if (cancelled) return;
+
       if (genderData) {
         const uniqueGenders = Array.from(new Set(genderData.map(item => item.gender).filter(Boolean))) as string[];
         setGenderOptions(uniqueGenders.sort());
@@ -102,6 +121,10 @@ export function CharacterFilters() {
       }
     }
     fetchFilterOptions();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Debounced search update

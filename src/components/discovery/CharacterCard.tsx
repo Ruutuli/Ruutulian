@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import type { OC } from '@/types/oc';
-import { convertGoogleDriveUrl, isGoogleSitesUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, isGoogleSitesUrl, isAnimatedImage } from '@/lib/utils/googleDriveImage';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
 
@@ -41,7 +41,7 @@ export function CharacterCard({ oc, className = '' }: CharacterCardProps) {
                 fill
                 sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 className="object-cover"
-                unoptimized={isGoogleSitesUrl(oc.image_url)}
+                unoptimized={isGoogleSitesUrl(oc.image_url) || isAnimatedImage(oc.image_url)}
               />
             )
           ) : (

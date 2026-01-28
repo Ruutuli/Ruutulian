@@ -36,16 +36,20 @@ export function DropdownOptionsProvider({ children }: DropdownOptionsProviderPro
       return fetchPromiseRef.current;
     }
 
+    const abortController = new AbortController();
     const fetchPromise = (async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        const response = await fetch('/api/admin/dropdown-options');
+        const response = await fetch('/api/admin/dropdown-options', {
+          signal: abortController.signal,
+        });
         
         if (!response.ok) {
           // Don't throw for 401/403 - just return empty data
           if (response.status === 401 || response.status === 403) {
+            if (abortController.signal.aborted) return;
             logger.warn('Context', 'DropdownOptionsContext: Auth error', response.status);
             setData({ options: {}, hexCodes: {} });
             setIsLoading(false);
@@ -57,6 +61,10 @@ export function DropdownOptionsProvider({ children }: DropdownOptionsProviderPro
         }
 
         const result = await response.json();
+        
+        // Check if aborted after parsing JSON
+        if (abortController.signal.aborted) return;
+        
         setData({
           options: result.options || {},
           hexCodes: result.hexCodes || {},
@@ -64,6 +72,10 @@ export function DropdownOptionsProvider({ children }: DropdownOptionsProviderPro
         setLastFetchTime(Date.now());
         setError(null);
       } catch (err) {
+        // Ignore abort errors
+        if (err instanceof Error && err.name === 'AbortError') {
+          return;
+        }
         logger.error('Context', 'DropdownOptionsContext: Error fetching dropdown options', err);
         setError(err instanceof Error ? err : new Error('Failed to fetch dropdown options'));
         // Keep existing data on error (stale-while-revalidate)
@@ -74,12 +86,23 @@ export function DropdownOptionsProvider({ children }: DropdownOptionsProviderPro
     })();
 
     fetchPromiseRef.current = fetchPromise;
+    
+    // Store abort controller for cleanup
+    (fetchPromise as any).abort = () => abortController.abort();
+    
     return fetchPromise;
   }, []);
 
   // Initial fetch on mount
   useEffect(() => {
     fetchOptions();
+
+    return () => {
+      // Cancel any pending fetch on unmount
+      if (fetchPromiseRef.current && (fetchPromiseRef.current as any).abort) {
+        (fetchPromiseRef.current as any).abort();
+      }
+    };
   }, [fetchOptions]);
 
   // Refetch function that can be called manually
@@ -94,7 +117,15 @@ export function DropdownOptionsProvider({ children }: DropdownOptionsProviderPro
     const timeSinceLastFetch = Date.now() - lastFetchTime;
     if (timeSinceLastFetch >= CACHE_TTL) {
       // Data is stale, refetch in background
-      fetchOptions();
+      const timeoutId = setTimeout(() => {
+        // Only refetch if component is still mounted and data is still stale
+        const currentTimeSinceLastFetch = Date.now() - lastFetchTime;
+        if (currentTimeSinceLastFetch >= CACHE_TTL) {
+          fetchOptions();
+        }
+      }, 1000); // Small delay to avoid rapid refetch loops
+
+      return () => clearTimeout(timeoutId);
     }
   }, [data, lastFetchTime, isLoading, fetchOptions]);
 

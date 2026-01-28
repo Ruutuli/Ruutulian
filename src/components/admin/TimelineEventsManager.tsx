@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { TimelineEvent, OC, Timeline } from '@/types/oc';
 import { createClient } from '@/lib/supabase/client';
@@ -22,12 +22,13 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
   const [timelineEra, setTimelineEra] = useState<string | null>(null);
   const [timelineStoryAliasId, setTimelineStoryAliasId] = useState<string | null>(null);
   const [showCreateEventForm, setShowCreateEventForm] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    loadTimelineAndEvents();
-  }, [timelineId]);
+  const cancelledRef = useRef(false);
 
   async function loadTimelineAndEvents() {
+    if (cancelledRef.current) return;
+    
     setIsLoading(true);
     const supabase = createClient();
     
@@ -38,14 +39,20 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
       .eq('id', timelineId)
       .single();
     
+    if (cancelledRef.current) return;
+
     if (!timeline) {
-      setIsLoading(false);
+      if (!cancelledRef.current) {
+        setIsLoading(false);
+      }
       return;
     }
 
-    setWorldId(timeline.world_id);
-    setTimelineEra(timeline.era);
-    setTimelineStoryAliasId(timeline.story_alias_id);
+    if (!cancelledRef.current) {
+      setWorldId(timeline.world_id);
+      setTimelineEra(timeline.era);
+      setTimelineStoryAliasId(timeline.story_alias_id);
+    }
 
     // Load events associated with this timeline via junction table
     const { data: associations } = await supabase
@@ -64,6 +71,8 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
       .eq('timeline_id', timelineId)
       .order('position', { ascending: true });
 
+    if (cancelledRef.current) return;
+
     if (associations) {
       const events = associations
         .map((assoc: any) => ({
@@ -71,11 +80,29 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
           position: assoc.position,
         }))
         .filter((e: any) => e.id); // Filter out any null events
-      setTimelineEvents(events);
+      if (!cancelledRef.current) {
+        setTimelineEvents(events);
+      }
     }
 
-    setIsLoading(false);
+    if (!cancelledRef.current) {
+      setIsLoading(false);
+    }
   }
+
+  useEffect(() => {
+    cancelledRef.current = false;
+    loadTimelineAndEvents();
+
+    return () => {
+      cancelledRef.current = true;
+      // Abort any pending Supabase queries if possible
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
+  }, [timelineId]);
 
   async function addEventToTimeline(eventId: string) {
     setIsSaving(true);

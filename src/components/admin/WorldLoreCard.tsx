@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl, isAnimatedImage } from '@/lib/utils/googleDriveImage';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
 
 interface WorldLoreCardProps {
@@ -73,7 +73,7 @@ export function WorldLoreCard({ lore }: WorldLoreCardProps) {
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
               className="object-cover"
-              unoptimized={isGoogleSitesUrl(lore.banner_image_url)}
+              unoptimized={isGoogleSitesUrl(lore.banner_image_url) || isAnimatedImage(lore.banner_image_url)}
             />
           )
         ) : (

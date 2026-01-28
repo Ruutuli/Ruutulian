@@ -26,6 +26,8 @@ export function useWorlds(options: UseWorldsOptions = {}): UseWorldsResult {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchWorlds() {
       try {
         setLoading(true);
@@ -45,22 +47,34 @@ export function useWorlds(options: UseWorldsOptions = {}): UseWorldsResult {
             .order('name');
         }
 
+        if (cancelled) return;
+
         const { data, error: fetchError } = result;
 
         if (fetchError) {
           throw fetchError;
         }
 
-        setWorlds((data as unknown as WorldListItem[]) || []);
+        if (!cancelled) {
+          setWorlds((data as unknown as WorldListItem[]) || []);
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch worlds');
-        logger.error('Hook', 'useWorlds: Error fetching worlds', err);
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to fetch worlds');
+          logger.error('Hook', 'useWorlds: Error fetching worlds', err);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     fetchWorlds();
+
+    return () => {
+      cancelled = true;
+    };
   }, [includeSlug]);
 
   return { worlds, loading, error };

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { OC } from '@/types/oc';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
-import { convertGoogleDriveUrl, isGoogleSitesUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, isGoogleSitesUrl, isAnimatedImage } from '@/lib/utils/googleDriveImage';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
 import { TagsDisplay } from '@/components/content/TagsInput';
 
@@ -59,7 +59,7 @@ export function OCCard({ oc }: OCCardProps) {
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
                   className="object-contain"
-                  unoptimized={isGoogleSitesUrl(oc.image_url)}
+                  unoptimized={isGoogleSitesUrl(oc.image_url) || isAnimatedImage(oc.image_url)}
                 />
               </div>
             )

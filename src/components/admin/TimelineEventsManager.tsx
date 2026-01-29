@@ -90,6 +90,7 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [availableEvents, setAvailableEvents] = useState<TimelineEvent[]>([]);
   const [isLoadingAvailableEvents, setIsLoadingAvailableEvents] = useState(false);
+  const [sortChronologically, setSortChronologically] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   
   // Scroll to top when editing an event
@@ -409,6 +410,160 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAddExistingEvent, worldId, timelineEvents.length]);
 
+  // Helper function to get period sort value (early=1, mid=2, late=3, null=2 for middle of year)
+  function getPeriodSortValue(period: 'early' | 'mid' | 'late' | null | undefined): number {
+    if (period === 'early') return 1;
+    if (period === 'mid') return 2;
+    if (period === 'late') return 3;
+    return 2; // Default to mid if no period specified
+  }
+
+  // Helper function to extract sortable date values from an event
+  function getEventSortDate(event: TimelineEvent & { position: number }): { 
+    year: number | null; 
+    month: number | null; 
+    day: number | null;
+    period: number | null; // Period sort value for approximate dates
+  } {
+    // First try to get from date_data
+    if (event.date_data) {
+      if (typeof event.date_data === 'object' && 'type' in event.date_data) {
+        const dateData = event.date_data as any;
+        if (dateData.type === 'exact') {
+          return {
+            year: dateData.year ?? null,
+            month: dateData.month ?? null,
+            day: dateData.day ?? null,
+            period: null,
+          };
+        } else if (dateData.type === 'range') {
+          // Use start date for sorting
+          return {
+            year: dateData.start?.year ?? null,
+            month: dateData.start?.month ?? null,
+            day: dateData.start?.day ?? null,
+            period: null,
+          };
+        } else if (dateData.type === 'approximate') {
+          // Use year if available, and include period for sorting
+          return {
+            year: dateData.year ?? (dateData.year_range?.[0] ?? null),
+            month: null,
+            day: null,
+            period: getPeriodSortValue(dateData.period),
+          };
+        }
+      }
+    }
+    
+    // Fallback to year/month/day fields
+    return {
+      year: event.year ?? null,
+      month: event.month ?? null,
+      day: event.day ?? null,
+      period: null,
+    };
+  }
+
+  // Sort events chronologically
+  const sortedEvents = sortChronologically
+    ? [...timelineEvents].sort((a, b) => {
+        const dateA = getEventSortDate(a);
+        const dateB = getEventSortDate(b);
+        
+        // Events without years go to the end
+        if (dateA.year === null && dateB.year === null) {
+          return a.position - b.position; // Maintain original order for events without dates
+        }
+        if (dateA.year === null) return 1;
+        if (dateB.year === null) return -1;
+        
+        // Compare years
+        if (dateA.year !== dateB.year) {
+          return dateA.year - dateB.year;
+        }
+        
+        // Same year, compare months or periods
+        // If both have periods but no months, compare periods directly
+        if (dateA.month === null && dateB.month === null && dateA.period !== null && dateB.period !== null) {
+          return dateA.period - dateB.period; // early (1) < mid (2) < late (3)
+        }
+        
+        // Convert periods to approximate month values for comparison with actual months
+        // early ≈ months 1-4 (use 2), mid ≈ months 5-8 (use 6), late ≈ months 9-12 (use 12 to ensure it comes after all dates)
+        const periodToMonth = (period: number | null): number | null => {
+          if (period === 1) return 2;  // early
+          if (period === 2) return 6;  // mid
+          if (period === 3) return 12; // late (use 12 so it comes after all specific dates in the year)
+          return null;
+        };
+        
+        const monthA = dateA.month ?? periodToMonth(dateA.period);
+        const monthB = dateB.month ?? periodToMonth(dateB.period);
+        
+        if (monthA === null && monthB === null) {
+          return a.position - b.position;
+        }
+        if (monthA === null) return 1;
+        if (monthB === null) return -1;
+        
+        // Compare months
+        if (monthA !== monthB) {
+          return monthA - monthB;
+        }
+        
+        // Same approximate month - if one is exact and one is period-based, exact comes first
+        // (e.g., "July 7, 1977" should come before "late 1977" even though late ≈ month 11)
+        const aHasExactMonth = dateA.month !== null;
+        const bHasExactMonth = dateB.month !== null;
+        const aHasPeriod = dateA.period !== null;
+        const bHasPeriod = dateB.period !== null;
+        
+        // If both have exact months, continue to day comparison below
+        // If one has exact month and other has period, exact comes first
+        if (aHasExactMonth && !bHasExactMonth && bHasPeriod) {
+          return -1; // Exact date comes before period-based date
+        }
+        if (bHasExactMonth && !aHasExactMonth && aHasPeriod) {
+          return 1; // Exact date comes before period-based date
+        }
+        
+        // If both are period-based with same month value, compare periods directly
+        if (!aHasExactMonth && !bHasExactMonth && aHasPeriod && bHasPeriod) {
+          return dateA.period! - dateB.period!;
+        }
+        
+        // Same year and month, compare days
+        // If one has a period (approximate date) and the other has an exact day, the exact date comes first
+        // (e.g., "July 7, 1977" should come before "late 1977")
+        if (dateA.period !== null && dateB.day !== null) {
+          // A is period-based, B has exact day - exact comes first
+          return 1;
+        }
+        if (dateB.period !== null && dateA.day !== null) {
+          // B is period-based, A has exact day - exact comes first
+          return -1;
+        }
+        
+        // Both have days or both don't have days
+        if (dateA.day === null && dateB.day === null) {
+          // If both are period-based, compare periods
+          if (dateA.period !== null && dateB.period !== null) {
+            return dateA.period - dateB.period;
+          }
+          return a.position - b.position;
+        }
+        if (dateA.day === null) return 1;
+        if (dateB.day === null) return -1;
+        if (dateA.day !== dateB.day) {
+          return dateA.day - dateB.day;
+        }
+        
+        // Same date, maintain original order
+        return a.position - b.position;
+      })
+    : timelineEvents;
+
   if (isLoading) {
     return <div className="text-center py-8 text-gray-300">Loading events...</div>;
   }
@@ -418,6 +573,17 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-semibold text-gray-100">Timeline Events</h3>
         <div className="flex gap-2">
+          <button
+            onClick={() => setSortChronologically(!sortChronologically)}
+            className={`px-4 py-2 rounded-md transition-colors ${
+              sortChronologically
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-gray-600 text-gray-200 hover:bg-gray-700'
+            }`}
+            title={sortChronologically ? 'Click to sort by timeline position (order added)' : 'Click to sort chronologically by date'}
+          >
+            {sortChronologically ? '📅 By Date (Chronological)' : '📅 By Position'}
+          </button>
           <button
             onClick={() => {
               setShowAddExistingEvent(!showAddExistingEvent);
@@ -532,7 +698,7 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
         </div>
       ) : (
         <div className="space-y-4">
-          {timelineEvents.map((event, index) => (
+          {sortedEvents.map((event, index) => (
             editingEventId === event.id ? null : (
             <div
               key={event.id}

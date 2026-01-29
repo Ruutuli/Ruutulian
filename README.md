@@ -40,8 +40,8 @@ Don't worry if you don't know what these are - we'll explain each one and show y
    - **Why you need it**: Your website needs somewhere to store all the information you add
 
 4. **Railway Account** - This puts your website online so others can see it
-   - **What it is**: A service that hosts (puts online) your website for free
-   - **How to get it**: [Sign up here](https://railway.app) - also free!
+   - **What it is**: A hosting service that runs your website in the cloud. Railway offers a small free trial; after that, the **Hobby plan** is about **$5/month** for personal projects.
+   - **How to get it**: [Sign up here](https://railway.app)
    - **Why you need it**: Without this, your website only works on your computer
 
 5. **GitHub Account** - This connects Railway to your project
@@ -290,6 +290,19 @@ Environment variables are stored in a file named `.env` in the project root. You
 5. If you didn’t set `USERNAME` and `PASSWORD` in Railway, open `https://your-app.railway.app/admin/setup` (use your actual Railway URL) and complete the setup form to create your admin account.
 
 **Your site is now live.** Share the Railway URL with anyone you want.
+
+### Step 5 (Optional): Add Your Own Domain
+
+If you have a domain (e.g. `myocwiki.com`) and want to use it instead of the default `your-app.railway.app` URL:
+
+1. In your Railway project, open your service (the deployed app), then go to **Settings**.
+2. Under **Networking** or **Domains**, click **Add custom domain** (or **Generate domain** if you haven’t set one yet).
+3. Enter your domain (e.g. `myocwiki.com` or `www.myocwiki.com`). Railway will show you the DNS records to add (usually a CNAME pointing to Railway, or an A record).
+4. In your domain registrar (where you bought the domain), add the CNAME or A record Railway gives you. It can take a few minutes up to 48 hours to propagate.
+5. Back in Railway, confirm the domain when it verifies. Railway will provision HTTPS for it.
+6. In Railway **Variables**, set `NEXT_PUBLIC_SITE_URL` to your custom URL (e.g. `https://myocwiki.com` or `https://www.myocwiki.com`) so links and metadata use the correct address.
+
+Your site will then be reachable at your own domain.
 
 ---
 

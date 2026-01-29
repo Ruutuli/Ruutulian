@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { TimelineEvent, World, OC } from '@/types/oc';
 import { getCategoryColorClasses } from '@/lib/utils/categoryColors';
+import { logger } from '@/lib/logger';
 
 interface TimelineEventsListProps {
   events: TimelineEvent[];
@@ -25,7 +27,9 @@ export function TimelineEventsList({
   categories,
   initialFilters,
 }: TimelineEventsListProps) {
+  const router = useRouter();
   const [filters, setFilters] = useState(initialFilters);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const updateFilter = (key: keyof typeof filters, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -44,6 +48,33 @@ export function TimelineEventsList({
     const query = buildQueryString();
     window.location.href = `/admin/timeline-events${query ? `?${query}` : ''}`;
   };
+
+  async function deleteEvent(eventId: string) {
+    if (!confirm('Are you sure you want to delete this timeline event? This action cannot be undone and will remove the event from all timelines.')) {
+      return;
+    }
+
+    setIsDeleting(eventId);
+
+    try {
+      const response = await fetch(`/api/admin/timeline-events/${eventId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to delete event' }));
+        throw new Error(errorData.error || 'Failed to delete event');
+      }
+
+      // Refresh the page to show updated list
+      router.refresh();
+    } catch (error) {
+      logger.error('Component', 'TimelineEventsList: Error deleting event', error);
+      alert(error instanceof Error ? error.message : 'Failed to delete event');
+    } finally {
+      setIsDeleting(null);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -153,30 +184,31 @@ export function TimelineEventsList({
         </div>
       ) : (
         <div className="bg-gray-700/90 rounded-lg shadow-lg overflow-hidden border border-gray-600/70">
-          <table className="min-w-full divide-y divide-gray-700">
-            <thead className="bg-gray-600/80">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                  Title
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                  World
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                  Categories
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                  Characters
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-gray-800/50 divide-y divide-gray-700">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-700">
+              <thead className="bg-gray-600/80">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Title
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    World
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Categories
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Characters
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-gray-800/50 divide-y divide-gray-700">
               {events.map((event) => (
                 <tr key={event.id} className="hover:bg-gray-700/50">
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -244,17 +276,28 @@ export function TimelineEventsList({
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link
-                      href={`/admin/timeline-events/${event.id}`}
-                      className="text-purple-400 hover:text-purple-300"
-                    >
-                      Edit
-                    </Link>
+                    <div className="flex justify-end gap-2">
+                      <Link
+                        href={`/admin/timeline-events/${event.id}`}
+                        className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium"
+                      >
+                        Edit
+                      </Link>
+                      <button
+                        onClick={() => deleteEvent(event.id)}
+                        disabled={isDeleting === event.id}
+                        className="px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                        title="Delete this timeline event permanently"
+                      >
+                        {isDeleting === event.id ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

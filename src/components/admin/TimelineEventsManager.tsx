@@ -22,6 +22,9 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
   const [timelineEra, setTimelineEra] = useState<string | null>(null);
   const [timelineStoryAliasId, setTimelineStoryAliasId] = useState<string | null>(null);
   const [showCreateEventForm, setShowCreateEventForm] = useState(false);
+  const [showAddExistingEvent, setShowAddExistingEvent] = useState(false);
+  const [availableEvents, setAvailableEvents] = useState<TimelineEvent[]>([]);
+  const [isLoadingAvailableEvents, setIsLoadingAvailableEvents] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const cancelledRef = useRef(false);
@@ -163,6 +166,32 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
     }
   }
 
+  async function deleteEvent(eventId: string) {
+    if (!confirm('Are you sure you want to delete this timeline event? This action cannot be undone and will remove the event from all timelines.')) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const response = await fetch(`/api/admin/timeline-events/${eventId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to delete event' }));
+        throw new Error(errorData.error || 'Failed to delete event');
+      }
+
+      await loadTimelineAndEvents();
+    } catch (error) {
+      logger.error('Component', 'TimelineEventsManager: Error deleting event', error);
+      alert(error instanceof Error ? error.message : 'Failed to delete event');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function updateEventPosition(eventId: string, newPosition: number) {
     setIsSaving(true);
 
@@ -200,6 +229,74 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
     updateEventPosition(targetEvent.id, event.position);
   }
 
+  async function loadAvailableEvents() {
+    if (!worldId) return;
+
+    setIsLoadingAvailableEvents(true);
+    try {
+      const supabase = createClient();
+      
+      // Get all events for this world
+      const { data: allEvents } = await supabase
+        .from('timeline_events')
+        .select('*')
+        .eq('world_id', worldId)
+        .order('year', { ascending: true, nullsFirst: false })
+        .order('month', { ascending: true, nullsFirst: true })
+        .order('day', { ascending: true, nullsFirst: true });
+
+      if (!allEvents) {
+        setAvailableEvents([]);
+        return;
+      }
+
+      // Get IDs of events already in this timeline
+      const eventIdsInTimeline = new Set(timelineEvents.map(e => e.id));
+
+      // Filter out events that are already in the timeline
+      const available = allEvents.filter(event => !eventIdsInTimeline.has(event.id));
+      setAvailableEvents(available);
+    } catch (error) {
+      logger.error('Component', 'TimelineEventsManager: Error loading available events', error);
+      alert('Failed to load available events');
+    } finally {
+      setIsLoadingAvailableEvents(false);
+    }
+  }
+
+  async function handleAddExistingEvent(eventId: string) {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/admin/timeline-events/${eventId}/timelines`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timeline_id: timelineId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to add event to timeline' }));
+        throw new Error(errorData.error || 'Failed to add event to timeline');
+      }
+
+      // Reload timeline events first
+      await loadTimelineAndEvents();
+      // Then reload available events to remove the one we just added
+      await loadAvailableEvents();
+    } catch (error) {
+      logger.error('Component', 'TimelineEventsManager: Error adding existing event to timeline', error);
+      alert(error instanceof Error ? error.message : 'Failed to add event to timeline');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  useEffect(() => {
+    if (showAddExistingEvent && worldId) {
+      loadAvailableEvents();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAddExistingEvent, worldId, timelineEvents.length]);
+
   if (isLoading) {
     return <div className="text-center py-8 text-gray-300">Loading events...</div>;
   }
@@ -210,13 +307,71 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
         <h3 className="text-xl font-semibold text-gray-100">Timeline Events</h3>
         <div className="flex gap-2">
           <button
-            onClick={() => setShowCreateEventForm(!showCreateEventForm)}
+            onClick={() => {
+              setShowAddExistingEvent(!showAddExistingEvent);
+              setShowCreateEventForm(false);
+            }}
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          >
+            {showAddExistingEvent ? 'Cancel' : 'Add Existing Event'}
+          </button>
+          <button
+            onClick={() => {
+              setShowCreateEventForm(!showCreateEventForm);
+              setShowAddExistingEvent(false);
+            }}
             className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
           >
             {showCreateEventForm ? 'Cancel' : 'Create New Event'}
           </button>
         </div>
       </div>
+
+      {showAddExistingEvent && worldId && (
+        <div className="border border-gray-600/70 rounded-lg p-6 bg-gray-700/60">
+          <h4 className="text-lg font-semibold text-gray-100 mb-4">Add Existing Event</h4>
+          {isLoadingAvailableEvents ? (
+            <div className="text-center py-4 text-gray-300">Loading available events...</div>
+          ) : availableEvents.length === 0 ? (
+            <div className="text-center py-4 text-gray-400">
+              No available events found. All events from this world are already in this timeline, or there are no events yet.
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {availableEvents.map((event) => (
+                <div
+                  key={event.id}
+                  className="flex items-center justify-between p-3 bg-gray-800/50 rounded border border-gray-700 hover:bg-gray-800"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h5 className="text-sm font-medium text-gray-100">{event.title}</h5>
+                      {event.is_key_event && (
+                        <span className="px-2 py-0.5 bg-yellow-600/30 text-yellow-300 rounded text-xs">
+                          KEY
+                        </span>
+                      )}
+                    </div>
+                    {event.date_text && (
+                      <div className="text-xs text-gray-400 mt-1">{event.date_text}</div>
+                    )}
+                    {event.description && (
+                      <div className="text-xs text-gray-500 mt-1 line-clamp-1">{event.description}</div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleAddExistingEvent(event.id)}
+                    disabled={isSaving}
+                    className="ml-4 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                  >
+                    Add
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {showCreateEventForm && worldId && (
         <div className="border border-gray-600/70 rounded-lg p-6 bg-gray-700/60">
@@ -326,9 +481,18 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
                   <button
                     onClick={() => removeEventFromTimeline(event.id)}
                     disabled={isSaving}
-                    className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+                    className="px-3 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50"
+                    title="Remove from timeline"
                   >
                     Remove
+                  </button>
+                  <button
+                    onClick={() => deleteEvent(event.id)}
+                    disabled={isSaving}
+                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                    title="Delete permanently"
+                  >
+                    Delete
                   </button>
                 </div>
               </div>

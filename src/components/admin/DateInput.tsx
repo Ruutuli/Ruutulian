@@ -47,8 +47,61 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
   };
 
   const updateValue = (updates: Partial<EventDateData>) => {
+    // If value exists and type matches, merge updates
     if (value && value.type === dateType) {
       onChange({ ...value, ...updates } as EventDateData);
+    } else {
+      // If value doesn't exist or type doesn't match, create new value based on current dateType
+      // Preserve existing fields from current value if it exists and is compatible
+      const baseValue: EventDateData = (() => {
+        switch (dateType) {
+          case 'exact': {
+            const existing = value && value.type === 'exact' ? value : null;
+            return {
+              type: 'exact' as const,
+              era: existing?.era ?? null,
+              year: existing?.year ?? new Date().getFullYear(),
+              month: existing?.month,
+              day: existing?.day,
+              approximate: existing?.approximate ?? false,
+            };
+          }
+          case 'approximate': {
+            const existing = value && value.type === 'approximate' ? value : null;
+            return {
+              type: 'approximate' as const,
+              text: existing?.text ?? '',
+              year: existing?.year,
+              year_range: existing?.year_range,
+            };
+          }
+          case 'range': {
+            const existing = value && value.type === 'range' ? value : null;
+            return {
+              type: 'range' as const,
+              start: existing?.start ?? { era: null, year: new Date().getFullYear() },
+              end: existing?.end ?? { era: null, year: new Date().getFullYear() },
+              text: existing?.text,
+            };
+          }
+          case 'relative': {
+            const existing = value && value.type === 'relative' ? value : null;
+            return {
+              type: 'relative' as const,
+              text: existing?.text ?? '',
+              reference_event_id: existing?.reference_event_id,
+            };
+          }
+          case 'unknown': {
+            const existing = value && value.type === 'unknown' ? value : null;
+            return {
+              type: 'unknown' as const,
+              text: existing?.text ?? 'Date unknown',
+            };
+          }
+        }
+      })();
+      onChange({ ...baseValue, ...updates } as EventDateData);
     }
   };
 
@@ -94,9 +147,14 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
               type="number"
               value={(value as ExactDate)?.year ?? ''}
               onChange={(e) => {
-                const numValue = e.target.value === '' ? 0 : parseInt(e.target.value);
-                if (!isNaN(numValue)) {
-                  updateValue({ year: numValue });
+                const inputValue = e.target.value;
+                if (inputValue === '') {
+                  updateValue({ year: 0 });
+                } else {
+                  const numValue = Number(inputValue);
+                  if (!isNaN(numValue)) {
+                    updateValue({ year: numValue });
+                  }
                 }
               }}
               className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
@@ -185,9 +243,14 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
                 type="number"
                 value={(value as ApproximateDate)?.year ?? ''}
                 onChange={(e) => {
-                  const numValue = e.target.value === '' ? undefined : parseInt(e.target.value);
-                  if (e.target.value === '' || !isNaN(numValue!)) {
-                    updateValue({ year: numValue });
+                  const inputValue = e.target.value;
+                  if (inputValue === '') {
+                    updateValue({ year: undefined });
+                  } else {
+                    const numValue = Number(inputValue);
+                    if (!isNaN(numValue)) {
+                      updateValue({ year: numValue });
+                    }
                   }
                 }}
                 className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
@@ -201,9 +264,14 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
                   value={(value as ApproximateDate)?.year_range?.[0] ?? ''}
                   onChange={(e) => {
                     const range = (value as ApproximateDate)?.year_range || [0, 0];
-                    const numValue = e.target.value === '' ? 0 : parseInt(e.target.value);
-                    if (!isNaN(numValue)) {
-                      updateValue({ year_range: [numValue, range[1]] });
+                    const inputValue = e.target.value;
+                    if (inputValue === '') {
+                      updateValue({ year_range: [0, range[1]] });
+                    } else {
+                      const numValue = Number(inputValue);
+                      if (!isNaN(numValue)) {
+                        updateValue({ year_range: [numValue, range[1]] });
+                      }
                     }
                   }}
                   placeholder="Start"
@@ -214,9 +282,14 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
                   value={(value as ApproximateDate)?.year_range?.[1] ?? ''}
                   onChange={(e) => {
                     const range = (value as ApproximateDate)?.year_range || [0, 0];
-                    const numValue = e.target.value === '' ? 0 : parseInt(e.target.value);
-                    if (!isNaN(numValue)) {
-                      updateValue({ year_range: [range[0], numValue] });
+                    const inputValue = e.target.value;
+                    if (inputValue === '') {
+                      updateValue({ year_range: [range[0], 0] });
+                    } else {
+                      const numValue = Number(inputValue);
+                      if (!isNaN(numValue)) {
+                        updateValue({ year_range: [range[0], numValue] });
+                      }
                     }
                   }}
                   placeholder="End"
@@ -257,11 +330,18 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
                 value={(value as DateRange)?.start?.year ?? ''}
                 onChange={(e) => {
                   const range = value as DateRange;
-                  const numValue = e.target.value === '' ? 0 : parseInt(e.target.value);
-                  if (!isNaN(numValue)) {
+                  const inputValue = e.target.value;
+                  if (inputValue === '') {
                     updateValue({
-                      start: { ...range?.start, year: numValue },
+                      start: { ...range?.start, year: 0 },
                     });
+                  } else {
+                    const numValue = Number(inputValue);
+                    if (!isNaN(numValue)) {
+                      updateValue({
+                        start: { ...range?.start, year: numValue },
+                      });
+                    }
                   }
                 }}
                 placeholder="Year"
@@ -348,11 +428,18 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
                 value={(value as DateRange)?.end?.year ?? ''}
                 onChange={(e) => {
                   const range = value as DateRange;
-                  const numValue = e.target.value === '' ? 0 : parseInt(e.target.value);
-                  if (!isNaN(numValue)) {
+                  const inputValue = e.target.value;
+                  if (inputValue === '') {
                     updateValue({
-                      end: { ...range?.end, year: numValue },
+                      end: { ...range?.end, year: 0 },
                     });
+                  } else {
+                    const numValue = Number(inputValue);
+                    if (!isNaN(numValue)) {
+                      updateValue({
+                        end: { ...range?.end, year: numValue },
+                      });
+                    }
                   }
                 }}
                 placeholder="Year"

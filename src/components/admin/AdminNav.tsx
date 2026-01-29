@@ -17,6 +17,7 @@ export function AdminNav({ userEmail }: AdminNavProps) {
     { href: '/admin/ocs', label: 'OCs' },
     { href: '/admin/fanfics', label: 'Fanfics' },
     { href: '/admin/timelines', label: 'Timelines' },
+    { href: '/admin/timeline-events', label: 'Events' },
     { href: '/admin/world-lore', label: 'Lore' },
     { href: '/admin/writing-prompts', label: 'Prompts' },
     { href: '/admin/writing-prompt-responses', label: 'Responses' },

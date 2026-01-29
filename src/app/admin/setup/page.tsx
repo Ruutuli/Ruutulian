@@ -11,9 +11,6 @@ interface SetupData {
   siteUrl: string;
   authorName: string;
   shortName: string;
-  username: string;
-  password: string;
-  confirmPassword: string;
 }
 
 export default function SetupPage() {
@@ -29,9 +26,6 @@ export default function SetupPage() {
     siteUrl: '',
     authorName: '',
     shortName: '',
-    username: '',
-    password: '',
-    confirmPassword: '',
   });
 
   useEffect(() => {
@@ -61,28 +55,15 @@ export default function SetupPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-
-    // Validation
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      const { confirmPassword, ...submitData } = formData;
       const response = await fetch('/api/admin/setup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(submitData),
+        body: JSON.stringify(formData),
       });
 
       const result = await response.json();
@@ -224,61 +205,6 @@ export default function SetupPage() {
                   onChange={(e) => setFormData({ ...formData, authorName: e.target.value })}
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
                   placeholder="Your Name"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4 pt-4 border-t border-gray-700">
-            <h3 className="text-xl font-semibold text-gray-100 border-b border-gray-700 pb-2">
-              Admin Credentials
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
-                  Username *
-                </label>
-                <input
-                  id="username"
-                  type="text"
-                  required
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                  placeholder="admin"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                  Password *
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  minLength={8}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                  placeholder="••••••••"
-                />
-                <p className="text-xs text-gray-500 mt-1">Must be at least 8 characters</p>
-              </div>
-
-              <div className="md:col-span-2">
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
-                  Confirm Password *
-                </label>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  required
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                  placeholder="••••••••"
                 />
               </div>
             </div>

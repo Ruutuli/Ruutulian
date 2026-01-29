@@ -25,31 +25,45 @@ interface SiteSettingsRow {
   updated_at: string;
 }
 
+/** Default config when no site_settings row exists yet (e.g. before /admin/setup is completed) */
+const DEFAULT_SITE_CONFIG: SiteConfig = {
+  websiteName: 'OC Wiki',
+  websiteDescription: 'A place to store and organize information on original characters, worlds, lore, and timelines.',
+  iconUrl: '/icon.png',
+  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com',
+  authorName: '',
+  shortName: 'OC Wiki',
+};
+
 /**
  * Internal function to fetch site config from database
  * This is cached using React's cache() to deduplicate requests within the same render
+ * Returns defaults when no row exists so the app can load and the user can complete /admin/setup
  */
 const fetchSiteConfigFromDB = cache(async (): Promise<SiteConfig> => {
   const supabase = createAdminClient();
-  
+
   const { data, error } = await supabase
     .from('site_settings')
     .select('*')
-    .single();
+    .maybeSingle();
 
-  if (error || !data) {
-    throw new Error(`Site settings not found in database. Please configure site settings in the admin panel. Error: ${error?.message || 'No data'}`);
+  if (error) {
+    throw new Error(`Site settings error: ${error.message}`);
   }
 
-  // Site URL always comes from environment variable
+  if (!data) {
+    return { ...DEFAULT_SITE_CONFIG, siteUrl: process.env.NEXT_PUBLIC_SITE_URL || DEFAULT_SITE_CONFIG.siteUrl };
+  }
+
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || data.site_url || 'https://example.com';
-  
+
   return {
     websiteName: data.website_name,
     websiteDescription: data.website_description,
     iconUrl: data.icon_url,
     altIconUrl: data.alt_icon_url || undefined,
-    siteUrl: siteUrl,
+    siteUrl,
     authorName: data.author_name,
     shortName: data.short_name,
   };

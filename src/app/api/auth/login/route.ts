@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import { checkRateLimit, recordFailedAttempt, clearRateLimit } from '@/lib/auth/rate-limit';
-import { constantTimeCompare, generateSessionToken, verifyPassword } from '@/lib/auth/security';
+import { constantTimeCompare, generateSessionToken } from '@/lib/auth/security';
 import { createSession } from '@/lib/auth/session-store';
 import { logger } from '@/lib/logger';
-import { createAdminClient } from '@/lib/supabase/server';
 
 export async function POST(request: Request) {
   try {
@@ -37,45 +36,20 @@ export async function POST(request: Request) {
     const trimmedUsername = username.trim();
     const trimmedPassword = password.trim();
 
-    let isValid = false;
+    const validUsername = process.env.USERNAME?.trim();
+    const validPassword = process.env.PASSWORD?.trim();
 
-    // First, try to check database credentials
-    try {
-      const supabase = createAdminClient();
-      const { data: adminCreds, error } = await supabase
-        .from('admin_credentials')
-        .select('username, password_hash')
-        .eq('username', trimmedUsername)
-        .single();
-
-      if (adminCreds && !error) {
-        // Verify password against database hash
-        isValid = await verifyPassword(trimmedPassword, adminCreds.password_hash);
-      }
-    } catch (dbError) {
-      // If database check fails, fall back to environment variables
-      logger.warn('Auth', 'Database credential check failed, falling back to env vars', dbError);
+    if (!validUsername || !validPassword) {
+      logger.error('Auth', 'No admin credentials configured (set USERNAME and PASSWORD in env)');
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
     }
 
-    // Fall back to environment variables if database check didn't succeed
-    if (!isValid) {
-      const validUsername = process.env.USERNAME?.trim();
-      const validPassword = process.env.PASSWORD?.trim();
-
-      if (validUsername && validPassword) {
-        // Use constant-time comparison to prevent timing attacks
-        const usernameMatch = constantTimeCompare(trimmedUsername, validUsername);
-        const passwordMatch = constantTimeCompare(trimmedPassword, validPassword);
-        isValid = usernameMatch && passwordMatch;
-      } else {
-        // No credentials configured at all
-        logger.error('Auth', 'No admin credentials configured (neither database nor environment variables)');
-        return NextResponse.json(
-          { error: 'Server configuration error' },
-          { status: 500 }
-        );
-      }
-    }
+    const usernameMatch = constantTimeCompare(trimmedUsername, validUsername);
+    const passwordMatch = constantTimeCompare(trimmedPassword, validPassword);
+    const isValid = usernameMatch && passwordMatch;
 
     if (!isValid) {
       // Record failed attempt

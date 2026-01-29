@@ -20,7 +20,7 @@ export default function SettingsPage() {
       <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
         <h2 className="text-2xl font-bold text-gray-100 mb-2">Setup</h2>
         <p className="text-gray-400 mb-4 text-sm">
-          Access the initial setup page to configure admin credentials and site information.
+          Access the initial setup page to configure site information.
         </p>
         <Link
           href="/admin/setup"

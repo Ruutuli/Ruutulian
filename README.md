@@ -166,6 +166,7 @@ Follow these steps in order. Take your time - there's no rush!
    - `20250101000017_seed_dropdown_options.sql`
    - `20250101000018_seed_setting_options.sql`
    - `20250101000019_seed_trope_options.sql`
+   - `20250101000020_drop_admin_credentials.sql`
 4. For each file:
    - Open the file from `supabase/migrations/` on your computer (Notepad, TextEdit, or any editor).
    - Copy **all** the text.
@@ -181,9 +182,9 @@ Follow these steps in order. Take your time - there's no rush!
 
 ### Step 4: Set Up Your Environment Variables
 
-**What you're doing**: Giving your website the keys and settings it needs (database, optional admin login, etc.).
+**What you're doing**: Giving your website the keys and settings it needs (database, admin login, etc.).
 
-Environment variables are stored in a file named `.env` in the project root. Your app reads them at runtime.
+Environment variables are stored in a file named `.env` in the project root (or in Railway **Variables** when deployed). Your app reads them at runtime.
 
 1. In your project folder, copy `.env.example` to a new file named `.env` (remove the `.example` part).
 2. Open `.env` in a text editor.
@@ -194,8 +195,10 @@ Environment variables are stored in a file named `.env` in the project root. You
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Your **Publishable key** (recommended) or **anon public** key from Step 3b.
    - `SUPABASE_SECRET_KEY` or `SUPABASE_SERVICE_ROLE_KEY` – Your **Secret key** (recommended) or **service_role** key from Step 3b. Use only one; the app checks both.
 
+   **Required (admin login):**
+   - `USERNAME` / `PASSWORD` – Admin login. **Set these in `.env` (or Railway variables when deployed).** Admin login uses only these env values; Supabase is not used for username or password. You must set them to log in and reach `/admin/setup` to complete site information.
+
    **Optional:**
-   - `USERNAME` / `PASSWORD` – Admin login. If you leave these blank, you set admin credentials at `/admin/setup` instead.
    - `NEXT_PUBLIC_SITE_URL` – Full site URL (e.g. `https://your-app.railway.app`). Used for metadata and links; you can set it after deploy.
    - `NODE_ENV` – Use `development` locally; set to `production` on Railway.
 
@@ -226,18 +229,18 @@ Environment variables are stored in a file named `.env` in the project root. You
 
 ### Step 6: Complete the Initial Setup
 
-**What you're doing**: Setting up your admin account and site information (name, description, etc.) so you can log in and add content.
+**What you're doing**: Saving your site information (name, description, etc.) so the wiki shows your branding. Admin username and password are **not** set here—they come only from `.env` or Railway variables (Step 4).
 
-1. In your browser, go to: `http://localhost:3000/admin/setup`
+**Flow:** Set `USERNAME` and `PASSWORD` in `.env` (or Railway variables) → log in at `/admin/login` → go to `/admin/setup` to fill out site information. Supabase is only used to store **site settings** (name, description, icon, etc.); it has no effect on admin user/pass.
 
-2. Fill out the setup form with:
-   - **Site name and description** – This is how your site is identified (you can change it later in **Admin → Site Settings**).
-   - **Admin username** – What you’ll use to log in.
-   - **Admin password** – Use a strong password.
+1. In your browser, go to: `http://localhost:3000/admin/login` and log in with the `USERNAME` and `PASSWORD` from your `.env`.
+2. Then go to: `http://localhost:3000/admin/setup`
 
-3. Click **Complete Setup**.
+3. Fill out the setup form with **site information only** (no username/password fields):
+   - **Website name**, **short name**, **description** – How your site is identified (you can change these later in **Admin → Site Settings**).
+   - **Site URL**, **icon URL**, **author name** – Used for metadata and display.
 
-4. You’ll be taken to `/admin/login`. Log in with the username and password you just created.
+4. Click **Complete Setup**.
 
 **Congratulations!** Your site is set up. Site name, colors, and other settings can be changed anytime under **Admin → Site Settings**.
 
@@ -274,10 +277,12 @@ Environment variables are stored in a file named `.env` in the project root. You
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Your **Publishable key** or **anon** key (the one you use for the public client).
    - `SUPABASE_SECRET_KEY` or `SUPABASE_SERVICE_ROLE_KEY` – Your **Secret key** or **service_role** key (server-only). Use one; the app supports both.
 
+   **Required for admin login (same as local):**
+   - `USERNAME` and `PASSWORD` – Admin login for the deployed site. Set these in Railway variables; admin login uses only these (Supabase is not used for credentials).
+
    **Optional but recommended:**
    - `NEXT_PUBLIC_SITE_URL` – Leave blank at first; after the first deploy, set it to your Railway URL (e.g. `https://your-app.railway.app`).
    - `NODE_ENV` – Set to `production`.
-   - `USERNAME` and `PASSWORD` – Admin login for the deployed site. If you don’t set these, you’ll need to complete **Setup** on the live site: go to `https://your-app.railway.app/admin/setup` after the first deploy and create your admin account there (credentials are then stored in the database).
 
 3. Save the variables.
 
@@ -287,7 +292,7 @@ Environment variables are stored in a file named `.env` in the project root. You
 2. Wait for the build to finish (you'll see a progress bar)
 3. Once it's done, Railway will give you a web address (like `your-site.railway.app`)
 4. Copy that address and set the `NEXT_PUBLIC_SITE_URL` variable in Railway to the full URL (including `https://`).
-5. If you didn’t set `USERNAME` and `PASSWORD` in Railway, open `https://your-app.railway.app/admin/setup` (use your actual Railway URL) and complete the setup form to create your admin account.
+5. Log in at `https://your-app.railway.app/admin/login` (use your actual Railway URL) with the `USERNAME` and `PASSWORD` you set in Railway variables. Then go to `/admin/setup` to complete site information if needed.
 
 **Your site is now live.** Share the Railway URL with anyone you want.
 
@@ -523,15 +528,20 @@ Everything is done through easy-to-use forms - no coding required!
 2. Use the **Publishable** (or anon) key for `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and the **Secret** (or service_role) key for `SUPABASE_SECRET_KEY` / `SUPABASE_SERVICE_ROLE_KEY`. Copy the full values (they’re long).
 3. Confirm your Supabase project is active in the dashboard.
 
+### Problem: Going to /admin/setup redirects to /admin/login
+
+**What this means**: The setup page may require you to be logged in first (depending on your setup).
+
+**How to fix**: Set `USERNAME` and `PASSWORD` in your `.env` file or Railway variables (see Step 4). Admin login uses only these—Supabase is not used for credentials. Then go to `/admin/login` and log in. After that, you can open `/admin/setup`.
+
 ### Problem: Can't log in to admin
 
 **What this means**: Your login isn't working.
 
 **How to fix**:
-1. Make sure you completed the setup at `/admin/setup` first
+1. Admin login uses **only** `USERNAME` and `PASSWORD` from `.env` or Railway variables—Supabase is not used for credentials. Set them (or fix typos), restart the dev server if you changed `.env`, then use `/admin/login`.
 2. Try clearing your browser's cookies
-3. Make sure you're using the correct username and password
-4. If it's your first time, go to `/admin/setup` to create your account
+3. Make sure you're using the correct username and password (case-sensitive)
 
 ### Problem: Website shows default/blank content
 

@@ -4,6 +4,16 @@ import { NextResponse } from 'next/server';
 import { unstable_cache } from 'next/cache';
 import { logger } from '@/lib/logger';
 
+const DEFAULT_SITE_CONFIG = {
+  websiteName: 'OC Wiki',
+  websiteDescription: 'A place to store and organize information on original characters, worlds, lore, and timelines.',
+  iconUrl: '/icon.png',
+  altIconUrl: undefined as string | undefined,
+  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com',
+  authorName: '',
+  shortName: 'OC Wiki',
+};
+
 // Cache the site config fetch for 60 seconds
 const getCachedSiteConfig = unstable_cache(
   async () => {
@@ -11,7 +21,7 @@ const getCachedSiteConfig = unstable_cache(
     const { data, error } = await supabase
       .from('site_settings')
       .select('*')
-      .single();
+      .maybeSingle();
     return { data, error };
   },
   ['site-config-api'],
@@ -22,28 +32,12 @@ const getCachedSiteConfig = unstable_cache(
 );
 
 // Public endpoint to get site configuration (no auth required)
-// Database-only - no file fallback
+// Returns defaults when no row exists so the app can load before /admin/setup is completed
 export async function GET(request: Request) {
   try {
     const { data, error } = await getCachedSiteConfig();
 
-    // PGRST116 is "not found" - return error if no settings exist
-    if (error && error.code === 'PGRST116') {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Site settings not configured. Please configure site settings in the admin panel.',
-        },
-        {
-          status: 404,
-          headers: {
-            'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
-          },
-        }
-      );
-    }
-
-    if (error || !data) {
+    if (error) {
       logger.error('API', 'Error fetching site settings', error);
       return NextResponse.json(
         {
@@ -59,19 +53,22 @@ export async function GET(request: Request) {
       );
     }
 
-    // Return database data with caching headers
-    return NextResponse.json(
-      {
-        success: true,
-        data: {
+    const config = data
+      ? {
           websiteName: data.website_name,
           websiteDescription: data.website_description,
           iconUrl: data.icon_url,
-          altIconUrl: data.alt_icon_url || undefined,
-          siteUrl: data.site_url,
+          altIconUrl: data.alt_icon_url ?? undefined,
+          siteUrl: process.env.NEXT_PUBLIC_SITE_URL || data.site_url || 'https://example.com',
           authorName: data.author_name,
           shortName: data.short_name,
-        },
+        }
+      : { ...DEFAULT_SITE_CONFIG, siteUrl: process.env.NEXT_PUBLIC_SITE_URL || DEFAULT_SITE_CONFIG.siteUrl };
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: config,
       },
       {
         headers: {

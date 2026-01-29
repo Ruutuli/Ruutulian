@@ -2,12 +2,76 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import type { TimelineEvent, OC, Timeline } from '@/types/oc';
+import type { TimelineEvent, OC, Timeline, EventDateData } from '@/types/oc';
 import { createClient } from '@/lib/supabase/client';
 import { TimelineEventForm } from './TimelineEventForm';
 import { getCategoryColorClasses } from '@/lib/utils/categoryColors';
 import { calculateAge } from '@/lib/utils/ageCalculation';
 import { logger } from '@/lib/logger';
+
+// Helper function to format date data for display
+function formatDateData(dateData: EventDateData | null | undefined): string {
+  if (!dateData) return '';
+  
+  // Handle case where dateData might be a string (invalid JSON from DB)
+  if (typeof dateData === 'string') {
+    return dateData;
+  }
+  
+  // Ensure dateData has a type property
+  if (typeof dateData !== 'object' || !('type' in dateData)) {
+    return '';
+  }
+  
+  switch (dateData.type) {
+    case 'exact':
+      const exact = dateData as any;
+      const eraPrefix = exact.era ? `${exact.era} ` : '';
+      const yearStr = exact.year.toString().padStart(4, '0');
+      const approximateSuffix = exact.approximate ? ' ~' : '';
+      
+      if (exact.month && exact.day) {
+        const monthStr = exact.month.toString().padStart(2, '0');
+        const dayStr = exact.day.toString().padStart(2, '0');
+        return `${eraPrefix}${yearStr}-${monthStr}-${dayStr}${approximateSuffix}`;
+      }
+      return `${eraPrefix}${yearStr}${approximateSuffix}`;
+    case 'approximate':
+      const approx = dateData as any;
+      const periodPrefix = approx.period ? `${approx.period} ` : '';
+      if (approx.year !== undefined) {
+        const eraPrefix = approx.era ? `${approx.era} ` : '';
+        const yearStr = approx.year.toString().padStart(4, '0');
+        return `~${periodPrefix}${eraPrefix}${yearStr}`;
+      }
+      if (approx.year_range && Array.isArray(approx.year_range) && approx.year_range.length === 2) {
+        const eraPrefix = approx.era ? `${approx.era} ` : '';
+        const startYear = approx.year_range[0].toString().padStart(4, '0');
+        const endYear = approx.year_range[1].toString().padStart(4, '0');
+        return `~${periodPrefix}${eraPrefix}${startYear}-${endYear}`;
+      }
+      return approx.text || 'Approximate date';
+    case 'range':
+      const range = dateData as any;
+      const startEra = range.start?.era ? `${range.start.era} ` : '';
+      const endEra = range.end?.era ? `${range.end.era} ` : '';
+      const startParts = [range.start.year.toString().padStart(4, '0')];
+      if (range.start.month) startParts.push(range.start.month.toString().padStart(2, '0'));
+      if (range.start.day) startParts.push(range.start.day.toString().padStart(2, '0'));
+      const endParts = [range.end.year.toString().padStart(4, '0')];
+      if (range.end.month) endParts.push(range.end.month.toString().padStart(2, '0'));
+      if (range.end.day) endParts.push(range.end.day.toString().padStart(2, '0'));
+      const separator = range.start?.era && range.end?.era && range.start.era === range.end.era ? '–' : ' to ';
+      return `${startEra}${startParts.join('-')}${separator}${endEra}${endParts.join('-')}${range.text ? ` (${range.text})` : ''}`;
+    case 'relative':
+      const relative = dateData as any;
+      return relative.text || 'Relative date';
+    case 'unknown':
+      return (dateData as any).text || 'Date unknown';
+    default:
+      return '';
+  }
+}
 
 interface TimelineEventsManagerProps {
   timelineId: string;
@@ -485,8 +549,10 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
                       </span>
                     )}
                   </div>
-                  {event.date_text && (
-                    <div className="text-sm text-gray-300 mb-2">{event.date_text}</div>
+                  {(event.date_data || event.date_text) && (
+                    <div className="text-sm text-gray-300 mb-2 font-medium">
+                      📅 {formatDateData(event.date_data) || event.date_text}
+                    </div>
                   )}
                   {event.categories && event.categories.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-2">

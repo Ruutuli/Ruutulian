@@ -478,9 +478,10 @@ export interface ExactDate {
 
 export interface ApproximateDate {
   type: 'approximate';
+  era?: string | null; // Era identifier (e.g., "BE", "SE", "CE")
   year?: number;
   year_range?: [number, number];
-  text: string; // e.g., "circa 500 BCE", "early 3rd century"
+  text?: string; // e.g., "circa 500 BCE", "early 3rd century" (optional)
 }
 
 export interface DateRange {
@@ -569,6 +570,7 @@ export interface TimelineEventCharacter {
   oc_id?: string | null; // Nullable if custom_name is used
   custom_name?: string | null; // For characters not in the database
   role?: string | null;
+  age?: number | null; // Character age at the time of the event (can be auto-calculated or manually set)
   created_at: string;
   // Joined data
   oc?: OC;

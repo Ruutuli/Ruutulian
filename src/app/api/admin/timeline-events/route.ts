@@ -169,11 +169,12 @@ export async function POST(request: Request) {
         .filter((char: { oc_id?: string | null; custom_name?: string | null }) => 
           char.oc_id || char.custom_name
         )
-        .map((char: { oc_id?: string | null; custom_name?: string | null; role?: string }) => ({
+        .map((char: { oc_id?: string | null; custom_name?: string | null; role?: string; age?: number | null }) => ({
           timeline_event_id: event.id,
           oc_id: char.oc_id || null,
           custom_name: char.custom_name || null,
           role: char.role || null,
+          age: char.age || null,
         }));
 
       const { error: charError } = await supabase

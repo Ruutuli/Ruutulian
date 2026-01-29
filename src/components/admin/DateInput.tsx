@@ -28,7 +28,7 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
         onChange({ type: 'exact', era: null, year: new Date().getFullYear(), approximate: false });
         break;
       case 'approximate':
-        onChange({ type: 'approximate', text: '' });
+        onChange({ type: 'approximate', era: null, text: '' });
         break;
       case 'range':
         onChange({
@@ -70,6 +70,7 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
             const existing = value && value.type === 'approximate' ? value : null;
             return {
               type: 'approximate' as const,
+              era: existing?.era ?? null,
               text: existing?.text ?? '',
               year: existing?.year,
               year_range: existing?.year_range,
@@ -225,15 +226,31 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
 
       {dateType === 'approximate' && (
         <div className="space-y-2">
+          {availableEras && availableEras.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Era (optional)</label>
+              <select
+                value={(value as ApproximateDate)?.era || ''}
+                onChange={(e) => updateValue({ era: e.target.value || null })}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
+              >
+                <option value="">No Era</option>
+                {availableEras.map((era) => (
+                  <option key={era} value={era}>
+                    {era}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Description *</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Description (optional)</label>
             <input
               type="text"
               value={(value as ApproximateDate)?.text || ''}
               onChange={(e) => updateValue({ text: e.target.value })}
               placeholder="e.g., circa 500 BCE, early 3rd century"
               className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
-              required
             />
           </div>
           <div className="grid grid-cols-2 gap-2">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,6 +23,8 @@ import { optionalUuid, optionalUrl } from '@/lib/utils/zodSchemas';
 import { calculateAge } from '@/lib/utils/ageCalculation';
 import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
+import { useDropdownPosition } from '@/hooks/useDropdownPosition';
+import type { OC } from '@/types/oc';
 
 const eventSchema = z.object({
   world_id: z.string().uuid('Invalid world'),
@@ -41,6 +43,7 @@ const eventSchema = z.object({
     oc_id: z.string().uuid().optional().nullable(),
     custom_name: z.string().optional().nullable(),
     role: z.string().optional(),
+    age: z.number().int().min(0).optional().nullable(),
   }).refine(
     (data) => data.oc_id || data.custom_name,
     { message: "Either select a character or enter a custom name" }
@@ -50,6 +53,238 @@ const eventSchema = z.object({
 });
 
 type EventFormData = z.infer<typeof eventSchema>;
+
+// Character Autocomplete Component
+function CharacterAutocompleteInput({
+  value,
+  characters,
+  onSelect,
+  placeholder,
+  disabled,
+}: {
+  value: string;
+  characters: OC[];
+  onSelect: (ocId: string | null, customName: string | null) => void;
+  placeholder?: string;
+  disabled?: boolean;
+}) {
+  const [inputValue, setInputValue] = useState(value);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLUListElement>(null);
+  const blurTimeoutRef = useRef<number | null>(null);
+
+  // Filter characters based on input
+  const filteredCharacters = useMemo(() => {
+    if (!inputValue.trim()) {
+      return characters.slice(0, 10); // Show first 10 when empty
+    }
+    const lowerInput = inputValue.toLowerCase();
+    return characters
+      .filter(char => char.name.toLowerCase().includes(lowerInput))
+      .slice(0, 10); // Limit to 10 suggestions
+  }, [inputValue, characters]);
+
+  // Check if input matches a character exactly
+  const exactMatch = useMemo(() => {
+    return characters.find(c => c.name.toLowerCase() === inputValue.toLowerCase());
+  }, [inputValue, characters]);
+
+  // Calculate dropdown position
+  const showAbove = useDropdownPosition({
+    inputRef,
+    isVisible: showSuggestions,
+    dropdownHeight: 240,
+    dependencies: [filteredCharacters.length],
+  });
+
+  // Sync with external value prop
+  useEffect(() => {
+    if (value !== inputValue) {
+      setInputValue(value);
+    }
+  }, [value]);
+
+  // Handle input change
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    setShowSuggestions(true);
+    setHighlightedIndex(-1);
+  };
+
+  // Handle suggestion selection
+  const handleSelectCharacter = (character: OC) => {
+    setInputValue(character.name);
+    setShowSuggestions(false);
+    setHighlightedIndex(-1);
+    onSelect(character.id, null);
+  };
+
+  // Handle custom name (when user types something that doesn't match)
+  const handleCustomName = () => {
+    const customName = inputValue.trim();
+    if (customName) {
+      setShowSuggestions(false);
+      setHighlightedIndex(-1);
+      onSelect(null, customName);
+    }
+  };
+
+  // Handle blur - if no exact match, treat as custom name
+  const handleBlur = () => {
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+    }
+    blurTimeoutRef.current = window.setTimeout(() => {
+      setShowSuggestions(false);
+      // If input doesn't match any character, treat as custom name
+      if (inputValue.trim() && !exactMatch) {
+        handleCustomName();
+      } else if (exactMatch) {
+        // If it matches, select that character
+        handleSelectCharacter(exactMatch);
+      }
+      blurTimeoutRef.current = null;
+    }, 200);
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || filteredCharacters.length === 0) {
+      if (e.key === 'Enter' && inputValue.trim() && !exactMatch) {
+        e.preventDefault();
+        handleCustomName();
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setHighlightedIndex(prev => 
+          prev < filteredCharacters.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setHighlightedIndex(prev => prev > 0 ? prev - 1 : -1);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < filteredCharacters.length) {
+          handleSelectCharacter(filteredCharacters[highlightedIndex]);
+        } else if (inputValue.trim() && !exactMatch) {
+          handleCustomName();
+        } else if (exactMatch) {
+          handleSelectCharacter(exactMatch);
+        }
+        break;
+      case 'Escape':
+        setShowSuggestions(false);
+        setHighlightedIndex(-1);
+        break;
+    }
+  };
+
+  // Prevent blur timers from firing after unmount
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+        blurTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+        setHighlightedIndex(-1);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (highlightedIndex >= 0 && suggestionsRef.current) {
+      const highlightedElement = suggestionsRef.current.children[highlightedIndex] as HTMLElement;
+      if (highlightedElement) {
+        highlightedElement.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [highlightedIndex]);
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <input
+        ref={inputRef}
+        type="text"
+        value={inputValue}
+        onChange={handleInputChange}
+        onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
+        onFocus={() => {
+          if (blurTimeoutRef.current) {
+            clearTimeout(blurTimeoutRef.current);
+            blurTimeoutRef.current = null;
+          }
+          setShowSuggestions(true);
+        }}
+        disabled={disabled}
+        placeholder={placeholder || 'Select character or type custom name...'}
+        className="w-full px-3 py-2 bg-gray-900/60 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:opacity-50 transition-all"
+        autoComplete="off"
+      />
+      
+      {showSuggestions && (filteredCharacters.length > 0 || (inputValue.trim() && !exactMatch)) && (
+        <ul
+          ref={suggestionsRef}
+          className={`absolute z-[99999] w-full max-h-60 overflow-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg ${
+            showAbove ? 'bottom-full mb-1' : 'top-full mt-1'
+          }`}
+        >
+          {filteredCharacters.map((character, index) => (
+            <li
+              key={character.id}
+              onClick={() => handleSelectCharacter(character)}
+              onMouseEnter={() => setHighlightedIndex(index)}
+              className={`px-4 py-2 cursor-pointer transition-colors ${
+                index === highlightedIndex
+                  ? 'bg-purple-600/50 text-white'
+                  : 'text-gray-200 hover:bg-gray-700'
+              }`}
+            >
+              {character.name}
+            </li>
+          ))}
+          {inputValue.trim() && !exactMatch && (
+            <li
+              onClick={handleCustomName}
+              onMouseEnter={() => setHighlightedIndex(filteredCharacters.length)}
+              className={`px-4 py-2 cursor-pointer transition-colors italic text-purple-300 ${
+                highlightedIndex === filteredCharacters.length
+                  ? 'bg-purple-600/50 text-white'
+                  : 'hover:bg-gray-700'
+              }`}
+            >
+              Use "{inputValue.trim()}" as custom name
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 interface TimelineEventFormProps {
   event?: TimelineEvent;
@@ -113,6 +348,7 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
         oc_id: c.oc_id || null,
         custom_name: c.custom_name || null,
         role: c.role || '',
+        age: (c as any).age ?? null,
       })) || [],
       story_alias_id: event.story_alias_id ?? null,
       timeline_ids: [], // Will be populated from existing associations if editing
@@ -137,19 +373,19 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
 
   // Ensure world_id is set when locked
   useEffect(() => {
-    if (lockWorld && worldId && !event) {
-      setValue('world_id', worldId);
+    if (lockWorld && worldId) {
+      setValue('world_id', worldId, { shouldValidate: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lockWorld, worldId, event]);
+  }, [lockWorld, worldId]);
 
   // Ensure story_alias_id is set when locked
   useEffect(() => {
-    if (lockStoryAlias && timelineStoryAliasId !== undefined && !event) {
-      setValue('story_alias_id', timelineStoryAliasId || null);
+    if (lockStoryAlias && timelineStoryAliasId !== undefined) {
+      setValue('story_alias_id', timelineStoryAliasId || null, { shouldValidate: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lockStoryAlias, timelineStoryAliasId, event]);
+  }, [lockStoryAlias, timelineStoryAliasId]);
 
   const {
     register,
@@ -234,11 +470,12 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
     oc_id: string | null;
     custom_name: string | null;
     role: string;
+    age: number | null;
   }>(
     'characters',
     watch,
     setValue,
-    () => ({ oc_id: null, custom_name: null, role: '' })
+    () => ({ oc_id: null, custom_name: null, role: '', age: null })
   );
 
   // Extract year/month/day from date_data for sorting
@@ -258,12 +495,56 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
     }
   }, [watchedDateData, setValue]);
 
+  // Auto-calculate age for characters when character or date changes
+  useEffect(() => {
+    const currentCharacters = watch('characters') || [];
+    if (!watchedDateData || currentCharacters.length === 0) return;
+
+    const updatedCharacters = currentCharacters.map((char) => {
+      // Only auto-calculate if character has oc_id (not custom name) and no manual age set
+      if (char.oc_id && char.age === null) {
+        const character = characters.find(c => c.id === char.oc_id);
+        if (character?.date_of_birth) {
+          const calculatedAge = calculateAge(character.date_of_birth, watchedDateData);
+          if (calculatedAge !== null && calculatedAge !== char.age) {
+            return { ...char, age: calculatedAge };
+          }
+        }
+      }
+      return char;
+    });
+
+    // Only update if there are changes
+    const hasChanges = updatedCharacters.some((char, index) => {
+      const original = currentCharacters[index];
+      return char.age !== original.age;
+    });
+
+    if (hasChanges) {
+      setValue('characters', updatedCharacters, { shouldDirty: true });
+    }
+  }, [watchedDateData, characters, watch, setValue]);
+
   const onSubmit = async (data: EventFormData) => {
+    logger.debug('Component', 'TimelineEventForm: Form submitted', data);
+    
+    // Ensure world_id is set when lockWorld is true
+    if (lockWorld && worldId && !data.world_id) {
+      data.world_id = worldId;
+    }
+    
+    // Ensure story_alias_id is set when lockStoryAlias is true
+    if (lockStoryAlias && timelineStoryAliasId !== undefined && data.story_alias_id === null) {
+      data.story_alias_id = timelineStoryAliasId || null;
+    }
+    
     await submit(data);
   };
 
   const onError = (errors: any) => {
     logger.debug('Component', 'TimelineEventForm: Form validation errors', errors);
+    // Log validation errors to console for debugging
+    console.error('Form validation errors:', errors);
   };
 
   const handleSaveAndClose = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
@@ -279,16 +560,73 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
   }, [handleSubmit, onSubmit, onError]);
 
 
+  // Check if there are any validation errors
+  const hasValidationErrors = Object.keys(errors).length > 0;
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-6">
       {error && <FormMessage type="error" message={error} />}
+      {hasValidationErrors && (
+        <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-4">
+          <p className="text-sm font-medium text-red-300 mb-2">
+            Please fix the following errors:
+          </p>
+          <ul className="list-disc list-inside space-y-1 text-sm text-red-200">
+            {errors.world_id && (
+              <li>World: {errors.world_id.message}</li>
+            )}
+            {errors.title && (
+              <li>Title: {errors.title.message}</li>
+            )}
+            {errors.description && (
+              <li>Description: {errors.description.message}</li>
+            )}
+            {errors.description_markdown && (
+              <li>Full Description: {errors.description_markdown.message}</li>
+            )}
+            {errors.year && (
+              <li>Year: {errors.year.message}</li>
+            )}
+            {errors.month && (
+              <li>Month: {errors.month.message}</li>
+            )}
+            {errors.day && (
+              <li>Day: {errors.day.message}</li>
+            )}
+            {errors.categories && (
+              <li>Categories: {errors.categories.message}</li>
+            )}
+            {errors.location && (
+              <li>Location: {errors.location.message}</li>
+            )}
+            {errors.image_url && (
+              <li>Image URL: {errors.image_url.message}</li>
+            )}
+            {errors.characters && (
+              <li>Characters: {Array.isArray(errors.characters) 
+                ? errors.characters.map((err: any, idx: number) => err?.message || `Character ${idx + 1} has errors`).join(', ')
+                : errors.characters.message || 'Invalid character data'}
+              </li>
+            )}
+            {errors.story_alias_id && (
+              <li>Story Alias: {errors.story_alias_id.message}</li>
+            )}
+            {errors.timeline_ids && (
+              <li>Timelines: {errors.timeline_ids.message}</li>
+            )}
+          </ul>
+        </div>
+      )}
 
       {lockWorld && lockedWorld ? (
         <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3">
           <FormLabel>World</FormLabel>
           <div className="text-gray-200 font-medium">{lockedWorld.name}</div>
           <p className="text-xs text-gray-400 mt-1">World is automatically set from timeline context</p>
-          <input type="hidden" {...register('world_id')} value={worldId} />
+          <input type="hidden" {...register('world_id')} />
+          {errors.world_id && (
+            <p className="text-xs text-red-400 mt-1">{errors.world_id.message}</p>
+          )}
         </div>
       ) : (
         <div>
@@ -467,98 +805,126 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
       </div>
 
       <div>
-        <div className="flex justify-between items-center mb-2">
-          <label className="block text-sm font-medium text-gray-300">
+        <div className="flex justify-between items-center mb-3">
+          <FormLabel htmlFor="characters">
             Characters Involved
-          </label>
+          </FormLabel>
           {characters.length > 0 && (
             <button
               type="button"
               onClick={relatedCharacters.addItem}
-              className="px-3 py-1 text-sm bg-gray-700 text-gray-300 rounded hover:bg-gray-600"
+              className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium shadow-sm"
             >
-              + Add Character
+              <i className="fas fa-plus mr-1.5" aria-hidden="true"></i>
+              Add Character
             </button>
           )}
         </div>
         {relatedCharacters.items && relatedCharacters.items.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {relatedCharacters.items.map((char, index) => {
-              const isCustomName = !char.oc_id && char.custom_name;
               const selectedCharacter = char.oc_id ? characters.find(c => c.id === char.oc_id) : null;
-              const age = selectedCharacter?.date_of_birth && watchedDateData
+              // Calculate age for display/auto-fill (but use stored age if manually set)
+              const calculatedAge = selectedCharacter?.date_of_birth && watchedDateData
                 ? calculateAge(selectedCharacter.date_of_birth, watchedDateData)
                 : null;
+              // Use stored age if set, otherwise use calculated age
+              const displayAge = char.age !== null ? char.age : calculatedAge;
+              
+              // Display name: character name if oc_id exists, otherwise custom_name
+              const displayName = selectedCharacter?.name || char.custom_name || '';
               
               return (
-                <div key={index} className="flex gap-2 items-center flex-wrap">
-                  <div className="flex gap-2 items-center flex-1 min-w-[200px]">
-                    <select
-                      value={char.oc_id || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value) {
-                          // Selected an OC - clear custom name
-                          relatedCharacters.updateItemField(index, 'oc_id', value);
-                          relatedCharacters.updateItemField(index, 'custom_name', null);
-                        } else {
-                          // Switched to custom name mode
-                          relatedCharacters.updateItemField(index, 'oc_id', null);
-                        }
-                      }}
-                      className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
-                    >
-                      <option value="">Custom name...</option>
-                      {characters.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                    {!char.oc_id && (
+                <div 
+                  key={`char-${index}-${char.oc_id || char.custom_name || 'new'}`} 
+                  className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4 hover:border-gray-600/50 transition-colors"
+                >
+                  <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-end">
+                    <div className="w-full sm:flex-1 min-w-0">
+                      <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                        Character Name
+                      </label>
+                      <CharacterAutocompleteInput
+                        value={displayName}
+                        characters={characters}
+                        onSelect={(ocId, customName) => {
+                          if (ocId) {
+                            // Selected an OC
+                            relatedCharacters.updateItemField(index, 'oc_id', ocId);
+                            relatedCharacters.updateItemField(index, 'custom_name', null);
+                            relatedCharacters.updateItemField(index, 'age', null); // Reset to trigger auto-calculation
+                          } else if (customName) {
+                            // Typed custom name
+                            relatedCharacters.updateItemField(index, 'oc_id', null);
+                            relatedCharacters.updateItemField(index, 'custom_name', customName);
+                            relatedCharacters.updateItemField(index, 'age', null);
+                          }
+                        }}
+                        placeholder="Select character or type custom name..."
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <div className="w-full sm:w-20 shrink-0">
+                      <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                        Age
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={displayAge !== null ? displayAge : ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === '') {
+                            relatedCharacters.updateItemField(index, 'age', null);
+                          } else {
+                            const numValue = Number(value);
+                            if (!isNaN(numValue) && numValue >= 0) {
+                              relatedCharacters.updateItemField(index, 'age', numValue);
+                            }
+                          }
+                        }}
+                        placeholder={calculatedAge !== null ? String(calculatedAge) : 'Age'}
+                        className="w-full px-2 py-2 bg-gray-900/60 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-center"
+                        title={calculatedAge !== null && char.age === null ? `Auto-calculated: ${calculatedAge}` : 'Enter age manually'}
+                      />
+                    </div>
+                    <div className="w-full sm:flex-1 min-w-[120px]">
+                      <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                        Role (optional)
+                      </label>
                       <input
                         type="text"
-                        value={char.custom_name || ''}
-                        onChange={(e) => {
-                          relatedCharacters.updateItemField(index, 'custom_name', e.target.value);
-                          relatedCharacters.updateItemField(index, 'oc_id', null);
-                        }}
-                        placeholder="Enter character name"
-                        className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
+                        value={char.role || ''}
+                        onChange={(e) => relatedCharacters.updateItemField(index, 'role', e.target.value)}
+                        placeholder="Role"
+                        className="w-full px-3 py-2 bg-gray-900/60 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                       />
-                    )}
+                    </div>
+                    <div className="flex items-end pt-6 sm:pt-0 w-full sm:w-auto shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => relatedCharacters.removeItem(index)}
+                        className="w-full sm:w-auto px-4 py-2 bg-red-600/80 text-white rounded-lg hover:bg-red-600 transition-colors font-medium text-sm shadow-sm whitespace-nowrap"
+                        title="Remove this character"
+                      >
+                        <i className="fas fa-trash mr-1.5" aria-hidden="true"></i>
+                        Remove
+                      </button>
+                    </div>
                   </div>
-                  {selectedCharacter && age !== null && (
-                    <span className="text-sm text-gray-400 whitespace-nowrap">
-                      Age: {age}
-                    </span>
-                  )}
-                  <input
-                    type="text"
-                    value={char.role || ''}
-                    onChange={(e) => relatedCharacters.updateItemField(index, 'role', e.target.value)}
-                    placeholder="Role (optional)"
-                    className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100 min-w-[150px]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => relatedCharacters.removeItem(index)}
-                    className="px-3 py-2 bg-red-700 text-white rounded hover:bg-red-600 whitespace-nowrap"
-                  >
-                    Remove
-                  </button>
                 </div>
               );
             })}
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="bg-gray-800/30 border border-gray-700/50 border-dashed rounded-lg p-6 text-center">
             <button
               type="button"
               onClick={relatedCharacters.addItem}
-              className="px-4 py-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors"
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium mb-3"
             >
-              + Add Character
+              <i className="fas fa-plus mr-1.5" aria-hidden="true"></i>
+              Add Character
             </button>
             <p className="text-sm text-gray-400">
               {watchedWorldId

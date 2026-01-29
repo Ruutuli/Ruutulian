@@ -27,6 +27,13 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
   const [availableEvents, setAvailableEvents] = useState<TimelineEvent[]>([]);
   const [isLoadingAvailableEvents, setIsLoadingAvailableEvents] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // Scroll to top when editing an event
+  useEffect(() => {
+    if (editingEventId) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [editingEventId]);
 
   const cancelledRef = useRef(false);
 

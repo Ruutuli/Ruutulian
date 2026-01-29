@@ -28,7 +28,7 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
         onChange({ type: 'exact', era: null, year: new Date().getFullYear(), approximate: false });
         break;
       case 'approximate':
-        onChange({ type: 'approximate', era: null, text: '' });
+        onChange({ type: 'approximate', era: null, period: null });
         break;
       case 'range':
         onChange({
@@ -71,9 +71,9 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
             return {
               type: 'approximate' as const,
               era: existing?.era ?? null,
-              text: existing?.text ?? '',
               year: existing?.year,
               year_range: existing?.year_range,
+              period: existing?.period ?? null,
             };
           }
           case 'range': {
@@ -243,16 +243,6 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
               </select>
             </div>
           )}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Description (optional)</label>
-            <input
-              type="text"
-              value={(value as ApproximateDate)?.text || ''}
-              onChange={(e) => updateValue({ text: e.target.value })}
-              placeholder="e.g., circa 500 BCE, early 3rd century"
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
-            />
-          </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">Approximate Year (optional)</label>
@@ -274,45 +264,62 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Year Range (optional)</label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  value={(value as ApproximateDate)?.year_range?.[0] ?? ''}
-                  onChange={(e) => {
-                    const range = (value as ApproximateDate)?.year_range || [0, 0];
-                    const inputValue = e.target.value;
-                    if (inputValue === '') {
-                      updateValue({ year_range: [0, range[1]] });
-                    } else {
-                      const numValue = Number(inputValue);
-                      if (!isNaN(numValue)) {
-                        updateValue({ year_range: [numValue, range[1]] });
-                      }
+              <label className="block text-sm font-medium text-gray-300 mb-1">Period (optional)</label>
+              <select
+                value={(value as ApproximateDate)?.period || ''}
+                onChange={(e) => {
+                  const periodValue = e.target.value === '' ? null : (e.target.value as 'early' | 'mid' | 'late');
+                  updateValue({ period: periodValue });
+                }}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
+              >
+                <option value="">No period</option>
+                <option value="early">Early</option>
+                <option value="mid">Mid</option>
+                <option value="late">Late</option>
+              </select>
+              <p className="text-xs text-gray-400 mt-1">Used for chronological sorting within the same year</p>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Year Range (optional)</label>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                value={(value as ApproximateDate)?.year_range?.[0] ?? ''}
+                onChange={(e) => {
+                  const range = (value as ApproximateDate)?.year_range || [0, 0];
+                  const inputValue = e.target.value;
+                  if (inputValue === '') {
+                    updateValue({ year_range: [0, range[1]] });
+                  } else {
+                    const numValue = Number(inputValue);
+                    if (!isNaN(numValue)) {
+                      updateValue({ year_range: [numValue, range[1]] });
                     }
-                  }}
-                  placeholder="Start"
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
-                />
-                <input
-                  type="number"
-                  value={(value as ApproximateDate)?.year_range?.[1] ?? ''}
-                  onChange={(e) => {
-                    const range = (value as ApproximateDate)?.year_range || [0, 0];
-                    const inputValue = e.target.value;
-                    if (inputValue === '') {
-                      updateValue({ year_range: [range[0], 0] });
-                    } else {
-                      const numValue = Number(inputValue);
-                      if (!isNaN(numValue)) {
-                        updateValue({ year_range: [range[0], numValue] });
-                      }
+                  }
+                }}
+                placeholder="Start"
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
+              />
+              <input
+                type="number"
+                value={(value as ApproximateDate)?.year_range?.[1] ?? ''}
+                onChange={(e) => {
+                  const range = (value as ApproximateDate)?.year_range || [0, 0];
+                  const inputValue = e.target.value;
+                  if (inputValue === '') {
+                    updateValue({ year_range: [range[0], 0] });
+                  } else {
+                    const numValue = Number(inputValue);
+                    if (!isNaN(numValue)) {
+                      updateValue({ year_range: [range[0], numValue] });
                     }
-                  }}
-                  placeholder="End"
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
-                />
-              </div>
+                  }
+                }}
+                placeholder="End"
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
+              />
             </div>
           </div>
         </div>

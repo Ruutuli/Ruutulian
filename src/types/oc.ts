@@ -482,6 +482,7 @@ export interface ApproximateDate {
   year?: number;
   year_range?: [number, number];
   text?: string; // e.g., "circa 500 BCE", "early 3rd century" (optional)
+  period?: 'early' | 'mid' | 'late' | null; // Time period within the year for chronological sorting
 }
 
 export interface DateRange {

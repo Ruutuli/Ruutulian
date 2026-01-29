@@ -177,6 +177,18 @@ export async function POST(request: Request) {
           age: char.age || null,
         }));
 
+      logger.debug('API', 'Adding characters to timeline event', {
+        eventId: event.id,
+        eventTitle: title,
+        characterCount: characterInserts.length,
+        characters: characterInserts.map(char => ({
+          oc_id: char.oc_id,
+          custom_name: char.custom_name,
+          role: char.role,
+          age: char.age,
+        })),
+      });
+
       const { error: charError } = await supabase
         .from('timeline_event_characters')
         .insert(characterInserts);
@@ -184,7 +196,17 @@ export async function POST(request: Request) {
       if (charError) {
         // Event was created, but character associations failed
         // We'll still return the event, but log the error
-        logger.error('API', 'Failed to associate characters', charError);
+        logger.error('API', 'Failed to associate characters', {
+          eventId: event.id,
+          error: charError,
+          characters: characterInserts,
+        });
+      } else {
+        logger.info('API', 'Successfully added characters to timeline event', {
+          eventId: event.id,
+          eventTitle: title,
+          characterCount: characterInserts.length,
+        });
       }
     }
 
@@ -220,20 +242,36 @@ export async function POST(request: Request) {
 
             // Get the actual event data for date comparison
             const eventIds = existingAssociations?.map((a: any) => a.timeline_event_id) || [];
-            let existingEvents: Array<{ id: string; year: number | null; month: number | null; day: number | null; position: number }> = [];
+            let existingEvents: Array<{ 
+              id: string; 
+              year: number | null; 
+              month: number | null; 
+              day: number | null; 
+              date_data: any;
+              position: number;
+              period: 'early' | 'mid' | 'late' | null;
+            }> = [];
             
             if (eventIds.length > 0) {
               const { data: events } = await supabase
                 .from('timeline_events')
-                .select('id, year, month, day')
+                .select('id, year, month, day, date_data')
                 .in('id', eventIds);
               
-              // Map events to their positions
+              // Map events to their positions and extract period from date_data
               existingEvents = (events || []).map((evt: any) => {
                 const assoc = existingAssociations?.find((a: any) => a.timeline_event_id === evt.id);
+                let period: 'early' | 'mid' | 'late' | null = null;
+                
+                // Extract period from date_data if it's an approximate date
+                if (evt.date_data && typeof evt.date_data === 'object' && evt.date_data.type === 'approximate') {
+                  period = evt.date_data.period || null;
+                }
+                
                 return {
                   ...evt,
                   position: assoc?.position ?? 0,
+                  period,
                 };
               }).sort((a, b) => a.position - b.position);
             }
@@ -243,6 +281,22 @@ export async function POST(request: Request) {
             const newEventMonth = month ?? 0;
             const newEventDay = day ?? 0;
             
+            // Extract period from date_data for new event
+            let newEventPeriod: 'early' | 'mid' | 'late' | null = null;
+            if (date_data && typeof date_data === 'object' && date_data.type === 'approximate') {
+              newEventPeriod = date_data.period || null;
+            }
+            
+            // Period weights for sorting (early = 1, mid = 2, late = 3, null = 2)
+            const getPeriodWeight = (period: 'early' | 'mid' | 'late' | null): number => {
+              if (period === 'early') return 1;
+              if (period === 'mid') return 2;
+              if (period === 'late') return 3;
+              return 2; // Default to mid if no period specified
+            };
+            
+            const newPeriodWeight = getPeriodWeight(newEventPeriod);
+            
             let insertPosition = 0;
             
             // Find where this event should be inserted chronologically
@@ -251,25 +305,53 @@ export async function POST(request: Request) {
               const existingYear = existingEvent.year ?? 0;
               const existingMonth = existingEvent.month ?? 0;
               const existingDay = existingEvent.day ?? 0;
+              const existingPeriodWeight = getPeriodWeight(existingEvent.period);
               
-              // Compare dates: year first, then month, then day
+              // Compare dates: year first, then month, then day, then period
               if (newEventYear < existingYear) {
                 insertPosition = existingEvent.position;
                 break;
               } else if (newEventYear === existingYear) {
+                // Same year - compare month
                 if (newEventMonth < existingMonth) {
                   insertPosition = existingEvent.position;
                   break;
                 } else if (newEventMonth === existingMonth) {
+                  // Same month - compare day
                   if (newEventDay < existingDay) {
                     insertPosition = existingEvent.position;
                     break;
                   } else if (newEventDay === existingDay) {
-                    // Same date, insert after
-                    insertPosition = existingEvent.position + 1;
-                    break;
+                    // Same date - compare by period
+                    if (newPeriodWeight < existingPeriodWeight) {
+                      insertPosition = existingEvent.position;
+                      break;
+                    } else if (newPeriodWeight === existingPeriodWeight) {
+                      // Same date and period, insert after
+                      insertPosition = existingEvent.position + 1;
+                      break;
+                    }
+                    // newPeriodWeight > existingPeriodWeight, continue to next
+                  } else {
+                    // newEventDay > existingDay, continue to next
                   }
+                } else {
+                  // newEventMonth > existingMonth, continue to next
                 }
+                
+                // If same year but no month/day specified, compare by period
+                if (newEventMonth === 0 && existingMonth === 0) {
+                  if (newPeriodWeight < existingPeriodWeight) {
+                    insertPosition = existingEvent.position;
+                    break;
+                  } else if (newPeriodWeight > existingPeriodWeight) {
+                    // Continue to next event
+                    continue;
+                  }
+                  // Same period, continue to check if this is the last event
+                }
+              } else {
+                // newEventYear > existingYear, continue to next
               }
               
               // If we've reached the end, insert after the last event

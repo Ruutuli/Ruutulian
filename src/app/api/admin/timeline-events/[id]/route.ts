@@ -157,13 +157,40 @@ export async function PUT(
             age: char.age || null,
           }));
 
+        logger.debug('API', 'Updating characters for timeline event', {
+          eventId: params.id,
+          eventTitle: title,
+          characterCount: characterInserts.length,
+          characters: characterInserts.map(char => ({
+            oc_id: char.oc_id,
+            custom_name: char.custom_name,
+            role: char.role,
+            age: char.age,
+          })),
+        });
+
         const { error: charError } = await supabase
           .from('timeline_event_characters')
           .insert(characterInserts);
 
         if (charError) {
-          logger.error('API', 'Failed to update character associations', charError);
+          logger.error('API', 'Failed to update character associations', {
+            eventId: params.id,
+            error: charError,
+            characters: characterInserts,
+          });
+        } else {
+          logger.info('API', 'Successfully updated characters for timeline event', {
+            eventId: params.id,
+            eventTitle: title,
+            characterCount: characterInserts.length,
+          });
         }
+      } else {
+        logger.debug('API', 'No characters to associate with timeline event', {
+          eventId: params.id,
+          eventTitle: title,
+        });
       }
     }
 

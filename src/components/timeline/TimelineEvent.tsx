@@ -36,21 +36,21 @@ function formatDateData(dateData: EventDateData | null | undefined): string {
       return `${eraPrefix}${yearStr}${approximateSuffix}`;
     case 'approximate':
       const approx = dateData as any;
+      // Format period prefix
+      const periodPrefix = approx.period ? `${approx.period} ` : '';
       // If there's a year or year_range, format it
       if (approx.year !== undefined) {
         const eraPrefix = approx.era ? `${approx.era} ` : '';
         const yearStr = approx.year.toString().padStart(4, '0');
-        const textPart = approx.text ? ` (${approx.text})` : '';
-        return `~${eraPrefix}${yearStr}${textPart}`;
+        return `~${periodPrefix}${eraPrefix}${yearStr}`;
       }
       if (approx.year_range && Array.isArray(approx.year_range) && approx.year_range.length === 2) {
         const eraPrefix = approx.era ? `${approx.era} ` : '';
         const startYear = approx.year_range[0].toString().padStart(4, '0');
         const endYear = approx.year_range[1].toString().padStart(4, '0');
-        const textPart = approx.text ? ` (${approx.text})` : '';
-        return `~${eraPrefix}${startYear}-${endYear}${textPart}`;
+        return `~${periodPrefix}${eraPrefix}${startYear}-${endYear}`;
       }
-      // If only text is provided, use it; otherwise show "Approximate date"
+      // Fallback for old data that might have text field
       return approx.text || 'Approximate date';
     case 'range':
       const range = dateData as any;

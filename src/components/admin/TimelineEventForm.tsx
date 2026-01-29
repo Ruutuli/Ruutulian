@@ -416,23 +416,23 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
     },
     shouldNavigateRef: shouldNavigateAfterSaveRef,
     onSuccess: async (responseData, isUpdate) => {
-      // If shouldNavigateRef is explicitly set to true, always navigate (even with custom callback)
+      // Call custom onSuccess callback if provided (for both creates and updates)
+      if (onSuccess) {
+        await onSuccess(responseData);
+      }
+      
+      // If we're editing within a timeline, don't navigate - let the callback handle closing the form
+      if (timelineId) {
+        return false;
+      }
+      
+      // If shouldNavigateRef is explicitly set to true, navigate
       if (shouldNavigateAfterSaveRef.current === true) {
-        // Call custom onSuccess callback if provided, but still navigate
-        if (onSuccess && !isUpdate) {
-          await onSuccess(responseData);
-        }
         return true;
       }
       
-      // Call custom onSuccess callback if provided
-      if (onSuccess && !isUpdate) {
-        await onSuccess(responseData);
-        // Return false to prevent navigation when we have a custom callback and ref is not explicitly true
-        return false;
-      }
-      // Return true to allow default navigation behavior
-      return true;
+      // Default: don't navigate if we have a custom callback, otherwise navigate
+      return !onSuccess;
     },
   });
 
@@ -645,36 +645,108 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
     fetchCustomNames();
   }, [watchedWorldId]);
 
-  // Function to fetch the most recent age for a character (OC) from previous timeline events
-  const fetchPreviousCharacterAge = useCallback(async (ocId: string): Promise<number | null> => {
+  // Helper function to calculate age from date_of_birth for approximate dates
+  const calculateAgeFromApproximateDate = useCallback((birthDate: string, eventDate: EventDateData): number | null => {
+    if (!birthDate || !eventDate) return null;
+    
+    // Parse birth date
+    const birthMatch = birthDate.match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/);
+    if (!birthMatch) return null;
+    
+    const birthYear = parseInt(birthMatch[1], 10);
+    
+    // Get event year from different date types
+    let eventYear: number | null = null;
+    if (eventDate.type === 'exact') {
+      eventYear = eventDate.year;
+    } else if (eventDate.type === 'approximate' && eventDate.year) {
+      eventYear = eventDate.year;
+    }
+    
+    if (eventYear === null) return null;
+    
+    // Simple year-based calculation for approximate dates
+    return eventYear - birthYear;
+  }, []);
+
+  // Function to fetch the most recent age and event year for a character (OC) from previous timeline events
+  // Returns both age and year, ordered by event date (chronologically most recent)
+  const fetchPreviousCharacterAge = useCallback(async (ocId: string): Promise<{ age: number; year: number | null } | null> => {
     if (!ocId) return null;
     
     try {
       const supabase = createClient();
       // Get the most recent timeline event character entry for this OC that has an age set
-      // Order by id descending (most recent first) since id is auto-incrementing
+      // Order by event date (year/month/day) descending to get chronologically most recent event
       const { data, error } = await supabase
         .from('timeline_event_characters')
-        .select('age')
+        .select(`
+          age,
+          event:timeline_events(
+            year,
+            month,
+            day
+          )
+        `)
         .eq('oc_id', ocId)
         .not('age', 'is', null)
-        .order('id', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order('id', { ascending: false }); // Temporary ordering, will filter by date in memory
 
-      if (error || !data || data.age === null || data.age === undefined) {
+      if (error || !data || data.length === 0) {
         return null;
       }
 
-      return data.age as number;
+      // Filter out entries without age and sort by event date
+      const validEntries = data
+        .filter((entry: any) => entry.age !== null && entry.age !== undefined && entry.event)
+        .map((entry: any) => {
+          const event = Array.isArray(entry.event) ? entry.event[0] : entry.event;
+          return {
+            age: entry.age as number,
+            year: event?.year ?? null,
+            month: event?.month ?? null,
+            day: event?.day ?? null,
+            id: entry.id,
+          };
+        })
+        .sort((a, b) => {
+          // Sort by year DESC, month DESC, day DESC, id DESC
+          if (a.year !== null && b.year !== null) {
+            if (a.year !== b.year) return b.year - a.year;
+          } else if (a.year !== null) return -1;
+          else if (b.year !== null) return 1;
+          
+          if (a.month !== null && b.month !== null) {
+            if (a.month !== b.month) return b.month - a.month;
+          } else if (a.month !== null) return -1;
+          else if (b.month !== null) return 1;
+          
+          if (a.day !== null && b.day !== null) {
+            if (a.day !== b.day) return b.day - a.day;
+          } else if (a.day !== null) return -1;
+          else if (b.day !== null) return 1;
+          
+          return 0; // Same date, order doesn't matter
+        });
+
+      if (validEntries.length === 0) {
+        return null;
+      }
+
+      const mostRecent = validEntries[0];
+      return {
+        age: mostRecent.age,
+        year: mostRecent.year,
+      };
     } catch (error) {
       logger.error('Component', 'TimelineEventForm: Error fetching previous character age', error);
       return null;
     }
   }, []);
 
-  // Function to fetch the most recent age for a custom name from previous timeline events
-  const fetchPreviousCustomNameAge = useCallback(async (customName: string): Promise<number | null> => {
+  // Function to fetch the most recent age and event year for a custom name from previous timeline events
+  // Returns both age and year, ordered by event date (chronologically most recent)
+  const fetchPreviousCustomNameAge = useCallback(async (customName: string): Promise<{ age: number; year: number | null } | null> => {
     if (!customName || !customName.trim()) return null;
     
     try {
@@ -684,22 +756,86 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
       const normalizedName = customName.trim();
       const { data, error } = await supabase
         .from('timeline_event_characters')
-        .select('age')
+        .select(`
+          age,
+          event:timeline_events(
+            year,
+            month,
+            day
+          )
+        `)
         .ilike('custom_name', normalizedName) // Case-insensitive matching
         .not('age', 'is', null)
-        .order('id', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order('id', { ascending: false }); // Temporary ordering, will filter by date in memory
 
-      if (error || !data || data.age === null || data.age === undefined) {
+      if (error || !data || data.length === 0) {
         return null;
       }
 
-      return data.age as number;
+      // Filter out entries without age and sort by event date
+      const validEntries = data
+        .filter((entry: any) => entry.age !== null && entry.age !== undefined && entry.event)
+        .map((entry: any) => {
+          const event = Array.isArray(entry.event) ? entry.event[0] : entry.event;
+          return {
+            age: entry.age as number,
+            year: event?.year ?? null,
+            month: event?.month ?? null,
+            day: event?.day ?? null,
+            id: entry.id,
+          };
+        })
+        .sort((a, b) => {
+          // Sort by year DESC, month DESC, day DESC, id DESC
+          if (a.year !== null && b.year !== null) {
+            if (a.year !== b.year) return b.year - a.year;
+          } else if (a.year !== null) return -1;
+          else if (b.year !== null) return 1;
+          
+          if (a.month !== null && b.month !== null) {
+            if (a.month !== b.month) return b.month - a.month;
+          } else if (a.month !== null) return -1;
+          else if (b.month !== null) return 1;
+          
+          if (a.day !== null && b.day !== null) {
+            if (a.day !== b.day) return b.day - a.day;
+          } else if (a.day !== null) return -1;
+          else if (b.day !== null) return 1;
+          
+          return 0; // Same date, order doesn't matter
+        });
+
+      if (validEntries.length === 0) {
+        return null;
+      }
+
+      const mostRecent = validEntries[0];
+      return {
+        age: mostRecent.age,
+        year: mostRecent.year,
+      };
     } catch (error) {
       logger.error('Component', 'TimelineEventForm: Error fetching previous custom name age', error);
       return null;
     }
+  }, []);
+
+  // Helper function to calculate aged-up age based on year difference
+  const calculateAgedUpAge = useCallback((
+    previousAge: number,
+    previousEventYear: number | null,
+    currentEventYear: number | null
+  ): number | null => {
+    if (previousEventYear === null || currentEventYear === null) {
+      // Can't calculate difference, return previous age
+      return previousAge;
+    }
+    const yearDifference = currentEventYear - previousEventYear;
+    if (yearDifference < 0) {
+      // Current event is before previous event - shouldn't happen but handle gracefully
+      return previousAge;
+    }
+    return previousAge + yearDifference;
   }, []);
 
   // Manage related characters
@@ -738,11 +874,20 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
     if (!watchedDateData || currentCharacters.length === 0) return;
 
     const updatedCharacters = currentCharacters.map((char) => {
-      // Only auto-calculate if character has oc_id (not custom name) and no manual age set
-      if (char.oc_id && char.age === null) {
+      // Auto-calculate if character has oc_id (not custom name)
+      // Recalculate even if age was previously set, so it updates when date changes
+      if (char.oc_id) {
         const character = characters.find(c => c.id === char.oc_id);
         if (character?.date_of_birth) {
-          const calculatedAge = calculateAge(character.date_of_birth, watchedDateData);
+          // Try exact date calculation first
+          let calculatedAge = calculateAge(character.date_of_birth, watchedDateData);
+          
+          // If exact calculation failed and date is approximate, try year-based calculation
+          if (calculatedAge === null && watchedDateData.type === 'approximate') {
+            calculatedAge = calculateAgeFromApproximateDate(character.date_of_birth, watchedDateData);
+          }
+          
+          // Update age if we got a valid calculation
           if (calculatedAge !== null && calculatedAge !== char.age) {
             return { ...char, age: calculatedAge };
           }
@@ -760,7 +905,7 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
     if (hasChanges) {
       setValue('characters', updatedCharacters, { shouldDirty: true });
     }
-  }, [watchedDateData, characters, watch, setValue]);
+  }, [watchedDateData, characters, watch, setValue, calculateAgeFromApproximateDate]);
 
   const onSubmitRef = useRef(false); // Prevent infinite loop
   
@@ -808,11 +953,15 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
     
     // When creating/editing within a timeline, don't navigate (let onSuccess handle it)
     // When creating/editing standalone, navigate after save
+    // But preserve the "save and close" intent if it was already set
     if (!timelineId) {
       shouldNavigateAfterSaveRef.current = true;
     } else {
       // If we have a timelineId, navigation is handled by onSuccess callback
-      shouldNavigateAfterSaveRef.current = false;
+      // Only set to false if it wasn't already set to true (by "Save and Close" button)
+      if (shouldNavigateAfterSaveRef.current !== true) {
+        shouldNavigateAfterSaveRef.current = false;
+      }
     }
     
     // Ensure world_id is set when lockWorld is true
@@ -1137,28 +1286,90 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
                         customNames={customNames || []}
                         onSelect={async (ocId, customName) => {
                           if (ocId) {
-                            // Selected an OC - fetch previous age and update all fields at once
+                            // Selected an OC - calculate age based on current event date if possible
                             characterInputRefs.current.delete(index);
                             
-                            // Fetch the most recent age for this character from previous events
-                            const previousAge = await fetchPreviousCharacterAge(ocId);
+                            const selectedCharacter = characters.find(c => c.id === ocId);
+                            let ageToUse: number | null = null;
+                            
+                            // Extract current event year from date_data
+                            let currentEventYear: number | null = null;
+                            if (watchedDateData) {
+                              if (watchedDateData.type === 'exact') {
+                                currentEventYear = watchedDateData.year;
+                              } else if (watchedDateData.type === 'range') {
+                                currentEventYear = watchedDateData.start?.year ?? null;
+                              } else if (watchedDateData.type === 'approximate') {
+                                currentEventYear = watchedDateData.year ?? null;
+                              }
+                            }
+                            
+                            // If character has date_of_birth and we have event date, calculate age from that
+                            if (selectedCharacter?.date_of_birth && watchedDateData) {
+                              // Try exact date calculation first
+                              const calculatedAge = calculateAge(selectedCharacter.date_of_birth, watchedDateData);
+                              if (calculatedAge !== null) {
+                                ageToUse = calculatedAge;
+                              } else if (watchedDateData.type === 'approximate') {
+                                // Fallback to year-based calculation for approximate dates
+                                const approxAge = calculateAgeFromApproximateDate(selectedCharacter.date_of_birth, watchedDateData);
+                                if (approxAge !== null) {
+                                  ageToUse = approxAge;
+                                }
+                              }
+                            }
+                            
+                            // If we couldn't calculate from date_of_birth, fetch previous event data and age up
+                            if (ageToUse === null) {
+                              const previousData = await fetchPreviousCharacterAge(ocId);
+                              if (previousData) {
+                                // Calculate aged-up age based on year difference
+                                ageToUse = calculateAgedUpAge(
+                                  previousData.age,
+                                  previousData.year,
+                                  currentEventYear
+                                );
+                              }
+                            }
                             
                             relatedCharacters.updateItem(index, {
                               oc_id: ocId,
                               custom_name: null,
-                              age: previousAge, // Use previous age if available, otherwise null (will trigger auto-calculation)
+                              age: ageToUse, // Use calculated age or aged-up previous age
                             });
                           } else if (customName) {
-                            // Typed custom name - fetch previous age for this custom name and update all fields at once
+                            // Typed custom name - fetch previous event data and age up
                             characterInputRefs.current.delete(index);
                             
-                            // Fetch the most recent age for this custom name from previous events
-                            const previousAge = await fetchPreviousCustomNameAge(customName);
+                            // Extract current event year from date_data
+                            let currentEventYear: number | null = null;
+                            if (watchedDateData) {
+                              if (watchedDateData.type === 'exact') {
+                                currentEventYear = watchedDateData.year;
+                              } else if (watchedDateData.type === 'range') {
+                                currentEventYear = watchedDateData.start?.year ?? null;
+                              } else if (watchedDateData.type === 'approximate') {
+                                currentEventYear = watchedDateData.year ?? null;
+                              }
+                            }
+                            
+                            // Fetch the most recent age and year for this custom name from previous events
+                            const previousData = await fetchPreviousCustomNameAge(customName);
+                            let ageToUse: number | null = null;
+                            
+                            if (previousData) {
+                              // Calculate aged-up age based on year difference
+                              ageToUse = calculateAgedUpAge(
+                                previousData.age,
+                                previousData.year,
+                                currentEventYear
+                              );
+                            }
                             
                             relatedCharacters.updateItem(index, {
                               oc_id: null,
                               custom_name: customName.trim(), // Normalize by trimming whitespace
-                              age: previousAge, // Use previous age if available, otherwise null
+                              age: ageToUse, // Use aged-up previous age if available, otherwise null
                             });
                           }
                         }}

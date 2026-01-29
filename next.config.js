@@ -1,3 +1,9 @@
+// On Windows, process.env.USERNAME is set by the OS. Load .env with override so
+// USERNAME and PASSWORD from .env take precedence over system env vars.
+const path = require('path');
+require('dotenv').config({ path: path.resolve(process.cwd(), '.env'), override: true });
+require('dotenv').config({ path: path.resolve(process.cwd(), '.env.local'), override: true });
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {

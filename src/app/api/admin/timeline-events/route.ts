@@ -172,7 +172,7 @@ export async function POST(request: Request) {
         .map((char: { oc_id?: string | null; custom_name?: string | null; role?: string; age?: number | null }) => ({
           timeline_event_id: event.id,
           oc_id: char.oc_id || null,
-          custom_name: char.custom_name || null,
+          custom_name: char.custom_name ? char.custom_name.trim() : null, // Normalize custom names by trimming
           role: char.role || null,
           age: char.age || null,
         }));
@@ -205,24 +205,99 @@ export async function POST(request: Request) {
           logger.warn('API', 'Some timelines do not belong to the event world', invalidTimelines);
         }
 
-        // Get the maximum position for each timeline to append new events at the end
+        // Calculate chronological position for each timeline
         const timelineInserts = await Promise.all(
           timelines.map(async (timeline) => {
-            // Get current max position for this timeline
-            const { data: maxPosData } = await supabase
+            // Get all events in this timeline with their dates for chronological sorting
+            const { data: existingAssociations } = await supabase
               .from('timeline_event_timelines')
-              .select('position')
+              .select(`
+                timeline_event_id,
+                position
+              `)
               .eq('timeline_id', timeline.id)
-              .order('position', { ascending: false })
-              .limit(1)
-              .single();
+              .order('position', { ascending: true });
 
-            const nextPosition = maxPosData?.position !== undefined ? maxPosData.position + 1 : 0;
+            // Get the actual event data for date comparison
+            const eventIds = existingAssociations?.map((a: any) => a.timeline_event_id) || [];
+            let existingEvents: Array<{ id: string; year: number | null; month: number | null; day: number | null; position: number }> = [];
+            
+            if (eventIds.length > 0) {
+              const { data: events } = await supabase
+                .from('timeline_events')
+                .select('id, year, month, day')
+                .in('id', eventIds);
+              
+              // Map events to their positions
+              existingEvents = (events || []).map((evt: any) => {
+                const assoc = existingAssociations?.find((a: any) => a.timeline_event_id === evt.id);
+                return {
+                  ...evt,
+                  position: assoc?.position ?? 0,
+                };
+              }).sort((a, b) => a.position - b.position);
+            }
+
+            // Calculate position based on chronological order
+            const newEventYear = year ?? 0;
+            const newEventMonth = month ?? 0;
+            const newEventDay = day ?? 0;
+            
+            let insertPosition = 0;
+            
+            // Find where this event should be inserted chronologically
+            for (let i = 0; i < existingEvents.length; i++) {
+              const existingEvent = existingEvents[i];
+              const existingYear = existingEvent.year ?? 0;
+              const existingMonth = existingEvent.month ?? 0;
+              const existingDay = existingEvent.day ?? 0;
+              
+              // Compare dates: year first, then month, then day
+              if (newEventYear < existingYear) {
+                insertPosition = existingEvent.position;
+                break;
+              } else if (newEventYear === existingYear) {
+                if (newEventMonth < existingMonth) {
+                  insertPosition = existingEvent.position;
+                  break;
+                } else if (newEventMonth === existingMonth) {
+                  if (newEventDay < existingDay) {
+                    insertPosition = existingEvent.position;
+                    break;
+                  } else if (newEventDay === existingDay) {
+                    // Same date, insert after
+                    insertPosition = existingEvent.position + 1;
+                    break;
+                  }
+                }
+              }
+              
+              // If we've reached the end, insert after the last event
+              if (i === existingEvents.length - 1) {
+                insertPosition = existingEvent.position + 1;
+              }
+            }
+            
+            // Shift all events at or after insertPosition by 1
+            if (insertPosition < (existingEvents[existingEvents.length - 1]?.position ?? -1) + 1) {
+              const eventsToShift = existingEvents.filter(
+                (evt) => evt.position >= insertPosition
+              );
+              
+              // Update positions for events that need to shift
+              for (const evtToShift of eventsToShift) {
+                await supabase
+                  .from('timeline_event_timelines')
+                  .update({ position: evtToShift.position + 1 })
+                  .eq('timeline_id', timeline.id)
+                  .eq('timeline_event_id', evtToShift.id);
+              }
+            }
 
             return {
               timeline_id: timeline.id,
               timeline_event_id: event.id,
-              position: nextPosition,
+              position: insertPosition,
             };
           })
         );

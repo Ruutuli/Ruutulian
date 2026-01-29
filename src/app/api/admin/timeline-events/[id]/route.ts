@@ -152,7 +152,7 @@ export async function PUT(
           .map((char: { oc_id?: string | null; custom_name?: string | null; role?: string; age?: number | null }) => ({
             timeline_event_id: params.id,
             oc_id: char.oc_id || null,
-            custom_name: char.custom_name || null,
+            custom_name: char.custom_name ? char.custom_name.trim() : null, // Normalize custom names by trimming
             role: char.role || null,
             age: char.age || null,
           }));

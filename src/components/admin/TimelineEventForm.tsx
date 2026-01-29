@@ -60,10 +60,17 @@ type MinimalOC = {
   date_of_birth?: string | null;
 };
 
+// Custom name type for autocomplete
+type CustomNameSuggestion = {
+  name: string;
+  isCustom: true;
+};
+
 // Character Autocomplete Component
 function CharacterAutocompleteInput({
   value,
   characters,
+  customNames,
   onSelect,
   placeholder,
   disabled,
@@ -72,6 +79,7 @@ function CharacterAutocompleteInput({
 }: {
   value: string;
   characters: MinimalOC[];
+  customNames?: CustomNameSuggestion[];
   onSelect: (ocId: string | null, customName: string | null) => void;
   placeholder?: string;
   disabled?: boolean;
@@ -87,28 +95,39 @@ function CharacterAutocompleteInput({
   const blurTimeoutRef = useRef<number | null>(null);
   const saveTimeoutRef = useRef<number | null>(null);
 
-  // Filter characters based on input
-  const filteredCharacters = useMemo(() => {
+  // Combine characters and custom names for filtering
+  const allSuggestions = useMemo(() => {
+    const ocSuggestions = (characters || []).map(char => ({ ...char, isCustom: false as const }));
+    const customSuggestions = (customNames || []).map(custom => ({ 
+      id: `custom-${custom.name}`, 
+      name: custom.name, 
+      isCustom: true as const 
+    }));
+    return [...ocSuggestions, ...customSuggestions];
+  }, [characters, customNames]);
+
+  // Filter suggestions based on input
+  const filteredSuggestions = useMemo(() => {
     if (!inputValue.trim()) {
-      return characters.slice(0, 10); // Show first 10 when empty
+      return allSuggestions.slice(0, 10); // Show first 10 when empty
     }
     const lowerInput = inputValue.toLowerCase();
-    return characters
-      .filter(char => char.name.toLowerCase().includes(lowerInput))
+    return allSuggestions
+      .filter(item => item.name.toLowerCase().includes(lowerInput))
       .slice(0, 10); // Limit to 10 suggestions
-  }, [inputValue, characters]);
+  }, [inputValue, allSuggestions]);
 
-  // Check if input matches a character exactly
+  // Check if input matches a suggestion exactly
   const exactMatch = useMemo(() => {
-    return characters.find(c => c.name.toLowerCase() === inputValue.toLowerCase());
-  }, [inputValue, characters]);
+    return allSuggestions.find(item => item.name.toLowerCase() === inputValue.toLowerCase());
+  }, [inputValue, allSuggestions]);
 
   // Calculate dropdown position
   const showAbove = useDropdownPosition({
     inputRef,
     isVisible: showSuggestions,
     dropdownHeight: 240,
-    dependencies: [filteredCharacters.length],
+    dependencies: [filteredSuggestions.length],
   });
 
   // Sync with external value prop
@@ -136,13 +155,13 @@ function CharacterAutocompleteInput({
       saveTimeoutRef.current = null;
     }
     
-    // If user is typing a custom name (doesn't match any character), save it after a delay
+    // If user is typing a custom name (doesn't match any suggestion), save it after a delay
     if (newValue.trim()) {
-      const exactMatch = characters.find(c => c.name.toLowerCase() === newValue.toLowerCase());
+      const exactMatch = allSuggestions.find(item => item.name.toLowerCase() === newValue.toLowerCase());
       if (!exactMatch) {
         // Debounce saving custom name
         saveTimeoutRef.current = window.setTimeout(() => {
-          // Only save if value hasn't changed and no character was selected
+          // Only save if value hasn't changed and no suggestion was selected
           if (inputValue.trim() === newValue.trim()) {
             onSelect(null, newValue.trim());
           }
@@ -153,7 +172,7 @@ function CharacterAutocompleteInput({
   };
 
   // Handle suggestion selection
-  const handleSelectCharacter = (character: MinimalOC) => {
+  const handleSelectSuggestion = (item: { id: string; name: string; isCustom: boolean }) => {
     // Clear any pending timeouts
     if (blurTimeoutRef.current) {
       clearTimeout(blurTimeoutRef.current);
@@ -163,11 +182,15 @@ function CharacterAutocompleteInput({
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
     }
-    setInputValue(character.name);
+    setInputValue(item.name);
     setShowSuggestions(false);
     setHighlightedIndex(-1);
     // Immediately update form state
-    onSelect(character.id, null);
+    if (item.isCustom) {
+      onSelect(null, item.name);
+    } else {
+      onSelect(item.id, null);
+    }
   };
 
   // Handle custom name (when user types something that doesn't match)
@@ -205,10 +228,10 @@ function CharacterAutocompleteInput({
       setShowSuggestions(false);
       // Always save the current input value when blurring
       if (inputValue.trim()) {
-        const exactMatch = characters.find(c => c.name.toLowerCase() === inputValue.toLowerCase());
+        const exactMatch = allSuggestions.find(item => item.name.toLowerCase() === inputValue.toLowerCase());
         if (exactMatch) {
-          // If it matches exactly, select that character
-          handleSelectCharacter(exactMatch);
+          // If it matches exactly, select that suggestion
+          handleSelectSuggestion(exactMatch);
         } else {
           // If it doesn't match, treat as custom name
           handleCustomName();
@@ -220,7 +243,8 @@ function CharacterAutocompleteInput({
 
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!showSuggestions || filteredCharacters.length === 0) {
+    const totalSuggestions = filteredSuggestions.length + (inputValue.trim() && !exactMatch ? 1 : 0);
+    if (!showSuggestions || totalSuggestions === 0) {
       if (e.key === 'Enter' && inputValue.trim() && !exactMatch) {
         e.preventDefault();
         handleCustomName();
@@ -232,7 +256,7 @@ function CharacterAutocompleteInput({
       case 'ArrowDown':
         e.preventDefault();
         setHighlightedIndex(prev => 
-          prev < filteredCharacters.length - 1 ? prev + 1 : prev
+          prev < totalSuggestions - 1 ? prev + 1 : prev
         );
         break;
       case 'ArrowUp':
@@ -241,12 +265,14 @@ function CharacterAutocompleteInput({
         break;
       case 'Enter':
         e.preventDefault();
-        if (highlightedIndex >= 0 && highlightedIndex < filteredCharacters.length) {
-          handleSelectCharacter(filteredCharacters[highlightedIndex]);
+        if (highlightedIndex >= 0 && highlightedIndex < filteredSuggestions.length) {
+          handleSelectSuggestion(filteredSuggestions[highlightedIndex]);
+        } else if (highlightedIndex === filteredSuggestions.length && inputValue.trim() && !exactMatch) {
+          handleCustomName();
         } else if (inputValue.trim() && !exactMatch) {
           handleCustomName();
         } else if (exactMatch) {
-          handleSelectCharacter(exactMatch);
+          handleSelectSuggestion(exactMatch);
         }
         break;
       case 'Escape':
@@ -317,33 +343,36 @@ function CharacterAutocompleteInput({
         autoComplete="off"
       />
       
-      {showSuggestions && (filteredCharacters.length > 0 || (inputValue.trim() && !exactMatch)) && (
+      {showSuggestions && (filteredSuggestions.length > 0 || (inputValue.trim() && !exactMatch)) && (
         <ul
           ref={suggestionsRef}
           className={`absolute z-[99999] w-full max-h-60 overflow-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg ${
             showAbove ? 'bottom-full mb-1' : 'top-full mt-1'
           }`}
         >
-          {filteredCharacters.map((character, index) => (
+          {filteredSuggestions.map((item, index) => (
             <li
-              key={character.id}
-              onClick={() => handleSelectCharacter(character)}
+              key={item.id}
+              onClick={() => handleSelectSuggestion(item)}
               onMouseEnter={() => setHighlightedIndex(index)}
-              className={`px-4 py-2 cursor-pointer transition-colors ${
+              className={`px-4 py-2 cursor-pointer transition-colors flex items-center gap-2 ${
                 index === highlightedIndex
                   ? 'bg-purple-600/50 text-white'
                   : 'text-gray-200 hover:bg-gray-700'
               }`}
             >
-              {character.name}
+              {item.name}
+              {item.isCustom && (
+                <span className="text-xs text-gray-400 italic">(custom)</span>
+              )}
             </li>
           ))}
           {inputValue.trim() && !exactMatch && (
             <li
               onClick={handleCustomName}
-              onMouseEnter={() => setHighlightedIndex(filteredCharacters.length)}
+              onMouseEnter={() => setHighlightedIndex(filteredSuggestions.length)}
               className={`px-4 py-2 cursor-pointer transition-colors italic text-purple-300 ${
-                highlightedIndex === filteredCharacters.length
+                highlightedIndex === filteredSuggestions.length
                   ? 'bg-purple-600/50 text-white'
                   : 'hover:bg-gray-700'
               }`}
@@ -378,18 +407,28 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
     apiRoute: '/api/admin/timeline-events',
     entity: event,
     successRoute: (responseData, isUpdate) => {
-      // After successful creation, navigate to the event detail page
-      if (!isUpdate && responseData?.id) {
-        return `/admin/timeline-events/${responseData.id}`;
+      // After successful creation, navigate to the main events list page
+      if (!isUpdate) {
+        return '/admin/timeline-events';
       }
+      // When updating, stay on the same page (event detail page)
       return event ? `/admin/timeline-events/${event.id}` : '/admin/timeline-events';
     },
     shouldNavigateRef: shouldNavigateAfterSaveRef,
     onSuccess: async (responseData, isUpdate) => {
+      // If shouldNavigateRef is explicitly set to true, always navigate (even with custom callback)
+      if (shouldNavigateAfterSaveRef.current === true) {
+        // Call custom onSuccess callback if provided, but still navigate
+        if (onSuccess && !isUpdate) {
+          await onSuccess(responseData);
+        }
+        return true;
+      }
+      
       // Call custom onSuccess callback if provided
       if (onSuccess && !isUpdate) {
         await onSuccess(responseData);
-        // Return false to prevent navigation when we have a custom callback
+        // Return false to prevent navigation when we have a custom callback and ref is not explicitly true
         return false;
       }
       // Return true to allow default navigation behavior
@@ -539,6 +578,129 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
   }, [event, setValue]);
 
   const { ocs: characters } = useOCsByWorld(watchedWorldId);
+  
+  // Fetch previously used custom names for autocomplete
+  const [customNames, setCustomNames] = useState<CustomNameSuggestion[]>([]);
+  
+  useEffect(() => {
+    async function fetchCustomNames() {
+      if (!watchedWorldId) {
+        setCustomNames([]);
+        return;
+      }
+      
+      try {
+        const supabase = createClient();
+        // First get all timeline event IDs for this world
+        const { data: events, error: eventsError } = await supabase
+          .from('timeline_events')
+          .select('id')
+          .eq('world_id', watchedWorldId);
+        
+        if (eventsError || !events) {
+          logger.error('Component', 'TimelineEventForm: Error fetching events for custom names', eventsError);
+          setCustomNames([]);
+          return;
+        }
+        
+        const eventIds = events.map(e => e.id);
+        if (eventIds.length === 0) {
+          setCustomNames([]);
+          return;
+        }
+        
+        // Then get distinct custom names from those events
+        const { data, error } = await supabase
+          .from('timeline_event_characters')
+          .select('custom_name')
+          .in('timeline_event_id', eventIds)
+          .not('custom_name', 'is', null);
+        
+        if (error) {
+          logger.error('Component', 'TimelineEventForm: Error fetching custom names', error);
+          setCustomNames([]);
+          return;
+        }
+        
+        // Extract unique custom names (case-insensitive)
+        const uniqueNames = new Map<string, string>();
+        (data || []).forEach((item: any) => {
+          if (item.custom_name) {
+            const normalized = item.custom_name.trim();
+            const lower = normalized.toLowerCase();
+            // Store the first occurrence (most common casing)
+            if (!uniqueNames.has(lower)) {
+              uniqueNames.set(lower, normalized);
+            }
+          }
+        });
+        
+        setCustomNames(Array.from(uniqueNames.values()).map(name => ({ name, isCustom: true })));
+      } catch (error) {
+        logger.error('Component', 'TimelineEventForm: Error fetching custom names', error);
+        setCustomNames([]);
+      }
+    }
+    
+    fetchCustomNames();
+  }, [watchedWorldId]);
+
+  // Function to fetch the most recent age for a character (OC) from previous timeline events
+  const fetchPreviousCharacterAge = useCallback(async (ocId: string): Promise<number | null> => {
+    if (!ocId) return null;
+    
+    try {
+      const supabase = createClient();
+      // Get the most recent timeline event character entry for this OC that has an age set
+      // Order by id descending (most recent first) since id is auto-incrementing
+      const { data, error } = await supabase
+        .from('timeline_event_characters')
+        .select('age')
+        .eq('oc_id', ocId)
+        .not('age', 'is', null)
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error || !data || data.age === null || data.age === undefined) {
+        return null;
+      }
+
+      return data.age as number;
+    } catch (error) {
+      logger.error('Component', 'TimelineEventForm: Error fetching previous character age', error);
+      return null;
+    }
+  }, []);
+
+  // Function to fetch the most recent age for a custom name from previous timeline events
+  const fetchPreviousCustomNameAge = useCallback(async (customName: string): Promise<number | null> => {
+    if (!customName || !customName.trim()) return null;
+    
+    try {
+      const supabase = createClient();
+      // Get the most recent timeline event character entry for this custom name that has an age set
+      // Use case-insensitive matching and trim whitespace for consistency
+      const normalizedName = customName.trim();
+      const { data, error } = await supabase
+        .from('timeline_event_characters')
+        .select('age')
+        .ilike('custom_name', normalizedName) // Case-insensitive matching
+        .not('age', 'is', null)
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error || !data || data.age === null || data.age === undefined) {
+        return null;
+      }
+
+      return data.age as number;
+    } catch (error) {
+      logger.error('Component', 'TimelineEventForm: Error fetching previous custom name age', error);
+      return null;
+    }
+  }, []);
 
   // Manage related characters
   const relatedCharacters = useRelatedItems<{
@@ -643,6 +805,11 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
     }
     
     onSubmitRef.current = false;
+    
+    // When creating a new event (not editing), set navigation ref to true so it navigates after save
+    if (!event) {
+      shouldNavigateAfterSaveRef.current = true;
+    }
     
     // Ensure world_id is set when lockWorld is true
     if (lockWorld && worldId && !data.world_id) {
@@ -963,22 +1130,31 @@ export function TimelineEventForm({ event, worldId, lockWorld = false, timelineE
                       <CharacterAutocompleteInput
                         value={displayName}
                         characters={characters}
-                        onSelect={(ocId, customName) => {
+                        customNames={customNames || []}
+                        onSelect={async (ocId, customName) => {
                           if (ocId) {
-                            // Selected an OC - update all fields at once
+                            // Selected an OC - fetch previous age and update all fields at once
                             characterInputRefs.current.delete(index);
+                            
+                            // Fetch the most recent age for this character from previous events
+                            const previousAge = await fetchPreviousCharacterAge(ocId);
+                            
                             relatedCharacters.updateItem(index, {
                               oc_id: ocId,
                               custom_name: null,
-                              age: null, // Reset to trigger auto-calculation
+                              age: previousAge, // Use previous age if available, otherwise null (will trigger auto-calculation)
                             });
                           } else if (customName) {
-                            // Typed custom name - update all fields at once
+                            // Typed custom name - fetch previous age for this custom name and update all fields at once
                             characterInputRefs.current.delete(index);
+                            
+                            // Fetch the most recent age for this custom name from previous events
+                            const previousAge = await fetchPreviousCustomNameAge(customName);
+                            
                             relatedCharacters.updateItem(index, {
                               oc_id: null,
-                              custom_name: customName,
-                              age: null,
+                              custom_name: customName.trim(), // Normalize by trimming whitespace
+                              age: previousAge, // Use previous age if available, otherwise null
                             });
                           }
                         }}

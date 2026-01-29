@@ -159,7 +159,7 @@ export async function PUT(
       .select(`
         *,
         world:worlds(id, name, slug),
-        story_alias:story_aliases(id, name, slug, description),
+        story_alias:story_aliases!story_alias_id(id, name, slug, description),
         characters:timeline_event_characters(
           *,
           oc:ocs(id, name, slug, date_of_birth)

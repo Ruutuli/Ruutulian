@@ -106,24 +106,28 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">Month (optional)</label>
-              <input
-                type="number"
-                min="1"
-                max="12"
+              <select
                 value={(value as ExactDate)?.month ?? ''}
                 onChange={(e) => {
-                  const inputValue = e.target.value;
-                  if (inputValue === '') {
-                    updateValue({ month: undefined });
-                  } else {
-                    const numValue = parseInt(inputValue, 10);
-                    if (!isNaN(numValue)) {
-                      updateValue({ month: numValue });
-                    }
-                  }
+                  const monthValue = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                  updateValue({ month: monthValue });
                 }}
                 className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
-              />
+              >
+                <option value="">Select month...</option>
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">Day (optional)</label>
@@ -137,7 +141,7 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
                   if (inputValue === '') {
                     updateValue({ day: undefined });
                   } else {
-                    const numValue = parseInt(inputValue, 10);
+                    const numValue = Number(inputValue);
                     if (!isNaN(numValue)) {
                       updateValue({ day: numValue });
                     }
@@ -265,30 +269,31 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
                 required
               />
               <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="number"
-                  min="1"
-                  max="12"
+                <select
                   value={(value as DateRange)?.start?.month ?? ''}
                   onChange={(e) => {
                     const range = value as DateRange;
-                    const inputValue = e.target.value;
-                    if (inputValue === '') {
-                      updateValue({
-                        start: { ...range?.start, month: undefined },
-                      });
-                    } else {
-                      const numValue = parseInt(inputValue, 10);
-                      if (!isNaN(numValue)) {
-                        updateValue({
-                          start: { ...range?.start, month: numValue },
-                        });
-                      }
-                    }
+                    const monthValue = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                    updateValue({
+                      start: { ...range?.start, month: monthValue },
+                    });
                   }}
-                  placeholder="Month (optional)"
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
-                />
+                >
+                  <option value="">Select month...</option>
+                  <option value="1">January</option>
+                  <option value="2">February</option>
+                  <option value="3">March</option>
+                  <option value="4">April</option>
+                  <option value="5">May</option>
+                  <option value="6">June</option>
+                  <option value="7">July</option>
+                  <option value="8">August</option>
+                  <option value="9">September</option>
+                  <option value="10">October</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
                 <input
                   type="number"
                   min="1"
@@ -302,7 +307,7 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
                         start: { ...range?.start, day: undefined },
                       });
                     } else {
-                      const numValue = parseInt(inputValue, 10);
+                      const numValue = Number(inputValue);
                       if (!isNaN(numValue)) {
                         updateValue({
                           start: { ...range?.start, day: numValue },
@@ -355,30 +360,31 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
                 required
               />
               <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="number"
-                  min="1"
-                  max="12"
+                <select
                   value={(value as DateRange)?.end?.month ?? ''}
                   onChange={(e) => {
                     const range = value as DateRange;
-                    const inputValue = e.target.value;
-                    if (inputValue === '') {
-                      updateValue({
-                        end: { ...range?.end, month: undefined },
-                      });
-                    } else {
-                      const numValue = parseInt(inputValue, 10);
-                      if (!isNaN(numValue)) {
-                        updateValue({
-                          end: { ...range?.end, month: numValue },
-                        });
-                      }
-                    }
+                    const monthValue = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                    updateValue({
+                      end: { ...range?.end, month: monthValue },
+                    });
                   }}
-                  placeholder="Month (optional)"
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100"
-                />
+                >
+                  <option value="">Select month...</option>
+                  <option value="1">January</option>
+                  <option value="2">February</option>
+                  <option value="3">March</option>
+                  <option value="4">April</option>
+                  <option value="5">May</option>
+                  <option value="6">June</option>
+                  <option value="7">July</option>
+                  <option value="8">August</option>
+                  <option value="9">September</option>
+                  <option value="10">October</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
                 <input
                   type="number"
                   min="1"
@@ -392,7 +398,7 @@ export function DateInput({ value, onChange, availableEras }: DateInputProps) {
                         end: { ...range?.end, day: undefined },
                       });
                     } else {
-                      const numValue = parseInt(inputValue, 10);
+                      const numValue = Number(inputValue);
                       if (!isNaN(numValue)) {
                         updateValue({
                           end: { ...range?.end, day: numValue },

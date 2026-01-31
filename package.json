@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:safe": "npm run build",
     "start": "next start",
     "lint": "next lint"
   },

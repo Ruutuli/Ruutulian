@@ -1,11 +1,6 @@
-[phases.setup]
-cmds = [
-  "mkdir -p /tmp/.next-cache",
-]
-
 [phases.install]
 cmds = [
-  "npm ci --production=false || (rm -rf node_modules/.cache && npm ci --production=false)",
+  "npm ci --production=false",
 ]
 
 [phases.build]
@@ -17,6 +12,8 @@ cmds = [
 NPM_CONFIG_CACHE = "/tmp/.npm"
 NODE_OPTIONS = "--max-old-space-size=4096"
 NEXT_TELEMETRY_DISABLED = "1"
+NPM_CONFIG_FUND = "false"
+NPM_CONFIG_AUDIT = "false"
 
 [start]
 cmd = "npm start"

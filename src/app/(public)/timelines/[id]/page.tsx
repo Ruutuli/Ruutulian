@@ -1,13 +1,14 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/server';
 import { getSiteConfig } from '@/lib/config/site-config';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { TimelineEvent } from '@/components/timeline/TimelineEvent';
 import { Markdown } from '@/lib/utils/markdown';
 import { formatLastUpdated } from '@/lib/utils/dateFormat';
-import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, getProxyUrl, isGoogleSitesUrl, isAnimatedImage } from '@/lib/utils/googleDriveImage';
 import type { World, TimelineEvent as TimelineEventType, StoryAlias } from '@/types/oc';
 import { generateDetailPageMetadata } from '@/lib/seo/page-metadata';
 
@@ -213,9 +214,24 @@ export default async function TimelinePage({
           {timeline.world && (
             <Link
               href={`/worlds/${timeline.world.slug}`}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 rounded-lg border border-purple-500/30 transition-colors group"
+              className="inline-flex items-center gap-3 px-4 py-2.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 rounded-xl border border-purple-500/30 transition-colors group"
             >
-              <i className="fas fa-globe text-sm" aria-hidden="true"></i>
+              <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-purple-500/30 bg-gray-800/80 flex-shrink-0">
+                {timeline.world.icon_url ? (
+                  <Image
+                    src={timeline.world.icon_url.includes('drive.google.com') ? getProxyUrl(timeline.world.icon_url) : convertGoogleDriveUrl(timeline.world.icon_url)}
+                    alt=""
+                    fill
+                    sizes="32px"
+                    className="object-cover"
+                    unoptimized={timeline.world.icon_url?.includes('drive.google.com') || isGoogleSitesUrl(timeline.world.icon_url) || isAnimatedImage(timeline.world.icon_url)}
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-purple-400">
+                    <i className="fas fa-globe text-sm" aria-hidden="true" />
+                  </div>
+                )}
+              </div>
               <span className="font-medium">{timeline.world.name}</span>
               <i className="fas fa-arrow-right text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" aria-hidden="true"></i>
             </Link>

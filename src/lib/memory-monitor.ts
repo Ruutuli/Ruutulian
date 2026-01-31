@@ -20,6 +20,13 @@ const MEMORY_LOG_INTERVAL_MS = parseInt(
 
 const MEMORY_WARNING_THRESHOLD = 0.8; // Warn if heap used > 80% of limit
 
+// Log initialization status
+if (ENABLE_MEMORY_LOGGING) {
+  logger.info('Memory', `Memory monitoring enabled (interval: ${MEMORY_LOG_INTERVAL_MS}ms, env: ${process.env.NODE_ENV})`);
+} else {
+  logger.info('Memory', 'Memory monitoring disabled (set ENABLE_MEMORY_LOGGING=true to enable)');
+}
+
 // Memory stats interface
 export interface MemoryStats {
   heapUsed: number; // MB
@@ -67,10 +74,14 @@ export function getMemoryUsage(): MemoryStats | null {
 
         lastMemoryStats = stats;
         return stats;
-      } else {
-        // Fallback for browsers without performance.memory API
-        return null;
+    } else {
+      // Fallback for browsers without performance.memory API
+      // Try to log a warning that memory API isn't available
+      if (ENABLE_MEMORY_LOGGING && typeof console !== 'undefined') {
+        console.warn('[Memory] performance.memory API not available in this browser. Memory monitoring limited.');
       }
+      return null;
+    }
     } else {
       // Node.js: Use process.memoryUsage()
       const memUsage = process.memoryUsage();
@@ -148,31 +159,48 @@ export function logMemoryUsage(
   message: string,
   context?: Record<string, any>
 ): void {
+  // Always try to get memory stats, but only log if enabled
+  const stats = getMemoryUsage();
+  
   if (!ENABLE_MEMORY_LOGGING) {
+    // Still log a warning if memory is very high even when logging is disabled
+    if (stats && stats.heapUsed > 500) {
+      console.warn(`[Memory] ⚠️ HIGH MEMORY DETECTED (logging disabled): ${stats.heapUsed}MB`, context);
+    }
     return;
   }
 
-  const stats = getMemoryUsage();
   if (!stats) {
+    // Log that memory stats aren't available
+    logger.info('Memory', `${category}: ${message} [Memory stats unavailable]`, context);
     return;
   }
 
   const contextStr = context ? ` ${JSON.stringify(context)}` : '';
   const memoryStr = formatMemoryStats(stats);
   
-  logger.debug('Memory', `${category}: ${message} ${memoryStr}${contextStr}`);
+  // Use info level so logs always show (debug only shows in dev)
+  logger.info('Memory', `${category}: ${message} ${memoryStr}${contextStr}`);
 
   // Warn if memory usage is high
   if (stats.usagePercent && stats.usagePercent > MEMORY_WARNING_THRESHOLD * 100) {
-    logger.warn('Memory', `High memory usage detected: ${stats.usagePercent}% of heap limit`, {
+    logger.warn('Memory', `⚠️ HIGH MEMORY USAGE: ${stats.usagePercent}% of heap limit (${stats.heapUsed}MB / ${stats.heapLimit}MB)`, {
       ...stats,
       ...context,
     });
   }
 
-  // Warn if memory is growing significantly
-  if (stats.delta && stats.delta > 10) {
-    logger.warn('Memory', `Significant memory growth detected: +${stats.delta}MB`, {
+  // Warn if memory is growing significantly (lowered threshold to catch leaks earlier)
+  if (stats.delta && stats.delta > 5) {
+    logger.warn('Memory', `⚠️ MEMORY GROWTH: +${stats.delta}MB since last check`, {
+      ...stats,
+      ...context,
+    });
+  }
+
+  // Warn if memory exceeds 500MB (potential leak indicator)
+  if (stats.heapUsed > 500) {
+    logger.warn('Memory', `⚠️ HIGH MEMORY: ${stats.heapUsed}MB used - potential memory leak?`, {
       ...stats,
       ...context,
     });
@@ -203,7 +231,7 @@ export function startPeriodicLogging(intervalMs: number = MEMORY_LOG_INTERVAL_MS
     }, intervalMs);
   }
 
-  logger.debug('Memory', `Started periodic memory logging (interval: ${intervalMs}ms)`);
+  logger.info('Memory', `Started periodic memory logging (interval: ${intervalMs}ms)`);
 }
 
 /**
@@ -217,7 +245,7 @@ export function stopPeriodicLogging(): void {
       clearInterval(periodicLoggingInterval as NodeJS.Timeout);
     }
     periodicLoggingInterval = null;
-    logger.debug('Memory', 'Stopped periodic memory logging');
+    logger.info('Memory', 'Stopped periodic memory logging');
   }
 }
 

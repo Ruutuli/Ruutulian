@@ -5,6 +5,7 @@ import { CharacterFilters } from '@/components/filters/CharacterFilters';
 import { OCListView } from '@/components/discovery/OCListView';
 import { generatePageMetadata } from '@/lib/config/metadata-helpers';
 import { getSiteConfig } from '@/lib/config/site-config';
+import { logMemoryUsage } from '@/lib/memory-monitor';
 
 export async function generateMetadata() {
   const config = await getSiteConfig();
@@ -23,6 +24,8 @@ interface OCsPageProps {
 }
 
 export default async function OCsPage({ searchParams }: OCsPageProps) {
+  logMemoryUsage('Server', 'OCsPage: Start', { path: 'ocs' });
+  
   const supabase = await createClient();
 
   // Extract filter values from searchParams
@@ -127,6 +130,14 @@ export default async function OCsPage({ searchParams }: OCsPageProps) {
         oc.world?.name.toLowerCase().includes(searchLower)
     );
   }
+
+  logMemoryUsage('Server', 'OCsPage: Data fetched', {
+    path: 'ocs',
+    totalOCs: ocs?.length || 0,
+    filteredOCs: filteredOCs.length,
+    hasWorlds: ocs?.some(oc => (oc as any).world) || false,
+    hasTags: ocs?.some(oc => (oc as any).character_tags?.length > 0) || false,
+  });
 
   return (
     <div>

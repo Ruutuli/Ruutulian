@@ -11,6 +11,7 @@ import { getDaySeed, getRandomItemsPerRequest, seededShuffle } from '@/lib/utils
 import { generateWebSiteSchema, generateOrganizationSchema, generatePersonSchema } from '@/lib/seo/structured-data';
 import { getAbsoluteIconUrl } from '@/lib/seo/metadata-helpers';
 import { getDateInEST, formatDateOfBirth } from '@/lib/utils/dateFormat';
+import { logMemoryUsage } from '@/lib/memory-monitor';
 
 export async function generateMetadata(): Promise<Metadata> {
   const config = await getSiteConfig();
@@ -26,6 +27,8 @@ export const revalidate = 0; // Disable caching so random items change on each p
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
+  logMemoryUsage('Server', 'HomePage: Start', { path: '/' });
+  
   const supabase = await createClient();
   
   // Batch initial data fetches in parallel
@@ -212,6 +215,22 @@ export default async function HomePage() {
   const authorSchema = generatePersonSchema(config.authorName);
   
   const structuredData = [websiteSchema, organizationSchema, authorSchema];
+
+  logMemoryUsage('Server', 'HomePage: Data fetched', {
+    path: '/',
+    worldCount,
+    ocCount,
+    loreCount,
+    timelineEventCount,
+    fanficCount,
+    randomWorldsCount: randomWorlds.length,
+    randomOCsCount: randomOCs.length,
+    recentWorldsCount: recentWorlds.data?.length || 0,
+    recentOCsCount: recentOCs.data?.length || 0,
+    recentLoreCount: recentLore.data?.length || 0,
+    quotesCount: allQuotes?.length || 0,
+    birthdayOCsCount: birthdayOCs.length,
+  });
 
   return (
     <>

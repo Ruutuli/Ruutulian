@@ -364,6 +364,7 @@ export default async function WorldDetailPage({
             <i className="fas fa-clock text-purple-400"></i>
             Timelines
           </h2>
+          {/* TimelineList component extracts worldSlug from timeline data internally */}
           <TimelineList timelines={timelines} />
         </section>
       )}

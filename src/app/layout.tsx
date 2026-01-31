@@ -39,13 +39,14 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+const showMemoryMonitor =
+  process.env.NODE_ENV === 'development' || process.env.ENABLE_MEMORY_LOGGING === 'true';
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  console.log('[RootLayout] Rendering with MemoryMonitor');
-  
   return (
     <html lang="en" className="dark">
       <body className="bg-gray-900">
@@ -54,7 +55,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
           strategy="afterInteractive"
         />
-        <MemoryMonitor />
+        {showMemoryMonitor && <MemoryMonitor />}
         {children}
       </body>
     </html>

@@ -4,19 +4,12 @@
  */
 
 import { logger } from './logger';
-import { MEMORY_MONITOR_VERSION, MEMORY_MONITOR_BUILD_TIME } from './memory-monitor-version';
-
-// Force a console log that will definitely show (using error so it's never stripped)
-console.error('[MemoryMonitor] MODULE LOADED - memory-monitor.ts imported');
-console.error('[MemoryMonitor] Version:', MEMORY_MONITOR_VERSION);
-console.error('[MemoryMonitor] Build time:', MEMORY_MONITOR_BUILD_TIME);
-console.error('[MemoryMonitor] NODE_ENV:', process.env.NODE_ENV);
 
 // Check if we're in a browser environment
 const isBrowser = typeof window !== 'undefined';
 
 // Configuration - Enable by default, can be disabled with ENABLE_MEMORY_LOGGING=false
-const ENABLE_MEMORY_LOGGING = 
+const ENABLE_MEMORY_LOGGING =
   process.env.ENABLE_MEMORY_LOGGING !== 'false';
 
 const MEMORY_LOG_INTERVAL_MS = parseInt(
@@ -26,26 +19,25 @@ const MEMORY_LOG_INTERVAL_MS = parseInt(
 
 const MEMORY_WARNING_THRESHOLD = 0.8; // Warn if heap used > 80% of limit
 
-// Log initialization status - use direct console.log to ensure it shows
-if (typeof window !== 'undefined') {
-  // Client-side
-  console.log('[Memory Monitor] Client-side initialized');
-  console.log('[Memory Monitor] ENABLE_MEMORY_LOGGING:', ENABLE_MEMORY_LOGGING);
-  console.log('[Memory Monitor] NODE_ENV:', process.env.NODE_ENV);
-  console.log('[Memory Monitor] performance.memory available:', !!(performance as any).memory);
-} else {
-  // Server-side
-  console.log('[Memory Monitor] Server-side initialized');
-  console.log('[Memory Monitor] ENABLE_MEMORY_LOGGING:', ENABLE_MEMORY_LOGGING);
-  console.log('[Memory Monitor] NODE_ENV:', process.env.NODE_ENV);
+// Configurable via env to reduce false positives (Node/Next dev often 400–500 MB RSS)
+const MEMORY_RSS_WARNING_MB = parseInt(process.env.MEMORY_RSS_WARNING_MB || '512', 10);
+const MEMORY_DELTA_WARNING_MB = parseInt(process.env.MEMORY_DELTA_WARNING_MB || '15', 10);
+
+const isDevOrLoggingEnabled =
+  process.env.NODE_ENV === 'development' || process.env.ENABLE_MEMORY_LOGGING === 'true';
+
+if (isDevOrLoggingEnabled) {
+  if (typeof window !== 'undefined') {
+    console.log('[Memory Monitor] Client-side initialized', { ENABLE_MEMORY_LOGGING, hasPerfMemory: !!(typeof performance !== 'undefined' && (performance as any).memory) });
+  } else {
+    console.log('[Memory Monitor] Server-side initialized', { ENABLE_MEMORY_LOGGING });
+  }
 }
 
 if (ENABLE_MEMORY_LOGGING) {
   logger.info('Memory', `Memory monitoring enabled (interval: ${MEMORY_LOG_INTERVAL_MS}ms, env: ${process.env.NODE_ENV})`);
-  console.log(`[Memory Monitor] ✅ ENABLED - interval: ${MEMORY_LOG_INTERVAL_MS}ms`);
 } else {
   logger.info('Memory', 'Memory monitoring disabled (set ENABLE_MEMORY_LOGGING=true to enable)');
-  console.log('[Memory Monitor] ❌ DISABLED - set ENABLE_MEMORY_LOGGING=true to enable');
 }
 
 // Memory stats interface
@@ -177,16 +169,9 @@ export function logMemoryUsage(
   message: string,
   context?: Record<string, any>
 ): void {
-  // Always log that the function was called
-  console.log(`[Memory] logMemoryUsage called: ${category} - ${message}`);
-  
-  // Always try to get memory stats, but only log if enabled
   const stats = getMemoryUsage();
-  console.log(`[Memory] getMemoryUsage returned:`, stats);
-  
+
   if (!ENABLE_MEMORY_LOGGING) {
-    console.log(`[Memory] Logging disabled, but stats:`, stats);
-    // Still log a warning if memory is very high even when logging is disabled
     if (stats && stats.heapUsed > 500) {
       console.warn(`[Memory] ⚠️ HIGH MEMORY DETECTED (logging disabled): ${stats.heapUsed}MB`, context);
     }
@@ -194,9 +179,7 @@ export function logMemoryUsage(
   }
 
   if (!stats) {
-    // Log that memory stats aren't available
     const msg = `${category}: ${message} [Memory stats unavailable]`;
-    console.log(`[Memory] ${msg}`, context);
     logger.info('Memory', msg, context);
     return;
   }
@@ -206,8 +189,8 @@ export function logMemoryUsage(
   
   // Always log to console directly for visibility (use error/warn so they're not stripped)
   // Use error for high memory/RSS, warn for medium, log for low
-  const isHighMemory = stats.heapUsed > 500 || (stats.rss && stats.rss > 300);
-  const isMediumMemory = stats.heapUsed > 200 || (stats.rss && stats.rss > 200);
+  const isHighMemory = stats.heapUsed > 500 || (stats.rss !== undefined && stats.rss > MEMORY_RSS_WARNING_MB);
+  const isMediumMemory = stats.heapUsed > 200 || (stats.rss !== undefined && stats.rss > 200);
   
   if (isHighMemory) {
     console.error(`[Memory] ${category}: ${message} ${memoryStr}${contextStr}`);
@@ -228,8 +211,8 @@ export function logMemoryUsage(
     });
   }
 
-  // Warn if memory is growing significantly (lowered threshold to catch leaks earlier)
-  if (stats.delta && stats.delta > 5) {
+  // Warn if memory is growing significantly (threshold configurable via MEMORY_DELTA_WARNING_MB)
+  if (stats.delta !== undefined && stats.delta > MEMORY_DELTA_WARNING_MB) {
     logger.warn('Memory', `⚠️ MEMORY GROWTH: +${stats.delta}MB since last check`, {
       ...stats,
       ...context,
@@ -244,8 +227,8 @@ export function logMemoryUsage(
     });
   }
 
-  // Warn if RSS (total process memory) is growing significantly
-  if (stats.rss && stats.rss > 300) {
+  // Warn if RSS (total process memory) is high (threshold configurable via MEMORY_RSS_WARNING_MB)
+  if (stats.rss !== undefined && stats.rss > MEMORY_RSS_WARNING_MB) {
     logger.warn('Memory', `⚠️ HIGH RSS: ${stats.rss}MB total process memory - potential leak?`, {
       ...stats,
       ...context,

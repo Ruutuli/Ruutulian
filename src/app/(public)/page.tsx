@@ -12,6 +12,7 @@ import { generateWebSiteSchema, generateOrganizationSchema, generatePersonSchema
 import { getAbsoluteIconUrl } from '@/lib/seo/metadata-helpers';
 import { getDateInEST, formatDateOfBirth } from '@/lib/utils/dateFormat';
 import { logMemoryUsage } from '@/lib/memory-monitor';
+import type { World, OC } from '@/types/oc';
 
 export async function generateMetadata(): Promise<Metadata> {
   const config = await getSiteConfig();
@@ -23,12 +24,13 @@ export async function generateMetadata(): Promise<Metadata> {
   });
 }
 
-export const revalidate = 0; // Disable caching so random items change on each page load
+export const revalidate = 60; // Cache RSC payload to reduce repeated full fetches; random content refreshes per revalidate window
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  logMemoryUsage('Server', 'HomePage: Start', { path: '/' });
-  
+  if (process.env.NODE_ENV === 'development') {
+    logMemoryUsage('Server', 'HomePage: Start', { path: '/' });
+  }
   const supabase = await createClient();
   
   // Batch initial data fetches in parallel
@@ -47,14 +49,14 @@ export default async function HomePage() {
     supabase.auth.getUser(),
     supabase
       .from('worlds')
-      .select('*')
+      .select('id, name, slug, header_image_url, primary_color, accent_color')
       .eq('is_public', true)
-      .limit(6), // Reduced from 10 to 6 since we only show 3
+      .limit(6),
     supabase
       .from('ocs')
-      .select('*, world:worlds(*)')
+      .select('id, name, slug, image_url, world:worlds(id, name, slug, primary_color, accent_color)')
       .eq('is_public', true)
-      .limit(6), // Reduced from 10 to 6 since we only show 3
+      .limit(6),
     supabase.from('worlds').select('*', { count: 'exact', head: true }).eq('is_public', true),
     supabase.from('ocs').select('*', { count: 'exact', head: true }).eq('is_public', true),
     supabase.from('world_lore').select('*, world:worlds!inner(is_public)', { count: 'exact', head: true }).eq('world.is_public', true),
@@ -85,13 +87,13 @@ export default async function HomePage() {
   const [recentWorlds, recentOCs, recentLore] = await Promise.all([
     supabase
       .from('worlds')
-      .select('*')
+      .select('id, name, slug, header_image_url, primary_color, accent_color, updated_at')
       .eq('is_public', true)
       .order('updated_at', { ascending: false })
       .limit(3),
     supabase
       .from('ocs')
-      .select('*, world:worlds(id, name, slug, primary_color, accent_color)')
+      .select('id, name, slug, image_url, world:worlds(id, name, slug, primary_color, accent_color)')
       .eq('is_public', true)
       .order('updated_at', { ascending: false })
       .limit(3),
@@ -108,9 +110,9 @@ export default async function HomePage() {
   // Since we're using seeded shuffle, we can fetch a smaller sample
   const { data: allQuotes } = await supabase
     .from('character_quotes')
-    .select('*, oc:ocs!inner(id, name, slug, is_public)')
+    .select('id, quote_text, context, oc:ocs!inner(id, name, slug, is_public)')
     .eq('oc.is_public', true)
-    .limit(20); // Reduced from 100 to 20 - still plenty for daily variety
+    .limit(20);
 
   let quoteOfTheDay = null;
   if (allQuotes && allQuotes.length > 0) {
@@ -216,21 +218,23 @@ export default async function HomePage() {
   
   const structuredData = [websiteSchema, organizationSchema, authorSchema];
 
-  logMemoryUsage('Server', 'HomePage: Data fetched', {
-    path: '/',
-    worldCount,
-    ocCount,
-    loreCount,
-    timelineEventCount,
-    fanficCount,
-    randomWorldsCount: randomWorlds.length,
-    randomOCsCount: randomOCs.length,
-    recentWorldsCount: recentWorlds.data?.length || 0,
-    recentOCsCount: recentOCs.data?.length || 0,
-    recentLoreCount: recentLore.data?.length || 0,
-    quotesCount: allQuotes?.length || 0,
-    birthdayOCsCount: birthdayOCs.length,
-  });
+  if (process.env.NODE_ENV === 'development') {
+    logMemoryUsage('Server', 'HomePage: Data fetched', {
+      path: '/',
+      worldCount,
+      ocCount,
+      loreCount,
+      timelineEventCount,
+      fanficCount,
+      randomWorldsCount: randomWorlds.length,
+      randomOCsCount: randomOCs.length,
+      recentWorldsCount: recentWorlds.data?.length || 0,
+      recentOCsCount: recentOCs.data?.length || 0,
+      recentLoreCount: recentLore.data?.length || 0,
+      quotesCount: allQuotes?.length || 0,
+      birthdayOCsCount: birthdayOCs.length,
+    });
+  }
 
   return (
     <>
@@ -592,7 +596,7 @@ export default async function HomePage() {
         {randomWorlds.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {randomWorlds.map((world) => (
-              <SimpleWorldCard key={world.id} world={world} />
+              <SimpleWorldCard key={world.id} world={world as World} />
             ))}
           </div>
         ) : (
@@ -620,7 +624,7 @@ export default async function HomePage() {
         {randomOCs.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {randomOCs.map((oc) => (
-              <SimpleOCCard key={oc.id} oc={oc} />
+              <SimpleOCCard key={oc.id} oc={oc as unknown as OC} />
             ))}
           </div>
         ) : (

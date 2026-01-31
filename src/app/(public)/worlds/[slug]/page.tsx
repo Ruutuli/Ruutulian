@@ -364,7 +364,7 @@ export default async function WorldDetailPage({
             <i className="fas fa-clock text-purple-400"></i>
             Timelines
           </h2>
-          <TimelineList timelines={timelines} worldSlug={world.slug} />
+          <TimelineList timelines={timelines} />
         </section>
       )}
 

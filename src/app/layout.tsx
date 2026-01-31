@@ -3,6 +3,7 @@ import Script from 'next/script';
 import './globals.css';
 import { getSiteConfig } from '@/lib/config/site-config';
 import { generateBaseMetadata, generateOpenGraphImage, generateTwitterCard } from '@/lib/seo/metadata-helpers';
+import { MemoryMonitor } from '@/components/memory/MemoryMonitor';
 
 export async function generateMetadata(): Promise<Metadata> {
   const config = await getSiteConfig();
@@ -51,6 +52,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
           strategy="afterInteractive"
         />
+        <MemoryMonitor />
         {children}
       </body>
     </html>

@@ -13,6 +13,7 @@ import { LoreCard } from '@/components/lore/LoreCard';
 import { WorldRelationships } from '@/components/world/WorldRelationships';
 import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
 import { generateDetailPageMetadata } from '@/lib/seo/page-metadata';
+import { logMemoryUsage } from '@/lib/memory-monitor';
 import Link from 'next/link';
 
 export async function generateMetadata({
@@ -92,6 +93,8 @@ export default async function WorldDetailPage({
   params: Promise<{ slug: string }>;
   searchParams?: Promise<{ story?: string }>;
 }) {
+  logMemoryUsage('Server', 'WorldDetailPage: Start', { path: 'worlds/[slug]' });
+  
   const supabase = await createClient();
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
@@ -309,6 +312,14 @@ export default async function WorldDetailPage({
   const ocs = ocsResult.data;
   const timelines = timelinesResult.data;
   const loreEntries = loreEntriesResult.data;
+
+  logMemoryUsage('Server', 'WorldDetailPage: Data fetched', {
+    path: 'worlds/[slug]',
+    slug: resolvedParams.slug,
+    ocsCount: ocs?.length || 0,
+    timelinesCount: timelines?.length || 0,
+    loreEntriesCount: loreEntries?.length || 0,
+  });
 
   return (
     <div>

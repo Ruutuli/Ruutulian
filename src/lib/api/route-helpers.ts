@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { logMemoryUsage } from '@/lib/memory-monitor';
 
 /**
  * Validates that required fields are present in the request body.
@@ -101,6 +102,10 @@ export function handleError(error: unknown, defaultMessage: string = 'Internal s
   // Import logger dynamically to avoid circular dependencies
   const { logger } = require('@/lib/logger');
   
+  logMemoryUsage('API', 'handleError: Error occurred', {
+    error: error instanceof Error ? error.message : String(error),
+  });
+  
   if (error instanceof Error) {
     logger.error('API', defaultMessage, {
       error: error.message,
@@ -111,5 +116,30 @@ export function handleError(error: unknown, defaultMessage: string = 'Internal s
   
   logger.error('API', defaultMessage, { error: String(error) });
   return errorResponse(defaultMessage, 500);
+}
+
+/**
+ * Wraps an API route handler with memory logging
+ */
+export function withMemoryLogging<T extends (...args: any[]) => Promise<Response>>(
+  handler: T,
+  routeName: string
+): T {
+  return (async (...args: Parameters<T>) => {
+    logMemoryUsage('API', `${routeName}: Request start`);
+    
+    try {
+      const response = await handler(...args);
+      logMemoryUsage('API', `${routeName}: Request complete`, {
+        status: response.status,
+      });
+      return response;
+    } catch (error) {
+      logMemoryUsage('API', `${routeName}: Request error`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }) as T;
 }
 

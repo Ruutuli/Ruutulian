@@ -12,6 +12,7 @@ import { calculateAge } from '@/lib/utils/ageCalculation';
 import { logger } from '@/lib/logger';
 import { useOCsByWorld } from '@/lib/hooks/useOCsByWorld';
 import { useDropdownPosition } from '@/hooks/useDropdownPosition';
+import { compareEventDates } from '@/lib/utils/dateSorting';
 
 // Helper function to format date data for display
 function formatDateData(dateData: EventDateData | null | undefined): string {
@@ -1347,99 +1348,15 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
     }
   };
 
-  // Always sort chronologically; position is tiebreaker for same-date events (user can move to reorder)
+  // Always sort chronologically using era order if available; position is tiebreaker for same-date events (user can move to reorder)
+  const eraOrder = timelineEra
+    ? timelineEra.split(',').map((s: string) => s.trim()).filter(Boolean)
+    : undefined;
+  
   const sortedEvents = [...timelineEvents].sort((a, b) => {
-    const dateA = getEventSortDate(a);
-    const dateB = getEventSortDate(b);
-        
-    // Events without years go to the end
-    if (dateA.year === null && dateB.year === null) {
-      return a.position - b.position; // Maintain original order for events without dates
-    }
-    if (dateA.year === null) return 1;
-    if (dateB.year === null) return -1;
-    
-    // Compare years
-    if (dateA.year !== dateB.year) {
-      return dateA.year - dateB.year;
-    }
-    
-    // Same year, compare months or periods
-    // If both have periods but no months, compare periods directly
-    if (dateA.month === null && dateB.month === null && dateA.period !== null && dateB.period !== null) {
-      return dateA.period - dateB.period; // early (1) < mid (2) < late (3)
-    }
-    
-    // Convert periods to approximate month values for comparison with actual months
-    // early ≈ months 1-4 (use 2), mid ≈ months 5-8 (use 6), late ≈ months 9-12 (use 12 to ensure it comes after all dates)
-    const periodToMonth = (period: number | null): number | null => {
-      if (period === 1) return 2;  // early
-      if (period === 2) return 6;  // mid
-      if (period === 3) return 12; // late (use 12 so it comes after all specific dates in the year)
-      return null;
-    };
-    
-    const monthA = dateA.month ?? periodToMonth(dateA.period);
-    const monthB = dateB.month ?? periodToMonth(dateB.period);
-    
-    if (monthA === null && monthB === null) {
-      return a.position - b.position;
-    }
-    if (monthA === null) return 1;
-    if (monthB === null) return -1;
-    
-    // Compare months
-    if (monthA !== monthB) {
-      return monthA - monthB;
-    }
-    
-    // Same approximate month - if one is exact and one is period-based, exact comes first
-    // (e.g., "July 7, 1977" should come before "late 1977" even though late ≈ month 11)
-    const aHasExactMonth = dateA.month !== null;
-    const bHasExactMonth = dateB.month !== null;
-    const aHasPeriod = dateA.period !== null;
-    const bHasPeriod = dateB.period !== null;
-    
-    // If both have exact months, continue to day comparison below
-    // If one has exact month and other has period, exact comes first
-    if (aHasExactMonth && !bHasExactMonth && bHasPeriod) {
-      return -1; // Exact date comes before period-based date
-    }
-    if (bHasExactMonth && !aHasExactMonth && aHasPeriod) {
-      return 1; // Exact date comes before period-based date
-    }
-    
-    // If both are period-based with same month value, compare periods directly
-    if (!aHasExactMonth && !bHasExactMonth && aHasPeriod && bHasPeriod) {
-      return dateA.period! - dateB.period!;
-    }
-    
-    // Same year and month, compare days
-    // If one has a period (approximate date) and the other has an exact day, the exact date comes first
-    // (e.g., "July 7, 1977" should come before "late 1977")
-    if (dateA.period !== null && dateB.day !== null) {
-      // A is period-based, B has exact day - exact comes first
-      return 1;
-    }
-    if (dateB.period !== null && dateA.day !== null) {
-      // B is period-based, A has exact day - exact comes first
-      return -1;
-    }
-    
-    // Both have days or both don't have days
-    if (dateA.day === null && dateB.day === null) {
-      // If both are period-based, compare periods
-      if (dateA.period !== null && dateB.period !== null) {
-        return dateA.period - dateB.period;
-      }
-      return a.position - b.position;
-    }
-    if (dateA.day === null) return 1;
-    if (dateB.day === null) return -1;
-    if (dateA.day !== dateB.day) {
-      return dateA.day - dateB.day;
-    }
-
+    // Use compareEventDates which handles era ordering properly
+    const dateCmp = compareEventDates(a.date_data ?? null, b.date_data ?? null, eraOrder);
+    if (dateCmp !== 0) return dateCmp;
     // Same date, use position so user can reorder (move up/down)
     return a.position - b.position;
   });

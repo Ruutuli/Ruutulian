@@ -1,6 +1,6 @@
 import type { TimelineEvent as TimelineEventType, EventDateData } from '@/types/oc';
 import { Markdown } from '@/lib/utils/markdown';
-import { getCategoryColorClasses } from '@/lib/utils/categoryColors';
+import { getCategoryColorClasses, getCategoryCardAccentClasses, getFallbackCardAccentClasses } from '@/lib/utils/categoryColors';
 import { calculateAge } from '@/lib/utils/ageCalculation';
 
 interface TimelineEventProps {
@@ -41,6 +41,9 @@ function getYearFromDateData(
 
 export function TimelineEvent({ event, isLast }: TimelineEventProps) {
   const displayYear = getYearFromDateData(event.date_data, event.date_text ?? undefined);
+  const cardAccent = event.categories?.[0]
+    ? getCategoryCardAccentClasses(event.categories[0])
+    : getFallbackCardAccentClasses(event.id);
 
   return (
     <div className="relative flex items-center gap-6 pb-12 last:pb-0">
@@ -58,9 +61,9 @@ export function TimelineEvent({ event, isLast }: TimelineEventProps) {
         </div>
       </div>
 
-      {/* Event content */}
+      {/* Event content - color-coded by category (or stable fallback by id) */}
       <div className="flex-1 min-w-0">
-        <div className="wiki-card p-5 md:p-6 hover:border-purple-500/50 transition-all duration-300">
+        <div className={`wiki-card p-5 md:p-6 transition-all duration-300 ${cardAccent}`}>
           {/* Title row: title + key event on left, year in top-right */}
           <div className="mb-4">
             <div className="flex items-start justify-between gap-3 flex-wrap mb-2">

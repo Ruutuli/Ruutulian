@@ -1,13 +1,17 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import type { TimelineEvent, OC, Timeline, EventDateData } from '@/types/oc';
+import { PREDEFINED_EVENT_CATEGORIES } from '@/types/oc';
 import { createClient } from '@/lib/supabase/client';
 import { TimelineEventForm } from './TimelineEventForm';
+import { DateInput } from './DateInput';
 import { getCategoryColorClasses } from '@/lib/utils/categoryColors';
 import { calculateAge } from '@/lib/utils/ageCalculation';
 import { logger } from '@/lib/logger';
+import { useOCsByWorld } from '@/lib/hooks/useOCsByWorld';
+import { useDropdownPosition } from '@/hooks/useDropdownPosition';
 
 // Helper function to format date data for display
 function formatDateData(dateData: EventDateData | null | undefined): string {
@@ -73,6 +77,619 @@ function formatDateData(dateData: EventDateData | null | undefined): string {
   }
 }
 
+// Minimal OC type for autocomplete
+type MinimalOC = {
+  id: string;
+  name: string;
+  date_of_birth?: string | null;
+};
+
+// Custom name type for autocomplete
+type CustomNameSuggestion = {
+  name: string;
+  isCustom: true;
+};
+
+// Character Autocomplete Component (simplified version for modal)
+function CharacterAutocompleteInput({
+  value,
+  characters,
+  customNames,
+  onSelect,
+  placeholder,
+  disabled,
+  onInputValueChange,
+}: {
+  value: string;
+  characters: MinimalOC[];
+  customNames?: CustomNameSuggestion[];
+  onSelect: (ocId: string | null, customName: string | null) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  onInputValueChange?: (value: string) => void;
+}) {
+  const [inputValue, setInputValue] = useState(value);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLUListElement>(null);
+  const blurTimeoutRef = useRef<number | null>(null);
+  const saveTimeoutRef = useRef<number | null>(null);
+
+  const allSuggestions = useMemo(() => {
+    const ocSuggestions = (characters || []).map(char => ({ ...char, isCustom: false as const }));
+    const customSuggestions = (customNames || []).map(custom => ({ 
+      id: `custom-${custom.name}`, 
+      name: custom.name, 
+      isCustom: true as const 
+    }));
+    return [...ocSuggestions, ...customSuggestions];
+  }, [characters, customNames]);
+
+  const filteredSuggestions = useMemo(() => {
+    if (!inputValue.trim()) {
+      return allSuggestions.slice(0, 10);
+    }
+    const lowerInput = inputValue.toLowerCase();
+    return allSuggestions
+      .filter(item => item.name.toLowerCase().includes(lowerInput))
+      .slice(0, 10);
+  }, [inputValue, allSuggestions]);
+
+  const exactMatch = useMemo(() => {
+    return allSuggestions.find(item => item.name.toLowerCase() === inputValue.toLowerCase());
+  }, [inputValue, allSuggestions]);
+
+  const showAbove = useDropdownPosition({
+    inputRef,
+    isVisible: showSuggestions,
+    dropdownHeight: 240,
+    dependencies: [filteredSuggestions.length],
+  });
+
+  useEffect(() => {
+    if (value !== inputValue) {
+      setInputValue(value);
+    }
+  }, [value]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    setShowSuggestions(true);
+    setHighlightedIndex(-1);
+    
+    if (onInputValueChange) {
+      onInputValueChange(newValue);
+    }
+    
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    
+    if (newValue.trim()) {
+      const exactMatch = allSuggestions.find(item => item.name.toLowerCase() === newValue.toLowerCase());
+      if (!exactMatch) {
+        saveTimeoutRef.current = window.setTimeout(() => {
+          if (inputValue.trim() === newValue.trim()) {
+            onSelect(null, newValue.trim());
+          }
+          saveTimeoutRef.current = null;
+        }, 300);
+      }
+    }
+  };
+
+  const handleSelectSuggestion = (item: { id: string; name: string; isCustom: boolean }) => {
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    setInputValue(item.name);
+    setShowSuggestions(false);
+    setHighlightedIndex(-1);
+    if (item.isCustom) {
+      onSelect(null, item.name);
+    } else {
+      onSelect(item.id, null);
+    }
+  };
+
+  const handleCustomName = () => {
+    const customName = inputValue.trim();
+    if (customName) {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+        blurTimeoutRef.current = null;
+      }
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      setShowSuggestions(false);
+      setHighlightedIndex(-1);
+      onSelect(null, customName);
+    }
+  };
+
+  const handleBlur = () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+    }
+    blurTimeoutRef.current = window.setTimeout(() => {
+      setShowSuggestions(false);
+      if (inputValue.trim()) {
+        const exactMatch = allSuggestions.find(item => item.name.toLowerCase() === inputValue.toLowerCase());
+        if (exactMatch) {
+          handleSelectSuggestion(exactMatch);
+        } else {
+          handleCustomName();
+        }
+      }
+      blurTimeoutRef.current = null;
+    }, 150);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const totalSuggestions = filteredSuggestions.length + (inputValue.trim() && !exactMatch ? 1 : 0);
+    if (!showSuggestions || totalSuggestions === 0) {
+      if (e.key === 'Enter' && inputValue.trim() && !exactMatch) {
+        e.preventDefault();
+        handleCustomName();
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setHighlightedIndex(prev => 
+          prev < totalSuggestions - 1 ? prev + 1 : prev
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setHighlightedIndex(prev => prev > 0 ? prev - 1 : -1);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < filteredSuggestions.length) {
+          handleSelectSuggestion(filteredSuggestions[highlightedIndex]);
+        } else if (highlightedIndex === filteredSuggestions.length && inputValue.trim() && !exactMatch) {
+          handleCustomName();
+        } else if (inputValue.trim() && !exactMatch) {
+          handleCustomName();
+        } else if (exactMatch) {
+          handleSelectSuggestion(exactMatch);
+        }
+        break;
+      case 'Escape':
+        setShowSuggestions(false);
+        setHighlightedIndex(-1);
+        break;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+        blurTimeoutRef.current = null;
+      }
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+        setHighlightedIndex(-1);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (highlightedIndex >= 0 && suggestionsRef.current) {
+      const highlightedElement = suggestionsRef.current.children[highlightedIndex] as HTMLElement;
+      if (highlightedElement) {
+        highlightedElement.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [highlightedIndex]);
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <input
+        ref={inputRef}
+        type="text"
+        value={inputValue}
+        onChange={handleInputChange}
+        onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
+        onFocus={() => {
+          if (blurTimeoutRef.current) {
+            clearTimeout(blurTimeoutRef.current);
+            blurTimeoutRef.current = null;
+          }
+          setShowSuggestions(true);
+        }}
+        disabled={disabled}
+        placeholder={placeholder || 'Select character or type custom name...'}
+        className="w-full px-3 py-2 bg-gray-900/60 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:opacity-50 transition-all"
+        autoComplete="off"
+      />
+      
+      {showSuggestions && (filteredSuggestions.length > 0 || (inputValue.trim() && !exactMatch)) && (
+        <ul
+          ref={suggestionsRef}
+          className={`absolute z-[99999] w-full max-h-60 overflow-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg ${
+            showAbove ? 'bottom-full mb-1' : 'top-full mt-1'
+          }`}
+        >
+          {filteredSuggestions.map((item, index) => (
+            <li
+              key={item.id}
+              onClick={() => handleSelectSuggestion(item)}
+              onMouseEnter={() => setHighlightedIndex(index)}
+              className={`px-4 py-2 cursor-pointer transition-colors flex items-center gap-2 ${
+                index === highlightedIndex
+                  ? 'bg-purple-600/50 text-white'
+                  : 'text-gray-200 hover:bg-gray-700'
+              }`}
+            >
+              {item.name}
+              {item.isCustom && (
+                <span className="text-xs text-gray-400 italic">(custom)</span>
+              )}
+            </li>
+          ))}
+          {inputValue.trim() && !exactMatch && (
+            <li
+              onClick={handleCustomName}
+              onMouseEnter={() => setHighlightedIndex(filteredSuggestions.length)}
+              className={`px-4 py-2 cursor-pointer transition-colors italic text-purple-300 ${
+                highlightedIndex === filteredSuggestions.length
+                  ? 'bg-purple-600/50 text-white'
+                  : 'hover:bg-gray-700'
+              }`}
+            >
+              Use "{inputValue.trim()}" as custom name
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// Characters Edit Modal Component
+function CharactersEditModal({
+  event,
+  worldId,
+  timelineEra,
+  onClose,
+  onSave,
+}: {
+  event: TimelineEvent & { position: number };
+  worldId: string | null;
+  timelineEra: string | null;
+  onClose: () => void;
+  onSave: (characters: Array<{ oc_id: string | null; custom_name: string | null; role?: string | null; age: number | null }>) => Promise<void>;
+}) {
+  const { ocs: characters } = useOCsByWorld(worldId || undefined);
+  const [customNames, setCustomNames] = useState<CustomNameSuggestion[]>([]);
+  const characterInputRefs = useRef<Map<number, string>>(new Map());
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Initialize characters from event
+  const initialCharacters = event.characters || [];
+  const [charactersList, setCharactersList] = useState<Array<{
+    oc_id: string | null;
+    custom_name: string | null;
+    role?: string | null;
+    age: number | null;
+  }>>(initialCharacters.map(char => ({
+    oc_id: char.oc_id || null,
+    custom_name: char.custom_name || null,
+    role: char.role || null,
+    age: char.age ?? null,
+  })));
+
+  const addCharacter = () => {
+    setCharactersList([...charactersList, { oc_id: null, custom_name: null, role: null, age: null }]);
+  };
+
+  const removeCharacter = (index: number) => {
+    setCharactersList(charactersList.filter((_, i) => i !== index));
+  };
+
+  const updateCharacter = (index: number, updates: Partial<{
+    oc_id: string | null;
+    custom_name: string | null;
+    role?: string | null;
+    age: number | null;
+  }>) => {
+    const updated = [...charactersList];
+    updated[index] = { ...updated[index], ...updates };
+    setCharactersList(updated);
+  };
+
+  const updateCharacterField = <K extends keyof typeof charactersList[0]>(index: number, field: K, value: typeof charactersList[0][K]) => {
+    const updated = [...charactersList];
+    updated[index] = { ...updated[index], [field]: value };
+    setCharactersList(updated);
+  };
+
+  // Fetch custom names
+  useEffect(() => {
+    async function fetchCustomNames() {
+      if (!worldId) {
+        setCustomNames([]);
+        return;
+      }
+      
+      try {
+        const supabase = createClient();
+        const { data: events, error: eventsError } = await supabase
+          .from('timeline_events')
+          .select('id')
+          .eq('world_id', worldId);
+        
+        if (eventsError || !events) {
+          logger.error('Component', 'CharactersEditModal: Error fetching events for custom names', eventsError);
+          setCustomNames([]);
+          return;
+        }
+        
+        const eventIds = events.map(e => e.id);
+        if (eventIds.length === 0) {
+          setCustomNames([]);
+          return;
+        }
+        
+        const { data, error } = await supabase
+          .from('timeline_event_characters')
+          .select('custom_name')
+          .in('timeline_event_id', eventIds)
+          .not('custom_name', 'is', null);
+        
+        if (error) {
+          logger.error('Component', 'CharactersEditModal: Error fetching custom names', error);
+          setCustomNames([]);
+          return;
+        }
+        
+        const uniqueNames = new Map<string, string>();
+        (data || []).forEach((item: any) => {
+          if (item.custom_name) {
+            const normalized = item.custom_name.trim();
+            const lower = normalized.toLowerCase();
+            if (!uniqueNames.has(lower)) {
+              uniqueNames.set(lower, normalized);
+            }
+          }
+        });
+        
+        setCustomNames(Array.from(uniqueNames.values()).map(name => ({ name, isCustom: true as const })));
+      } catch (error) {
+        logger.error('Component', 'CharactersEditModal: Error in fetchCustomNames', error);
+        setCustomNames([]);
+      }
+    }
+    
+    fetchCustomNames();
+  }, [worldId]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await onSave(charactersList);
+      onClose();
+    } catch (error) {
+      logger.error('Component', 'CharactersEditModal: Error saving characters', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Calculate age for display
+  const getDisplayAge = (char: { oc_id: string | null; custom_name: string | null; age: number | null }, index: number) => {
+    if (char.age !== null) return char.age;
+    if (char.oc_id) {
+      const character = characters.find(c => c.id === char.oc_id);
+      if (character?.date_of_birth && event.date_data) {
+        return calculateAge(character.date_of_birth, event.date_data);
+      }
+    }
+    return null;
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex justify-between items-center">
+          <h4 className="text-lg font-semibold text-gray-100">Edit Characters: {event.title}</h4>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white text-xl"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="space-y-3 mb-4">
+          {charactersList && charactersList.length > 0 ? (
+            charactersList.map((char, index) => {
+              const selectedCharacter = char.oc_id ? characters.find(c => c.id === char.oc_id) : null;
+              const calculatedAge = selectedCharacter?.date_of_birth && event.date_data
+                ? calculateAge(selectedCharacter.date_of_birth, event.date_data)
+                : null;
+              const displayAge = char.age !== null ? char.age : calculatedAge;
+              const displayName = selectedCharacter?.name || char.custom_name || '';
+              
+              return (
+                <div 
+                  key={`char-${index}-${char.oc_id || char.custom_name || 'new'}`} 
+                  className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4 hover:border-gray-600/50 transition-colors"
+                >
+                  <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-end">
+                    <div className="w-full sm:flex-1 min-w-0">
+                      <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                        Character Name
+                      </label>
+                      <CharacterAutocompleteInput
+                        value={displayName}
+                        characters={characters}
+                        customNames={customNames}
+                        onSelect={async (ocId, customName) => {
+                          if (ocId) {
+                            characterInputRefs.current.delete(index);
+                            const selectedCharacter = characters.find(c => c.id === ocId);
+                            let ageToUse: number | null = null;
+                            
+                            if (selectedCharacter?.date_of_birth && event.date_data) {
+                              const calculatedAge = calculateAge(selectedCharacter.date_of_birth, event.date_data);
+                              if (calculatedAge !== null) {
+                                ageToUse = calculatedAge;
+                              }
+                            }
+                            
+                            updateCharacter(index, {
+                              oc_id: ocId,
+                              custom_name: null,
+                              age: ageToUse,
+                            });
+                          } else if (customName) {
+                            characterInputRefs.current.delete(index);
+                            updateCharacter(index, {
+                              oc_id: null,
+                              custom_name: customName.trim(),
+                              age: null,
+                            });
+                          }
+                        }}
+                        onInputValueChange={(inputValue) => {
+                          if (inputValue.trim()) {
+                            characterInputRefs.current.set(index, inputValue.trim());
+                          } else {
+                            characterInputRefs.current.delete(index);
+                          }
+                        }}
+                        placeholder="Select character or type custom name..."
+                        disabled={isSaving}
+                      />
+                    </div>
+                    <div className="w-full sm:w-20 shrink-0">
+                      <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                        Age
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={displayAge !== null ? displayAge : ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === '') {
+                            updateCharacterField(index, 'age', null);
+                          } else {
+                            const numValue = Number(value);
+                            if (!isNaN(numValue) && numValue >= 0) {
+                              updateCharacterField(index, 'age', numValue);
+                            }
+                          }
+                        }}
+                        placeholder={calculatedAge !== null ? String(calculatedAge) : 'Age'}
+                        className="w-full px-2 py-2 bg-gray-900/60 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-center"
+                        title={calculatedAge !== null && char.age === null ? `Auto-calculated: ${calculatedAge}` : 'Enter age manually'}
+                      />
+                    </div>
+                    <div className="w-full sm:flex-1 min-w-[120px]">
+                      <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                        Role (optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={char.role || ''}
+                        onChange={(e) => updateCharacterField(index, 'role', e.target.value)}
+                        placeholder="Role"
+                        className="w-full px-3 py-2 bg-gray-900/60 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                      />
+                    </div>
+                    <div className="flex items-end pt-6 sm:pt-0 w-full sm:w-auto shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => removeCharacter(index)}
+                        className="w-full sm:w-auto px-4 py-2 bg-red-600/80 text-white rounded-lg hover:bg-red-600 transition-colors font-medium text-sm shadow-sm whitespace-nowrap"
+                        title="Remove this character"
+                      >
+                        <i className="fas fa-trash mr-1.5" aria-hidden="true"></i>
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="bg-gray-800/30 border border-gray-700/50 border-dashed rounded-lg p-6 text-center">
+              <p className="text-sm text-gray-400 mb-3">
+                No characters added yet.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 mt-4">
+          <button
+            type="button"
+            onClick={addCharacter}
+            className="px-4 py-2 text-sm bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors font-medium shadow-sm"
+          >
+            <i className="fas fa-plus mr-1.5" aria-hidden="true"></i>
+            Add Character
+          </button>
+        </div>
+
+        <div className="flex gap-2 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50"
+          >
+            {isSaving ? 'Saving...' : 'Save Characters'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface TimelineEventsManagerProps {
   timelineId: string;
 }
@@ -91,6 +708,24 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
   const [availableEvents, setAvailableEvents] = useState<TimelineEvent[]>([]);
   const [isLoadingAvailableEvents, setIsLoadingAvailableEvents] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // Table view state
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
+  const [editedEvents, setEditedEvents] = useState<Map<string, Partial<TimelineEvent>>>(new Map());
+  const [editingDateEventId, setEditingDateEventId] = useState<string | null>(null);
+  const [editingCategoryEventId, setEditingCategoryEventId] = useState<string | null>(null);
+  const [editingTitleEventId, setEditingTitleEventId] = useState<string | null>(null);
+  const [editingLocationEventId, setEditingLocationEventId] = useState<string | null>(null);
+  const [editingDescriptionEventId, setEditingDescriptionEventId] = useState<string | null>(null);
+  const [editingCharactersEventId, setEditingCharactersEventId] = useState<string | null>(null);
+  const [showBulkEditModal, setShowBulkEditModal] = useState(false);
+  const [bulkEditValues, setBulkEditValues] = useState<{
+    title?: string;
+    location?: string;
+    is_key_event?: boolean;
+    categories?: string[];
+  }>({});
   
   // Scroll to top when editing an event
   useEffect(() => {
@@ -328,7 +963,7 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
     }
   }
 
-  function moveEvent(sortedList: Array<TimelineEvent & { position: number }>, index: number, direction: 'up' | 'down') {
+  async function moveEvent(sortedList: Array<TimelineEvent & { position: number }>, index: number, direction: 'up' | 'down') {
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= sortedList.length) return;
 
@@ -336,8 +971,35 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
     const targetEvent = sortedList[newIndex];
 
     // Swap positions so display order (chronological + tiebreaker) is preserved
-    updateEventPosition(event.id, targetEvent.position);
-    updateEventPosition(targetEvent.id, event.position);
+    setIsSaving(true);
+    try {
+      // Update both positions in parallel
+      const [response1, response2] = await Promise.all([
+        fetch(`/api/admin/timeline-events/${event.id}/timelines`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ timeline_id: timelineId, position: targetEvent.position }),
+        }),
+        fetch(`/api/admin/timeline-events/${targetEvent.id}/timelines`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ timeline_id: timelineId, position: event.position }),
+        }),
+      ]);
+
+      if (!response1.ok || !response2.ok) {
+        const errorData1 = await response1.json().catch(() => ({ error: 'Failed to update event position' }));
+        const errorData2 = await response2.json().catch(() => ({ error: 'Failed to update event position' }));
+        throw new Error(errorData1.error || errorData2.error || 'Failed to update event position');
+      }
+
+      await loadTimelineAndEvents();
+    } catch (error) {
+      logger.error('Component', 'TimelineEventsManager: Error moving event', error);
+      alert(error instanceof Error ? error.message : 'Failed to move event');
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   async function loadAvailableEvents() {
@@ -408,6 +1070,37 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAddExistingEvent, worldId, timelineEvents.length]);
 
+  // Close category editor when clicking outside
+  useEffect(() => {
+    if (!editingCategoryEventId) return;
+    
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('td')) {
+        setEditingCategoryEventId(null);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [editingCategoryEventId]);
+
+  // Close date editor when clicking outside
+  useEffect(() => {
+    if (!editingDateEventId) return;
+    
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Close if clicking outside the modal
+      if (!target.closest('.bg-gray-800.border')) {
+        setEditingDateEventId(null);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [editingDateEventId]);
+
   // Helper function to get period sort value (early=1, mid=2, late=3, null=2 for middle of year)
   function getPeriodSortValue(period: 'early' | 'mid' | 'late' | null | undefined): number {
     if (period === 'early') return 1;
@@ -463,102 +1156,301 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
     };
   }
 
+  // Inline editing handlers
+  const handleInlineFieldChange = (eventId: string, field: keyof TimelineEvent, value: any) => {
+    setEditedEvents((prev) => {
+      const newMap = new Map(prev);
+      const existing = newMap.get(eventId) || {};
+      newMap.set(eventId, { ...existing, [field]: value });
+      return newMap;
+    });
+  };
+
+  const saveRowChanges = async (eventId: string) => {
+    const changes = editedEvents.get(eventId);
+    if (!changes) return;
+
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/admin/timeline-events/${eventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(changes),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to save changes' }));
+        throw new Error(errorData.error || 'Failed to save changes');
+      }
+
+      // Remove from edited events map
+      setEditedEvents((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(eventId);
+        return newMap;
+      });
+
+      await loadTimelineAndEvents();
+    } catch (error) {
+      logger.error('Component', 'TimelineEventsManager: Error saving row changes', error);
+      alert(error instanceof Error ? error.message : 'Failed to save changes');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const saveAllChanges = async () => {
+    if (editedEvents.size === 0) return;
+
+    setIsSaving(true);
+    try {
+      const savePromises = Array.from(editedEvents.entries()).map(([eventId, changes]) =>
+        fetch(`/api/admin/timeline-events/${eventId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(changes),
+        }).then((res) => {
+          if (!res.ok) {
+            return res.json().then((data) => {
+              throw new Error(data.error || 'Failed to save changes');
+            });
+          }
+          return res.json();
+        })
+      );
+
+      await Promise.all(savePromises);
+      setEditedEvents(new Map());
+      await loadTimelineAndEvents();
+    } catch (error) {
+      logger.error('Component', 'TimelineEventsManager: Error saving all changes', error);
+      alert(error instanceof Error ? error.message : 'Failed to save all changes');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Row selection handlers
+  const toggleRowSelection = (eventId: string) => {
+    setSelectedEventIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(eventId)) {
+        newSet.delete(eventId);
+      } else {
+        newSet.add(eventId);
+      }
+      return newSet;
+    });
+  };
+
+  // Bulk operations
+  const handleBulkEdit = async () => {
+    if (selectedEventIds.size === 0) return;
+
+    setIsSaving(true);
+    try {
+      const updates: Record<string, any> = {};
+      if (bulkEditValues.title !== undefined) updates.title = bulkEditValues.title;
+      if (bulkEditValues.location !== undefined) updates.location = bulkEditValues.location;
+      if (bulkEditValues.is_key_event !== undefined) updates.is_key_event = bulkEditValues.is_key_event;
+      if (bulkEditValues.categories !== undefined) updates.categories = bulkEditValues.categories;
+
+      const savePromises = Array.from(selectedEventIds).map((eventId) =>
+        fetch(`/api/admin/timeline-events/${eventId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates),
+        }).then((res) => {
+          if (!res.ok) {
+            return res.json().then((data) => {
+              throw new Error(data.error || 'Failed to update event');
+            });
+          }
+          return res.json();
+        })
+      );
+
+      await Promise.all(savePromises);
+      setSelectedEventIds(new Set());
+      setShowBulkEditModal(false);
+      setBulkEditValues({});
+      await loadTimelineAndEvents();
+    } catch (error) {
+      logger.error('Component', 'TimelineEventsManager: Error bulk editing', error);
+      alert(error instanceof Error ? error.message : 'Failed to bulk edit events');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedEventIds.size === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedEventIds.size} event(s)? This action cannot be undone.`)) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const deletePromises = Array.from(selectedEventIds).map((eventId) =>
+        fetch(`/api/admin/timeline-events/${eventId}`, {
+          method: 'DELETE',
+        }).then((res) => {
+          if (!res.ok) {
+            return res.json().then((data) => {
+              throw new Error(data.error || 'Failed to delete event');
+            });
+          }
+          return res.json();
+        })
+      );
+
+      await Promise.all(deletePromises);
+      setSelectedEventIds(new Set());
+      await loadTimelineAndEvents();
+    } catch (error) {
+      logger.error('Component', 'TimelineEventsManager: Error bulk deleting', error);
+      alert(error instanceof Error ? error.message : 'Failed to bulk delete events');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleBulkRemove = async () => {
+    if (selectedEventIds.size === 0) return;
+    if (!confirm(`Remove ${selectedEventIds.size} event(s) from this timeline? (The events themselves will not be deleted)`)) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const removePromises = Array.from(selectedEventIds).map((eventId) =>
+        fetch(`/api/admin/timeline-events/${eventId}/timelines?timeline_id=${timelineId}`, {
+          method: 'DELETE',
+        }).then((res) => {
+          if (!res.ok) {
+            return res.json().then((data) => {
+              throw new Error(data.error || 'Failed to remove event');
+            });
+          }
+          return res.json();
+        })
+      );
+
+      await Promise.all(removePromises);
+      setSelectedEventIds(new Set());
+      await loadTimelineAndEvents();
+    } catch (error) {
+      logger.error('Component', 'TimelineEventsManager: Error bulk removing', error);
+      alert(error instanceof Error ? error.message : 'Failed to bulk remove events');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Always sort chronologically; position is tiebreaker for same-date events (user can move to reorder)
   const sortedEvents = [...timelineEvents].sort((a, b) => {
-        const dateA = getEventSortDate(a);
-        const dateB = getEventSortDate(b);
+    const dateA = getEventSortDate(a);
+    const dateB = getEventSortDate(b);
         
-        // Events without years go to the end
-        if (dateA.year === null && dateB.year === null) {
-          return a.position - b.position; // Maintain original order for events without dates
-        }
-        if (dateA.year === null) return 1;
-        if (dateB.year === null) return -1;
-        
-        // Compare years
-        if (dateA.year !== dateB.year) {
-          return dateA.year - dateB.year;
-        }
-        
-        // Same year, compare months or periods
-        // If both have periods but no months, compare periods directly
-        if (dateA.month === null && dateB.month === null && dateA.period !== null && dateB.period !== null) {
-          return dateA.period - dateB.period; // early (1) < mid (2) < late (3)
-        }
-        
-        // Convert periods to approximate month values for comparison with actual months
-        // early ≈ months 1-4 (use 2), mid ≈ months 5-8 (use 6), late ≈ months 9-12 (use 12 to ensure it comes after all dates)
-        const periodToMonth = (period: number | null): number | null => {
-          if (period === 1) return 2;  // early
-          if (period === 2) return 6;  // mid
-          if (period === 3) return 12; // late (use 12 so it comes after all specific dates in the year)
-          return null;
-        };
-        
-        const monthA = dateA.month ?? periodToMonth(dateA.period);
-        const monthB = dateB.month ?? periodToMonth(dateB.period);
-        
-        if (monthA === null && monthB === null) {
-          return a.position - b.position;
-        }
-        if (monthA === null) return 1;
-        if (monthB === null) return -1;
-        
-        // Compare months
-        if (monthA !== monthB) {
-          return monthA - monthB;
-        }
-        
-        // Same approximate month - if one is exact and one is period-based, exact comes first
-        // (e.g., "July 7, 1977" should come before "late 1977" even though late ≈ month 11)
-        const aHasExactMonth = dateA.month !== null;
-        const bHasExactMonth = dateB.month !== null;
-        const aHasPeriod = dateA.period !== null;
-        const bHasPeriod = dateB.period !== null;
-        
-        // If both have exact months, continue to day comparison below
-        // If one has exact month and other has period, exact comes first
-        if (aHasExactMonth && !bHasExactMonth && bHasPeriod) {
-          return -1; // Exact date comes before period-based date
-        }
-        if (bHasExactMonth && !aHasExactMonth && aHasPeriod) {
-          return 1; // Exact date comes before period-based date
-        }
-        
-        // If both are period-based with same month value, compare periods directly
-        if (!aHasExactMonth && !bHasExactMonth && aHasPeriod && bHasPeriod) {
-          return dateA.period! - dateB.period!;
-        }
-        
-        // Same year and month, compare days
-        // If one has a period (approximate date) and the other has an exact day, the exact date comes first
-        // (e.g., "July 7, 1977" should come before "late 1977")
-        if (dateA.period !== null && dateB.day !== null) {
-          // A is period-based, B has exact day - exact comes first
-          return 1;
-        }
-        if (dateB.period !== null && dateA.day !== null) {
-          // B is period-based, A has exact day - exact comes first
-          return -1;
-        }
-        
-        // Both have days or both don't have days
-        if (dateA.day === null && dateB.day === null) {
-          // If both are period-based, compare periods
-          if (dateA.period !== null && dateB.period !== null) {
-            return dateA.period - dateB.period;
-          }
-          return a.position - b.position;
-        }
-        if (dateA.day === null) return 1;
-        if (dateB.day === null) return -1;
-        if (dateA.day !== dateB.day) {
-          return dateA.day - dateB.day;
-        }
-        
-        // Same date, use position so user can reorder (move up/down)
-        return a.position - b.position;
-      });
+    // Events without years go to the end
+    if (dateA.year === null && dateB.year === null) {
+      return a.position - b.position; // Maintain original order for events without dates
+    }
+    if (dateA.year === null) return 1;
+    if (dateB.year === null) return -1;
+    
+    // Compare years
+    if (dateA.year !== dateB.year) {
+      return dateA.year - dateB.year;
+    }
+    
+    // Same year, compare months or periods
+    // If both have periods but no months, compare periods directly
+    if (dateA.month === null && dateB.month === null && dateA.period !== null && dateB.period !== null) {
+      return dateA.period - dateB.period; // early (1) < mid (2) < late (3)
+    }
+    
+    // Convert periods to approximate month values for comparison with actual months
+    // early ≈ months 1-4 (use 2), mid ≈ months 5-8 (use 6), late ≈ months 9-12 (use 12 to ensure it comes after all dates)
+    const periodToMonth = (period: number | null): number | null => {
+      if (period === 1) return 2;  // early
+      if (period === 2) return 6;  // mid
+      if (period === 3) return 12; // late (use 12 so it comes after all specific dates in the year)
+      return null;
+    };
+    
+    const monthA = dateA.month ?? periodToMonth(dateA.period);
+    const monthB = dateB.month ?? periodToMonth(dateB.period);
+    
+    if (monthA === null && monthB === null) {
+      return a.position - b.position;
+    }
+    if (monthA === null) return 1;
+    if (monthB === null) return -1;
+    
+    // Compare months
+    if (monthA !== monthB) {
+      return monthA - monthB;
+    }
+    
+    // Same approximate month - if one is exact and one is period-based, exact comes first
+    // (e.g., "July 7, 1977" should come before "late 1977" even though late ≈ month 11)
+    const aHasExactMonth = dateA.month !== null;
+    const bHasExactMonth = dateB.month !== null;
+    const aHasPeriod = dateA.period !== null;
+    const bHasPeriod = dateB.period !== null;
+    
+    // If both have exact months, continue to day comparison below
+    // If one has exact month and other has period, exact comes first
+    if (aHasExactMonth && !bHasExactMonth && bHasPeriod) {
+      return -1; // Exact date comes before period-based date
+    }
+    if (bHasExactMonth && !aHasExactMonth && aHasPeriod) {
+      return 1; // Exact date comes before period-based date
+    }
+    
+    // If both are period-based with same month value, compare periods directly
+    if (!aHasExactMonth && !bHasExactMonth && aHasPeriod && bHasPeriod) {
+      return dateA.period! - dateB.period!;
+    }
+    
+    // Same year and month, compare days
+    // If one has a period (approximate date) and the other has an exact day, the exact date comes first
+    // (e.g., "July 7, 1977" should come before "late 1977")
+    if (dateA.period !== null && dateB.day !== null) {
+      // A is period-based, B has exact day - exact comes first
+      return 1;
+    }
+    if (dateB.period !== null && dateA.day !== null) {
+      // B is period-based, A has exact day - exact comes first
+      return -1;
+    }
+    
+    // Both have days or both don't have days
+    if (dateA.day === null && dateB.day === null) {
+      // If both are period-based, compare periods
+      if (dateA.period !== null && dateB.period !== null) {
+        return dateA.period - dateB.period;
+      }
+      return a.position - b.position;
+    }
+    if (dateA.day === null) return 1;
+    if (dateB.day === null) return -1;
+    if (dateA.day !== dateB.day) {
+      return dateA.day - dateB.day;
+    }
+
+    // Same date, use position so user can reorder (move up/down)
+    return a.position - b.position;
+  });
+
+  const toggleSelectAll = () => {
+    if (selectedEventIds.size === sortedEvents.length) {
+      setSelectedEventIds(new Set());
+    } else {
+      setSelectedEventIds(new Set(sortedEvents.map((e) => e.id)));
+    }
+  };
 
   if (isLoading) {
     return <div className="text-center py-8 text-gray-300">Loading events...</div>;
@@ -566,9 +1458,87 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <h3 className="text-xl font-semibold text-gray-100">Timeline Events</h3>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {/* View mode toggle */}
+          <div className="flex gap-1 bg-gray-800 rounded-md p-1">
+            <button
+              onClick={() => {
+                setViewMode('cards');
+                // Clear editing states when switching views
+                setEditingDateEventId(null);
+                setEditingCategoryEventId(null);
+                setEditingTitleEventId(null);
+                setEditingLocationEventId(null);
+                setEditingDescriptionEventId(null);
+              }}
+              className={`px-3 py-1 rounded text-sm transition-colors ${
+                viewMode === 'cards'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-300 hover:text-white'
+              }`}
+            >
+              Cards
+            </button>
+            <button
+              onClick={() => {
+                setViewMode('table');
+                // Clear editing states when switching views
+                setEditingDateEventId(null);
+                setEditingCategoryEventId(null);
+                setEditingTitleEventId(null);
+                setEditingLocationEventId(null);
+                setEditingDescriptionEventId(null);
+              }}
+              className={`px-3 py-1 rounded text-sm transition-colors ${
+                viewMode === 'table'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-300 hover:text-white'
+              }`}
+            >
+              Table
+            </button>
+          </div>
+          
+          {/* Bulk operations buttons (only in table view) */}
+          {viewMode === 'table' && selectedEventIds.size > 0 && (
+            <>
+              <button
+                onClick={() => setShowBulkEditModal(true)}
+                disabled={isSaving}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                Bulk Edit ({selectedEventIds.size})
+              </button>
+              <button
+                onClick={handleBulkRemove}
+                disabled={isSaving}
+                className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors disabled:opacity-50"
+              >
+                Bulk Remove ({selectedEventIds.size})
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={isSaving}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                Bulk Delete ({selectedEventIds.size})
+              </button>
+            </>
+          )}
+          
+          {/* Save all changes button (only in table view with unsaved changes) */}
+          {viewMode === 'table' && editedEvents.size > 0 && (
+            <button
+              onClick={saveAllChanges}
+              disabled={isSaving}
+              className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors disabled:opacity-50"
+            >
+              Save All Changes ({editedEvents.size})
+            </button>
+          )}
+          
           <button
             onClick={() => {
               setShowAddExistingEvent(!showAddExistingEvent);
@@ -677,18 +1647,556 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
         );
       })()}
 
+      {/* Bulk Edit Modal */}
+      {showBulkEditModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4">
+            <h4 className="text-lg font-semibold text-gray-100 mb-4">
+              Bulk Edit {selectedEventIds.size} Event(s)
+            </h4>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Title</label>
+                <input
+                  type="text"
+                  value={bulkEditValues.title || ''}
+                  onChange={(e) => setBulkEditValues({ ...bulkEditValues, title: e.target.value })}
+                  placeholder="Leave empty to not change"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-gray-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Location</label>
+                <input
+                  type="text"
+                  value={bulkEditValues.location || ''}
+                  onChange={(e) => setBulkEditValues({ ...bulkEditValues, location: e.target.value })}
+                  placeholder="Leave empty to not change"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-gray-100"
+                />
+              </div>
+              <div>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={bulkEditValues.is_key_event ?? false}
+                    onChange={(e) => setBulkEditValues({ ...bulkEditValues, is_key_event: e.target.checked })}
+                    className="w-4 h-4 text-purple-600 bg-gray-800 border-gray-700 rounded"
+                  />
+                  <span className="text-sm font-medium text-gray-300">Key Event</span>
+                </label>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Categories</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {PREDEFINED_EVENT_CATEGORIES.map((category) => {
+                    const isSelected = bulkEditValues.categories?.includes(category) ?? false;
+                    return (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => {
+                          const current = bulkEditValues.categories || [];
+                          if (isSelected) {
+                            setBulkEditValues({ ...bulkEditValues, categories: current.filter(c => c !== category) });
+                          } else {
+                            setBulkEditValues({ ...bulkEditValues, categories: [...current, category] });
+                          }
+                        }}
+                        className={`px-2 py-1 rounded text-xs border transition-colors ${
+                          isSelected
+                            ? getCategoryColorClasses(category)
+                            : 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600'
+                        }`}
+                      >
+                        {category}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-gray-400">Selected categories will replace existing ones</p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={() => {
+                  setShowBulkEditModal(false);
+                  setBulkEditValues({});
+                }}
+                className="flex-1 px-4 py-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkEdit}
+                disabled={isSaving}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                Apply Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Characters Editing Modal */}
+      {editingCharactersEventId && (() => {
+        const eventToEdit = timelineEvents.find(e => e.id === editingCharactersEventId);
+        if (!eventToEdit) return null;
+        
+        return (
+          <CharactersEditModal
+            event={eventToEdit}
+            worldId={worldId}
+            timelineEra={timelineEra}
+            onClose={() => setEditingCharactersEventId(null)}
+            onSave={async (characters) => {
+              // Save characters immediately
+              setIsSaving(true);
+              try {
+                const response = await fetch(`/api/admin/timeline-events/${editingCharactersEventId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ characters }),
+                });
+
+                if (!response.ok) {
+                  const errorData = await response.json();
+                  throw new Error(errorData.error || 'Failed to save characters');
+                }
+
+                // Refresh events
+                await loadTimelineAndEvents();
+                setEditingCharactersEventId(null);
+              } catch (error) {
+                logger.error('Component', 'TimelineEventsManager: Error saving characters', error);
+                alert('Failed to save characters. Please try again.');
+              } finally {
+                setIsSaving(false);
+              }
+            }}
+          />
+        );
+      })()}
+
       {timelineEvents.length === 0 ? (
         <div className="text-center py-8 text-gray-400">
           No events in this timeline yet. Create events to get started.
         </div>
       ) : (
-        <div className="space-y-4">
-          {sortedEvents.map((event, index) => (
-            editingEventId === event.id ? null : (
-            <div
-              key={event.id}
-              className="border border-gray-600/70 rounded-lg p-6 bg-gray-700/60"
-            >
+        viewMode === 'table' ? (
+        // Table View
+        <div className="border border-gray-700 rounded-lg overflow-hidden bg-gray-900/50">
+          <div className="overflow-x-auto max-h-[calc(100vh-300px)] overflow-y-auto">
+            <table className="w-full border-collapse min-w-[1600px]">
+              <thead className="sticky top-0 z-10 bg-gray-800 shadow-md">
+                <tr className="border-b-2 border-gray-700">
+                  <th className="p-3 text-left sticky left-0 bg-gray-800 z-30 border-r border-gray-700 shadow-[2px_0_4px_rgba(0,0,0,0.1)]">
+                    <input
+                      type="checkbox"
+                      checked={selectedEventIds.size === sortedEvents.length && sortedEvents.length > 0}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 text-purple-600 bg-gray-800 border-gray-700 rounded cursor-pointer"
+                    />
+                  </th>
+                  <th className="p-3 text-left text-sm font-semibold text-gray-300 sticky left-12 bg-gray-800 z-30 border-r border-gray-700 min-w-[50px] shadow-[2px_0_4px_rgba(0,0,0,0.1)]">#</th>
+                  <th className="p-3 text-center text-sm font-semibold text-gray-300 min-w-[80px]">Order</th>
+                  <th className="p-3 text-left text-sm font-semibold text-gray-300 min-w-[200px]">Title</th>
+                  <th className="p-3 text-left text-sm font-semibold text-gray-300 min-w-[150px]">Date</th>
+                  <th className="p-3 text-left text-sm font-semibold text-gray-300 min-w-[180px]">Categories</th>
+                  <th className="p-3 text-center text-sm font-semibold text-gray-300 min-w-[60px]">Key</th>
+                  <th className="p-3 text-left text-sm font-semibold text-gray-300 min-w-[150px]">Location</th>
+                  <th className="p-3 text-left text-sm font-semibold text-gray-300 min-w-[250px]">Characters</th>
+                  <th className="p-3 text-left text-sm font-semibold text-gray-300 min-w-[120px]">Description</th>
+                  <th className="p-3 text-left text-sm font-semibold text-gray-300 min-w-[200px]">Actions</th>
+                </tr>
+              </thead>
+            <tbody>
+              {sortedEvents.map((event, index) => {
+                if (editingEventId === event.id) return null;
+                const edited = editedEvents.get(event.id);
+                const isSelected = selectedEventIds.has(event.id);
+                const hasUnsavedChanges = edited !== undefined;
+                const displayEvent = edited ? { ...event, ...edited } : event;
+                
+                return (
+                  <tr
+                    key={event.id}
+                    className={`border-b border-gray-700/50 ${
+                      isSelected ? 'bg-purple-900/20' : hasUnsavedChanges ? 'bg-yellow-900/10' : 'bg-gray-800/30'
+                    } hover:bg-gray-700/30 transition-colors`}
+                  >
+                    <td className="p-3 sticky left-0 bg-inherit z-20 border-r border-gray-700/50 shadow-[2px_0_4px_rgba(0,0,0,0.1)]">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleRowSelection(event.id)}
+                        className="w-4 h-4 text-purple-600 bg-gray-800 border-gray-700 rounded cursor-pointer"
+                      />
+                    </td>
+                    <td className="p-3 text-sm text-gray-400 font-mono sticky left-12 bg-inherit z-20 border-r border-gray-700/50 text-center shadow-[2px_0_4px_rgba(0,0,0,0.1)]">
+                      {index + 1}
+                    </td>
+                    <td className="p-3 text-center">
+                      <div className="flex flex-col gap-1 items-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            moveEvent(sortedEvents, index, 'up');
+                          }}
+                          disabled={index === 0 || isSaving}
+                          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          title="Move up"
+                        >
+                          <i className="fas fa-chevron-up text-xs" aria-hidden="true"></i>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            moveEvent(sortedEvents, index, 'down');
+                          }}
+                          disabled={index === sortedEvents.length - 1 || isSaving}
+                          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          title="Move down"
+                        >
+                          <i className="fas fa-chevron-down text-xs" aria-hidden="true"></i>
+                        </button>
+                      </div>
+                    </td>
+                    <td 
+                      className="p-3 cursor-pointer hover:bg-gray-700/30 transition-colors"
+                      onClick={() => {
+                        if (editingTitleEventId !== event.id) {
+                          setEditingTitleEventId(event.id);
+                        }
+                      }}
+                    >
+                      {editingTitleEventId === event.id ? (
+                        <input
+                          type="text"
+                          value={displayEvent.title || ''}
+                          onChange={(e) => handleInlineFieldChange(event.id, 'title', e.target.value)}
+                          onBlur={() => setEditingTitleEventId(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === 'Escape') {
+                              setEditingTitleEventId(null);
+                            }
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full px-2 py-1.5 bg-gray-900 border border-purple-500 rounded text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          autoFocus
+                        />
+                      ) : (
+                        <div className="text-gray-100 font-medium min-h-[28px] flex items-center">
+                          {displayEvent.title}
+                        </div>
+                      )}
+                    </td>
+                    <td 
+                      className="p-3 relative cursor-pointer hover:bg-gray-700/30 transition-colors"
+                      onClick={() => {
+                        if (editingDateEventId !== event.id) {
+                          setEditingDateEventId(event.id);
+                        }
+                      }}
+                    >
+                      {editingDateEventId === event.id && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setEditingDateEventId(null)}>
+                          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 max-w-lg w-full mx-4" onClick={(e) => e.stopPropagation()}>
+                            <div className="mb-4 flex justify-between items-center">
+                              <h4 className="text-lg font-semibold text-gray-100">Edit Date</h4>
+                              <button
+                                onClick={() => setEditingDateEventId(null)}
+                                className="text-gray-400 hover:text-white text-xl"
+                              >
+                                ×
+                              </button>
+                            </div>
+                            <DateInput
+                              value={displayEvent.date_data || null}
+                              onChange={(value) => {
+                                handleInlineFieldChange(event.id, 'date_data', value);
+                                // Also update year/month/day if available
+                                if (value && typeof value === 'object' && 'type' in value) {
+                                  const dateData = value as any;
+                                  if (dateData.type === 'exact') {
+                                    handleInlineFieldChange(event.id, 'year', dateData.year);
+                                    handleInlineFieldChange(event.id, 'month', dateData.month);
+                                    handleInlineFieldChange(event.id, 'day', dateData.day);
+                                  }
+                                }
+                              }}
+                              availableEras={timelineEra ? timelineEra.split(',').map(e => e.trim()).filter(Boolean) : undefined}
+                            />
+                            <div className="mt-4 flex gap-2">
+                              <button
+                                onClick={() => setEditingDateEventId(null)}
+                                className="flex-1 px-4 py-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600"
+                              >
+                                Done
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <div className="text-sm text-gray-300 min-h-[28px] flex items-center">
+                        {formatDateData(displayEvent.date_data) || displayEvent.date_text || '—'}
+                      </div>
+                    </td>
+                    <td 
+                      className="p-3 relative cursor-pointer hover:bg-gray-700/30 transition-colors"
+                      onClick={() => {
+                        if (editingCategoryEventId !== event.id) {
+                          setEditingCategoryEventId(event.id);
+                        }
+                      }}
+                    >
+                      {editingCategoryEventId === event.id ? (
+                        <div className="relative">
+                          <div className="absolute z-10 bg-gray-800 border border-gray-700 rounded-lg p-3 shadow-lg max-h-64 overflow-y-auto min-w-[250px]">
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {PREDEFINED_EVENT_CATEGORIES.map((category) => {
+                                const currentCategories = displayEvent.categories || [];
+                                const isSelected = currentCategories.includes(category);
+                                return (
+                                  <button
+                                    key={category}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const newCategories = isSelected
+                                        ? currentCategories.filter(c => c !== category)
+                                        : [...currentCategories, category];
+                                      handleInlineFieldChange(event.id, 'categories', newCategories);
+                                    }}
+                                    className={`px-2 py-0.5 rounded text-xs border transition-colors ${
+                                      isSelected
+                                        ? getCategoryColorClasses(category)
+                                        : 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600'
+                                    }`}
+                                  >
+                                    {category}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <div className="flex gap-2 mt-2 pt-2 border-t border-gray-700">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingCategoryEventId(null);
+                                }}
+                                className="flex-1 px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                              >
+                                Done
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleInlineFieldChange(event.id, 'categories', []);
+                                  setEditingCategoryEventId(null);
+                                }}
+                                className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700"
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="min-h-[28px] flex items-center gap-1 flex-wrap">
+                          {displayEvent.categories && displayEvent.categories.length > 0 ? (
+                            <>
+                              {displayEvent.categories.map((cat) => (
+                                <span
+                                  key={cat}
+                                  className={`text-xs px-1.5 py-0.5 rounded border ${getCategoryColorClasses(cat)}`}
+                                >
+                                  {cat}
+                                </span>
+                              ))}
+                            </>
+                          ) : (
+                            <span className="text-xs text-gray-500 italic">Click to add categories</span>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                    <td 
+                      className="p-3 text-center cursor-pointer hover:bg-gray-700/30 transition-colors"
+                      onClick={(e) => {
+                        if (e.target instanceof HTMLInputElement) return;
+                        const checkbox = e.currentTarget.querySelector('input[type="checkbox"]') as HTMLInputElement;
+                        if (checkbox) {
+                          checkbox.click();
+                        }
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={displayEvent.is_key_event || false}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleInlineFieldChange(event.id, 'is_key_event', e.target.checked);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-4 h-4 text-purple-600 bg-gray-800 border-gray-700 rounded cursor-pointer"
+                      />
+                    </td>
+                    <td 
+                      className="p-3 cursor-pointer hover:bg-gray-700/30 transition-colors"
+                      onClick={() => {
+                        if (editingLocationEventId !== event.id) {
+                          setEditingLocationEventId(event.id);
+                        }
+                      }}
+                    >
+                      {editingLocationEventId === event.id ? (
+                        <input
+                          type="text"
+                          value={displayEvent.location || ''}
+                          onChange={(e) => handleInlineFieldChange(event.id, 'location', e.target.value)}
+                          onBlur={() => setEditingLocationEventId(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === 'Escape') {
+                              setEditingLocationEventId(null);
+                            }
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full px-2 py-1.5 bg-gray-900 border border-purple-500 rounded text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          autoFocus
+                        />
+                      ) : (
+                        <div className="text-sm text-gray-300 min-h-[28px] flex items-center">
+                          {displayEvent.location || <span className="text-gray-500 italic">Click to add location</span>}
+                        </div>
+                      )}
+                    </td>
+                    <td 
+                      className="p-3 cursor-pointer hover:bg-gray-700/30 transition-colors"
+                      onClick={() => {
+                        if (editingCharactersEventId !== event.id) {
+                          setEditingCharactersEventId(event.id);
+                        }
+                      }}
+                      title="Click to edit characters"
+                    >
+                      <div className="text-xs text-gray-300 space-y-1">
+                        {displayEvent.characters && displayEvent.characters.length > 0 ? (
+                          displayEvent.characters.map((char) => {
+                            const characterName = char.custom_name || char.oc?.name;
+                            let age: number | null = null;
+                            if (char.age !== null && char.age !== undefined) {
+                              age = char.age;
+                            } else if (char.oc?.date_of_birth && displayEvent.date_data) {
+                              age = calculateAge(char.oc.date_of_birth, displayEvent.date_data);
+                            }
+                            return (
+                              <div key={char.id} className="flex items-center gap-1">
+                                <span className="font-medium">{characterName}</span>
+                                {age !== null && (
+                                  <span className="text-gray-500">({age})</span>
+                                )}
+                                {char.role && (
+                                  <span className="text-gray-500 text-[10px]">• {char.role}</span>
+                                )}
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <span className="text-gray-500 italic">Click to add characters</span>
+                        )}
+                      </div>
+                    </td>
+                    <td 
+                      className="p-3 cursor-pointer hover:bg-gray-700/30 transition-colors"
+                      onClick={() => {
+                        if (editingDescriptionEventId !== event.id) {
+                          setEditingDescriptionEventId(event.id);
+                        }
+                      }}
+                    >
+                      {editingDescriptionEventId === event.id ? (
+                        <textarea
+                          value={displayEvent.description || ''}
+                          onChange={(e) => handleInlineFieldChange(event.id, 'description', e.target.value)}
+                          onBlur={() => setEditingDescriptionEventId(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                              setEditingDescriptionEventId(null);
+                            }
+                            if (e.key === 'Enter' && e.ctrlKey) {
+                              setEditingDescriptionEventId(null);
+                            }
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full px-2 py-1.5 bg-gray-900 border border-purple-500 rounded text-gray-100 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                          rows={3}
+                          autoFocus
+                        />
+                      ) : (
+                        <div className="text-xs text-gray-400 min-h-[50px] flex items-start">
+                          {displayEvent.description ? (
+                            <span className="line-clamp-3">{displayEvent.description}</span>
+                          ) : (
+                            <span className="text-gray-500 italic">Click to add description</span>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-3">
+                      <div className="flex gap-1 flex-wrap">
+                        {hasUnsavedChanges && (
+                          <button
+                            onClick={() => saveRowChanges(event.id)}
+                            disabled={isSaving}
+                            className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 disabled:opacity-50"
+                            title="Save changes"
+                          >
+                            💾
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setEditingEventId(event.id)}
+                          className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                          title="Full edit"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => removeEventFromTimeline(event.id)}
+                          disabled={isSaving}
+                          className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600 disabled:opacity-50"
+                          title="Remove"
+                        >
+                          Remove
+                        </button>
+                        <button
+                          onClick={() => deleteEvent(event.id)}
+                          disabled={isSaving}
+                          className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 disabled:opacity-50"
+                          title="Delete"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          </div>
+        </div>
+        ) : (
+          // Card View
+          <div className="space-y-4">
+            {sortedEvents.map((event, index) => 
+              editingEventId === event.id ? null : (
+                <div
+                  key={event.id}
+                  className="border border-gray-600/70 rounded-lg p-6 bg-gray-700/60"
+                >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
@@ -787,9 +2295,10 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
                 </div>
               </div>
             </div>
-            )
-          ))}
-        </div>
+              )
+            )}
+          </div>
+        )
       )}
     </div>
   );

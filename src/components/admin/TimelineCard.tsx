@@ -85,7 +85,7 @@ export function TimelineCard({ timeline }: TimelineCardProps) {
           </Link>
           <Link
             href={`/admin/timelines/${timeline.id}/events`}
-            className="px-3 py-2 text-sm font-medium text-center bg-blue-700 hover:bg-blue-600 text-white rounded-md transition-colors"
+            className="px-3 py-2 text-sm font-medium text-center bg-purple-600 hover:bg-purple-500 text-white rounded-md transition-colors"
           >
             Events
           </Link>

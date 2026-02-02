@@ -128,7 +128,7 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
       setWorldId(timeline.world_id);
       setTimelineEra(timeline.era);
       setTimelineStoryAliasId(timeline.story_alias_id);
-      setSortChronologically(timeline.sort_chronologically ?? false);
+      setSortChronologically(timeline.sort_chronologically ?? true);
     }
 
     // Load events associated with this timeline via junction table

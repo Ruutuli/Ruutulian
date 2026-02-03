@@ -88,7 +88,7 @@ export function getDateSortValue(dateData: EventDateData | null | undefined, era
   if (dateData.type === 'approximate' && (dateData as any).year) {
     const approx = dateData as any;
     // Get base sort value from era + year (same as exact)
-    const exactValue = getDateSortValue({ type: 'exact', era: approx.era || null, year: approx.year, month: null, day: null } as ExactDate, eraOrder);
+    const exactValue = getDateSortValue({ type: 'exact', era: approx.era || null, year: approx.year, month: undefined, day: undefined } as ExactDate, eraOrder);
     if (exactValue === Infinity) return Infinity;
     // Within the same year: early < mid < late < no period (no period = last in that year)
     const period = approx.period?.toLowerCase?.();

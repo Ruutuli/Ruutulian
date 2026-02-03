@@ -213,13 +213,21 @@ export function EraSystemManager({ value, onChange, disabled }: EraSystemManager
                   </FormLabel>
                   <FormInput
                     id={`era-start-year-${index}`}
-                    type="number"
-                    value={era.startYear ?? ''}
+                    type="text"
+                    value={era.startYear !== null && era.startYear !== undefined ? era.startYear.toString() : ''}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      updateEra(index, { startYear: val === '' ? undefined : parseInt(val, 10) || undefined });
+                      const val = e.target.value.trim();
+                      if (val === '') {
+                        updateEra(index, { startYear: undefined });
+                      } else if (/^-?\d+$/.test(val)) {
+                        // Valid integer (including negative numbers and numbers with leading zeros)
+                        const num = parseInt(val, 10);
+                        if (!isNaN(num)) {
+                          updateEra(index, { startYear: num });
+                        }
+                      }
                     }}
-                    placeholder="e.g., 0"
+                    placeholder="e.g., 0 or 0000"
                     disabled={disabled}
                     className="text-sm"
                   />
@@ -232,11 +240,19 @@ export function EraSystemManager({ value, onChange, disabled }: EraSystemManager
                   </FormLabel>
                   <FormInput
                     id={`era-end-year-${index}`}
-                    type="number"
-                    value={era.endYear ?? ''}
+                    type="text"
+                    value={era.endYear !== null && era.endYear !== undefined ? era.endYear.toString() : ''}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      updateEra(index, { endYear: val === '' ? undefined : parseInt(val, 10) || undefined });
+                      const val = e.target.value.trim();
+                      if (val === '') {
+                        updateEra(index, { endYear: undefined });
+                      } else if (/^-?\d+$/.test(val)) {
+                        // Valid integer (including negative numbers and numbers with leading zeros)
+                        const num = parseInt(val, 10);
+                        if (!isNaN(num)) {
+                          updateEra(index, { endYear: num });
+                        }
+                      }
                     }}
                     placeholder="e.g., 2000"
                     disabled={disabled}

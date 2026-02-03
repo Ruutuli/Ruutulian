@@ -2,13 +2,66 @@ import type { EventDateData, ExactDate } from '@/types/oc';
 import type { EraDate } from './eraDates';
 import { parseEraDate } from './eraDates';
 
+export interface EraConfig {
+  name: string;
+  startYear?: number | null;
+  endYear?: number | null;
+}
+
+/**
+ * Parse era configuration from timeline.era field
+ * Supports both comma-separated format and JSON format
+ */
+export function parseEraConfig(eraString: string | null | undefined): EraConfig[] {
+  if (!eraString || typeof eraString !== 'string' || eraString.trim() === '') {
+    return [];
+  }
+
+  const trimmed = eraString.trim();
+  
+  // Check if it's JSON format
+  if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => {
+          if (typeof item === 'string') {
+            return { name: item.trim() };
+          }
+          if (item && typeof item === 'object') {
+            return {
+              name: item.name?.trim() || '',
+              startYear: typeof item.startYear === 'number' ? item.startYear : (item.startYear === null ? null : undefined),
+              endYear: typeof item.endYear === 'number' ? item.endYear : (item.endYear === null ? null : undefined),
+            };
+          }
+          return null;
+        }).filter((e): e is EraConfig => e !== null && e.name !== '');
+      }
+    } catch {
+      // Not valid JSON, fall through to comma-separated parsing
+    }
+  }
+
+  // Parse as comma-separated string
+  return trimmed
+    .split(',')
+    .map(era => era.trim())
+    .filter(era => era)
+    .map(era => ({ name: era }));
+}
+
 /**
  * Calculate age from birth date and event date
  * Supports both regular dates and era-based dates
+ * @param birthDate - Birth date string (can be era format like "[ μ ] – εγλ 1990" or regular format)
+ * @param eventDate - Event date data
+ * @param eraConfig - Optional array of era configurations for cross-era age calculation
  */
 export function calculateAge(
   birthDate: string | null | undefined,
-  eventDate: EventDateData | null | undefined
+  eventDate: EventDateData | null | undefined,
+  eraConfig?: EraConfig[]
 ): number | null {
   if (!birthDate || !eventDate || eventDate.type !== 'exact') {
     return null;
@@ -19,7 +72,7 @@ export function calculateAge(
   const eventEraDate = eventDateToEraDate(eventDate);
 
   if (birthEraDate && eventEraDate) {
-    return calculateEraAge(birthEraDate, eventEraDate);
+    return calculateEraAge(birthEraDate, eventEraDate, eraConfig);
   }
 
   // Fallback to regular date calculation
@@ -28,7 +81,7 @@ export function calculateAge(
   if (!birthMatch) {
     // Try era format as fallback
     if (birthEraDate && eventEraDate) {
-      return calculateEraAge(birthEraDate, eventEraDate);
+      return calculateEraAge(birthEraDate, eventEraDate, eraConfig);
     }
     return null;
   }
@@ -53,33 +106,108 @@ export function calculateAge(
 
 /**
  * Calculate age using era-based dates
+ * Supports cross-era age calculation when era configuration is provided
  */
-function calculateEraAge(birthDate: EraDate, eventDate: EraDate): number | null {
-  // If eras are different, we can't calculate accurately
-  if (birthDate.era !== eventDate.era) {
-    // BE comes before SE, so if birth is BE and event is SE, age is positive
-    // But we need to know the transition point (when BE 0000 becomes SE 0000)
-    // For now, return null if eras differ
+function calculateEraAge(birthDate: EraDate, eventDate: EraDate, eraConfig?: EraConfig[]): number | null {
+  // If eras are the same, calculate normally
+  if (birthDate.era === eventDate.era) {
+    const birthYear = birthDate.year;
+    const birthMonth = birthDate.month ?? 1;
+    const birthDay = birthDate.day ?? 1;
+
+    const eventYear = eventDate.year;
+    const eventMonth = eventDate.month ?? 1;
+    const eventDay = eventDate.day ?? 1;
+
+    let age = eventYear - birthYear;
+    
+    // Adjust if birthday hasn't occurred yet this year
+    if (eventMonth < birthMonth || (eventMonth === birthMonth && eventDay < birthDay)) {
+      age--;
+    }
+
+    return age >= 0 ? age : null;
+  }
+
+  // Different eras - need era configuration to calculate cross-era age
+  if (!eraConfig || eraConfig.length === 0) {
     return null;
   }
 
-  // Same era, calculate normally
-  const birthYear = birthDate.year;
-  const birthMonth = birthDate.month ?? 1;
-  const birthDay = birthDate.day ?? 1;
+  // Find era configurations
+  const birthEraConfig = eraConfig.find(e => e.name.trim() === birthDate.era.trim());
+  const eventEraConfig = eraConfig.find(e => e.name.trim() === eventDate.era.trim());
 
-  const eventYear = eventDate.year;
-  const eventMonth = eventDate.month ?? 1;
-  const eventDay = eventDate.day ?? 1;
-
-  let age = eventYear - birthYear;
-  
-  // Adjust if birthday hasn't occurred yet this year
-  if (eventMonth < birthMonth || (eventMonth === birthMonth && eventDay < birthDay)) {
-    age--;
+  if (!birthEraConfig || !eventEraConfig) {
+    return null;
   }
 
-  return age;
+  // Find era order
+  const birthEraIndex = eraConfig.findIndex(e => e.name.trim() === birthDate.era.trim());
+  const eventEraIndex = eraConfig.findIndex(e => e.name.trim() === eventDate.era.trim());
+
+  if (birthEraIndex < 0 || eventEraIndex < 0) {
+    return null;
+  }
+
+  // If event is before birth era, return null (can't have negative age)
+  if (eventEraIndex < birthEraIndex) {
+    return null;
+  }
+
+  // Calculate age across eras
+  let totalAge = 0;
+
+  // Age in birth era (from birth year to end of that era)
+  if (birthEraConfig.endYear !== null && birthEraConfig.endYear !== undefined) {
+    const birthYear = birthDate.year;
+    const birthMonth = birthDate.month ?? 1;
+    const birthDay = birthDate.day ?? 1;
+    
+    // Calculate years from birth to end of birth era
+    const yearsInBirthEra = birthEraConfig.endYear - birthYear;
+    
+    // Adjust for partial year (if birthday hasn't occurred yet in the end year)
+    // For simplicity, we'll use the full year count
+    totalAge += yearsInBirthEra;
+  }
+
+  // Age in intermediate eras (full era spans)
+  for (let i = birthEraIndex + 1; i < eventEraIndex; i++) {
+    const era = eraConfig[i];
+    if (era.startYear !== null && era.startYear !== undefined && 
+        era.endYear !== null && era.endYear !== undefined) {
+      totalAge += (era.endYear - era.startYear);
+    }
+  }
+
+  // Age in event era (from start of event era to event year)
+  if (eventEraConfig.startYear !== null && eventEraConfig.startYear !== undefined) {
+    const eventYear = eventDate.year;
+    const eventMonth = eventDate.month ?? 1;
+    const eventDay = eventDate.day ?? 1;
+    
+    // Calculate years from start of event era to event year
+    let yearsInEventEra = eventYear - eventEraConfig.startYear;
+    
+    // Adjust if birthday hasn't occurred yet this year
+    // We need to know the birth month/day to adjust properly
+    // For now, we'll use a simplified calculation
+    // If the event is in the same year as the era start, check if birthday has passed
+    if (yearsInEventEra === 0) {
+      // In first year of era, check if birthday has occurred
+      const birthMonth = birthDate.month ?? 1;
+      const birthDay = birthDate.day ?? 1;
+      if (eventMonth < birthMonth || (eventMonth === birthMonth && eventDay < birthDay)) {
+        // Birthday hasn't occurred yet in this era
+        return totalAge - 1;
+      }
+    }
+    
+    totalAge += yearsInEventEra;
+  }
+
+  return totalAge >= 0 ? totalAge : null;
 }
 
 /**

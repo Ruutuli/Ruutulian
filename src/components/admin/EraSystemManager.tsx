@@ -9,6 +9,8 @@ import { logger } from '@/lib/logger';
 export interface EraDefinition {
   name: string;
   label?: string; // Optional label like "Past Era", "Current Era", "Future Era"
+  startYear?: number | null; // Year this era starts at (for age calculation across eras)
+  endYear?: number | null; // Year this era ends at (for age calculation across eras)
 }
 
 interface EraSystemManagerProps {
@@ -40,7 +42,9 @@ function parseEras(value: string | undefined | null): EraDefinition[] {
           if (item && typeof item === 'object') {
             return { 
               name: item.name?.trim() || '', 
-              label: item.label?.trim() || undefined 
+              label: item.label?.trim() || undefined,
+              startYear: typeof item.startYear === 'number' ? item.startYear : (item.startYear === null ? null : undefined),
+              endYear: typeof item.endYear === 'number' ? item.endYear : (item.endYear === null ? null : undefined),
             };
           }
           return null;
@@ -60,10 +64,21 @@ function parseEras(value: string | undefined | null): EraDefinition[] {
 }
 
 /**
- * Format EraDefinition array to comma-separated string
+ * Format EraDefinition array to JSON string (to preserve startYear/endYear)
  */
 function formatEras(eras: EraDefinition[]): string {
-  return eras.map(e => e.name).join(', ');
+  // If all eras have only name (no labels or year info), use comma-separated for backward compatibility
+  const hasExtraData = eras.some(e => e.label || e.startYear !== undefined || e.endYear !== undefined);
+  if (!hasExtraData) {
+    return eras.map(e => e.name).join(', ');
+  }
+  // Otherwise use JSON to preserve all data
+  return JSON.stringify(eras.map(e => ({
+    name: e.name,
+    ...(e.label && { label: e.label }),
+    ...(e.startYear !== undefined && { startYear: e.startYear }),
+    ...(e.endYear !== undefined && { endYear: e.endYear }),
+  })));
 }
 
 export function EraSystemManager({ value, onChange, disabled }: EraSystemManagerProps) {
@@ -149,7 +164,7 @@ export function EraSystemManager({ value, onChange, disabled }: EraSystemManager
                 {index + 1}
               </div>
               
-              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                 <div>
                   <FormLabel htmlFor={`era-name-${index}`} className="text-xs">
                     Era Name
@@ -190,6 +205,44 @@ export function EraSystemManager({ value, onChange, disabled }: EraSystemManager
                       </FormButton>
                     )}
                   </div>
+                </div>
+
+                <div>
+                  <FormLabel htmlFor={`era-start-year-${index}`} className="text-xs" optional>
+                    Start Year (Optional)
+                  </FormLabel>
+                  <FormInput
+                    id={`era-start-year-${index}`}
+                    type="number"
+                    value={era.startYear ?? ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      updateEra(index, { startYear: val === '' ? undefined : parseInt(val, 10) || undefined });
+                    }}
+                    placeholder="e.g., 0"
+                    disabled={disabled}
+                    className="text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-0.5">Year this era starts</p>
+                </div>
+
+                <div>
+                  <FormLabel htmlFor={`era-end-year-${index}`} className="text-xs" optional>
+                    End Year (Optional)
+                  </FormLabel>
+                  <FormInput
+                    id={`era-end-year-${index}`}
+                    type="number"
+                    value={era.endYear ?? ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      updateEra(index, { endYear: val === '' ? undefined : parseInt(val, 10) || undefined });
+                    }}
+                    placeholder="e.g., 2000"
+                    disabled={disabled}
+                    className="text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-0.5">Year previous era ended</p>
                 </div>
               </div>
 

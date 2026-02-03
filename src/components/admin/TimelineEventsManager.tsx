@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/client';
 import { TimelineEventForm } from './TimelineEventForm';
 import { DateInput } from './DateInput';
 import { getCategoryColorClasses } from '@/lib/utils/categoryColors';
-import { calculateAge } from '@/lib/utils/ageCalculation';
+import { calculateAge, parseEraConfig } from '@/lib/utils/ageCalculation';
 import { logger } from '@/lib/logger';
 import { useOCsByWorld } from '@/lib/hooks/useOCsByWorld';
 import { useDropdownPosition } from '@/hooks/useDropdownPosition';
@@ -401,6 +401,9 @@ function CharactersEditModal({
   const [customNames, setCustomNames] = useState<CustomNameSuggestion[]>([]);
   const characterInputRefs = useRef<Map<number, string>>(new Map());
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Parse era config for age calculation
+  const eraConfig = timelineEra ? parseEraConfig(timelineEra) : undefined;
 
   // Initialize characters from event
   const initialCharacters = event.characters || [];
@@ -519,7 +522,7 @@ function CharactersEditModal({
     if (char.oc_id) {
       const character = characters.find(c => c.id === char.oc_id);
       if (character?.date_of_birth && event.date_data) {
-        return calculateAge(character.date_of_birth, event.date_data);
+        return calculateAge(character.date_of_birth, event.date_data, eraConfig);
       }
     }
     return null;
@@ -543,7 +546,7 @@ function CharactersEditModal({
             charactersList.map((char, index) => {
               const selectedCharacter = char.oc_id ? characters.find(c => c.id === char.oc_id) : null;
               const calculatedAge = selectedCharacter?.date_of_birth && event.date_data
-                ? calculateAge(selectedCharacter.date_of_birth, event.date_data)
+                ? calculateAge(selectedCharacter.date_of_birth, event.date_data, eraConfig)
                 : null;
               const displayAge = char.age !== null ? char.age : calculatedAge;
               const displayName = selectedCharacter?.name || char.custom_name || '';
@@ -569,7 +572,7 @@ function CharactersEditModal({
                             let ageToUse: number | null = null;
                             
                             if (selectedCharacter?.date_of_birth && event.date_data) {
-                              const calculatedAge = calculateAge(selectedCharacter.date_of_birth, event.date_data);
+                              const calculatedAge = calculateAge(selectedCharacter.date_of_birth, event.date_data, eraConfig);
                               if (calculatedAge !== null) {
                                 ageToUse = calculatedAge;
                               }
@@ -1353,6 +1356,9 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
     ? timelineEra.split(',').map((s: string) => s.trim()).filter(Boolean)
     : undefined;
   
+  // Parse era config for age calculation
+  const eraConfig = timelineEra ? parseEraConfig(timelineEra) : undefined;
+  
   const sortedEvents = [...timelineEvents].sort((a, b) => {
     // Use compareEventDates which handles era ordering properly
     const dateCmp = compareEventDates(a.date_data ?? null, b.date_data ?? null, eraOrder);
@@ -2006,7 +2012,7 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
                             if (char.age !== null && char.age !== undefined) {
                               age = char.age;
                             } else if (char.oc?.date_of_birth && displayEvent.date_data) {
-                              age = calculateAge(char.oc.date_of_birth, displayEvent.date_data);
+                              age = calculateAge(char.oc.date_of_birth, displayEvent.date_data, eraConfig);
                             }
                             return (
                               <div key={char.id} className="flex items-center gap-1">
@@ -2155,7 +2161,7 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
                         {event.characters.map((char, index, arr) => {
                           const characterName = char.custom_name || char.oc?.name;
                           const age = char.oc?.date_of_birth && event.date_data
-                            ? calculateAge(char.oc.date_of_birth, event.date_data)
+                            ? calculateAge(char.oc.date_of_birth, event.date_data, eraConfig)
                             : null;
                           
                           return (

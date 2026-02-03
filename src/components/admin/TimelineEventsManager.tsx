@@ -972,32 +972,31 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= sortedList.length) return;
 
-    const event = sortedList[index];
-    const targetEvent = sortedList[newIndex];
+    // Build new order: remove item at index, insert at newIndex
+    const reordered = [...sortedList];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(newIndex, 0, moved);
 
-    // Swap positions so display order (chronological + tiebreaker) is preserved
+    // Persist new order: assign positions 0..n-1 to match display order
+    const updates = reordered
+      .map((event, i) => (event.position !== i ? { eventId: event.id, position: i } : null))
+      .filter((u): u is { eventId: string; position: number } => u !== null);
+    if (updates.length === 0) return;
+
     setIsSaving(true);
     try {
-      // Update both positions in parallel
-      const [response1, response2] = await Promise.all([
-        fetch(`/api/admin/timeline-events/${event.id}/timelines`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ timeline_id: timelineId, position: targetEvent.position }),
-        }),
-        fetch(`/api/admin/timeline-events/${targetEvent.id}/timelines`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ timeline_id: timelineId, position: event.position }),
-        }),
-      ]);
-
-      if (!response1.ok || !response2.ok) {
-        const errorData1 = await response1.json().catch(() => ({ error: 'Failed to update event position' }));
-        const errorData2 = await response2.json().catch(() => ({ error: 'Failed to update event position' }));
-        throw new Error(errorData1.error || errorData2.error || 'Failed to update event position');
-      }
-
+      const responses = await Promise.all(
+        updates.map(({ eventId, position }) =>
+          fetch(`/api/admin/timeline-events/${eventId}/timelines`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ timeline_id: timelineId, position }),
+          })
+        )
+      );
+      const allOk = responses.every((r) => r.ok);
+      if (!allOk) throw new Error('Failed to update event position(s)');
+      setSortOrder('list'); // show list order so the move is visible
       await loadTimelineAndEvents();
     } catch (error) {
       logger.error('Component', 'TimelineEventsManager: Error moving event', error);

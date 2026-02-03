@@ -715,6 +715,7 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
   
   // Table view state
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [sortOrder, setSortOrder] = useState<'chronological' | 'list'>('chronological');
   const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
   const [editedEvents, setEditedEvents] = useState<Map<string, Partial<TimelineEvent>>>(new Map());
   const [editingDateEventId, setEditingDateEventId] = useState<string | null>(null);
@@ -1001,6 +1002,43 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
     } catch (error) {
       logger.error('Component', 'TimelineEventsManager: Error moving event', error);
       alert(error instanceof Error ? error.message : 'Failed to move event');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  /** Persist current chronological order to the server (update positions to match date order). */
+  async function saveChronologicalOrder() {
+    if (timelineEvents.length === 0) return;
+    const order = timelineEra
+      ? parseEraConfig(timelineEra).map((c) => c.name).filter(Boolean)
+      : undefined;
+    const chronoSorted = [...timelineEvents].sort((a, b) => {
+      const dateCmp = compareEventDates(a.date_data ?? null, b.date_data ?? null, order);
+      if (dateCmp !== 0) return dateCmp;
+      return a.position - b.position;
+    });
+    const updates = chronoSorted
+      .map((event, index) => (event.position !== index ? { eventId: event.id, position: index } : null))
+      .filter((u): u is { eventId: string; position: number } => u !== null);
+    if (updates.length === 0) return;
+    setIsSaving(true);
+    try {
+      const responses = await Promise.all(
+        updates.map(({ eventId, position }) =>
+          fetch(`/api/admin/timeline-events/${eventId}/timelines`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ timeline_id: timelineId, position }),
+          })
+        )
+      );
+      const allOk = responses.every((r) => r.ok);
+      if (!allOk) throw new Error('Failed to update some positions');
+      await loadTimelineAndEvents();
+    } catch (error) {
+      logger.error('Component', 'TimelineEventsManager: Error saving chronological order', error);
+      alert(error instanceof Error ? error.message : 'Failed to save chronological order');
     } finally {
       setIsSaving(false);
     }
@@ -1360,13 +1398,16 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
   // Parse era config for age calculation
   const eraConfig = timelineEra ? parseEraConfig(timelineEra) : undefined;
   
-  const sortedEvents = [...timelineEvents].sort((a, b) => {
-    // Use compareEventDates which handles era ordering properly
-    const dateCmp = compareEventDates(a.date_data ?? null, b.date_data ?? null, eraOrder);
-    if (dateCmp !== 0) return dateCmp;
-    // Same date, use position so user can reorder (move up/down)
-    return a.position - b.position;
-  });
+  const sortedEvents = useMemo(() => {
+    if (sortOrder === 'list') {
+      return [...timelineEvents].sort((a, b) => a.position - b.position);
+    }
+    return [...timelineEvents].sort((a, b) => {
+      const dateCmp = compareEventDates(a.date_data ?? null, b.date_data ?? null, eraOrder);
+      if (dateCmp !== 0) return dateCmp;
+      return a.position - b.position;
+    });
+  }, [timelineEvents, sortOrder, eraOrder]);
 
   const toggleSelectAll = () => {
     if (selectedEventIds.size === sortedEvents.length) {
@@ -1385,6 +1426,40 @@ export function TimelineEventsManager({ timelineId }: TimelineEventsManagerProps
       <div className="flex justify-between items-center flex-wrap gap-4">
         <h3 className="text-xl font-semibold text-gray-100">Timeline Events</h3>
         <div className="flex gap-2 flex-wrap">
+          {/* Sort order: By date / As listed */}
+          {timelineEvents.length > 1 && (
+            <div className="flex gap-1 bg-gray-800 rounded-md p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setSortOrder('chronological');
+                  saveChronologicalOrder();
+                }}
+                className={`px-3 py-1 rounded text-sm transition-colors flex items-center gap-1.5 ${
+                  sortOrder === 'chronological'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+                title="Sort by date and save this order"
+              >
+                <i className="fas fa-sort-amount-down-alt text-xs" aria-hidden="true"></i>
+                By date
+              </button>
+              <button
+                type="button"
+                onClick={() => setSortOrder('list')}
+                className={`px-3 py-1 rounded text-sm transition-colors flex items-center gap-1.5 ${
+                  sortOrder === 'list'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+                title="Show in timeline list order"
+              >
+                <i className="fas fa-list text-xs" aria-hidden="true"></i>
+                As listed
+              </button>
+            </div>
+          )}
           {/* View mode toggle */}
           <div className="flex gap-1 bg-gray-800 rounded-md p-1">
             <button

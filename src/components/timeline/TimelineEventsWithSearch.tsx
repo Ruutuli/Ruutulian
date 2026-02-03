@@ -3,12 +3,9 @@
 import { useMemo, useState } from 'react';
 import { TimelineEvent } from '@/components/timeline/TimelineEvent';
 import type { TimelineEvent as TimelineEventType } from '@/types/oc';
-import { compareEventDates } from '@/lib/utils/dateSorting';
 
 interface TimelineEventsWithSearchProps {
   events: TimelineEventType[];
-  /** Era order for chronological sort (e.g. from parseEraConfig). If provided, "Sort by date" is available. */
-  eraOrder?: string[];
 }
 
 interface Filters {
@@ -53,14 +50,13 @@ function eventMatchesFilters(event: TimelineEventType, filters: Filters): boolea
   return true;
 }
 
-export function TimelineEventsWithSearch({ events, eraOrder }: TimelineEventsWithSearchProps) {
+export function TimelineEventsWithSearch({ events }: TimelineEventsWithSearchProps) {
   const [filters, setFilters] = useState<Filters>({
     search: '',
     category: '',
     story: '',
     keyEventOnly: false,
   });
-  const [sortOrder, setSortOrder] = useState<'chronological' | 'list'>('chronological');
 
   const filterOptions = useMemo(() => {
     const categories = new Set<string>();
@@ -80,26 +76,15 @@ export function TimelineEventsWithSearch({ events, eraOrder }: TimelineEventsWit
     };
   }, [events]);
 
-  const orderedEvents = useMemo(() => {
-    if (sortOrder === 'chronological') {
-      return [...events].sort((a, b) =>
-        compareEventDates(a.date_data ?? null, b.date_data ?? null, eraOrder)
-      );
-    }
-    return events;
-  }, [events, sortOrder, eraOrder]);
-
   const filtered = useMemo(() => {
-    return orderedEvents.filter((e) => eventMatchesFilters(e, filters));
-  }, [orderedEvents, filters]);
+    return events.filter((e) => eventMatchesFilters(e, filters));
+  }, [events, filters]);
 
   const hasActiveFilters = filters.search.trim() !== '' || filters.category !== '' || filters.story !== '' || filters.keyEventOnly;
 
   const clearFilters = () => {
     setFilters({ search: '', category: '', story: '', keyEventOnly: false });
   };
-
-  const canSortChronologically = events.length > 1;
 
   if (!events || events.length === 0) {
     return (
@@ -168,38 +153,6 @@ export function TimelineEventsWithSearch({ events, eraOrder }: TimelineEventsWit
               ))}
             </select>
           )}
-          {canSortChronologically && (
-            <div className="flex items-center gap-1 rounded-xl border border-gray-600/50 overflow-hidden bg-gray-800/80">
-              <button
-                type="button"
-                onClick={() => setSortOrder('chronological')}
-                className={`px-3 py-2.5 text-sm font-medium transition-colors ${
-                  sortOrder === 'chronological'
-                    ? 'bg-purple-600/50 text-purple-200 border border-purple-500/50'
-                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
-                }`}
-                aria-label="Sort by date"
-                title="Sort by date"
-              >
-                <i className="fas fa-sort-amount-down-alt mr-1.5" aria-hidden="true" />
-                By date
-              </button>
-              <button
-                type="button"
-                onClick={() => setSortOrder('list')}
-                className={`px-3 py-2.5 text-sm font-medium transition-colors ${
-                  sortOrder === 'list'
-                    ? 'bg-purple-600/50 text-purple-200 border border-purple-500/50'
-                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
-                }`}
-                aria-label="Show in list order"
-                title="Show in timeline list order"
-              >
-                <i className="fas fa-list mr-1.5" aria-hidden="true" />
-                As listed
-              </button>
-            </div>
-          )}
           {hasActiveFilters && (
             <button
               type="button"
@@ -214,7 +167,7 @@ export function TimelineEventsWithSearch({ events, eraOrder }: TimelineEventsWit
         </div>
         {hasActiveFilters && (
           <p className="text-sm text-gray-400">
-            Showing {filtered.length} of {orderedEvents.length} {orderedEvents.length === 1 ? 'event' : 'events'}
+            Showing {filtered.length} of {events.length} {events.length === 1 ? 'event' : 'events'}
           </p>
         )}
       </div>
@@ -243,7 +196,7 @@ export function TimelineEventsWithSearch({ events, eraOrder }: TimelineEventsWit
             className="hidden md:block absolute top-0 bottom-0 w-1 bg-gradient-to-b from-purple-500 via-purple-400 to-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.4)] z-10"
             style={{ left: '1.875rem' }}
           />
-          {filtered.map((event, index) => (
+          {filtered.map((event: TimelineEventType, index: number) => (
             <TimelineEvent
               key={event.id}
               event={event}

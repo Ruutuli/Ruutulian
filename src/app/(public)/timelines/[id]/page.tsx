@@ -191,11 +191,15 @@ export default async function TimelinePage({
     })
     .filter((x): x is { event: TimelineEventType; position: number } => x !== null && x.event.id !== undefined) || [];
 
-  // Parse era names for client-side chronological sort (handles both JSON and comma-separated format)
+  // Sort chronologically for public view; position is tiebreaker for same-date
   const eraOrder = timeline.era
     ? parseEraConfig(timeline.era).map((c) => c.name).filter(Boolean)
     : undefined;
-  // Pass events in list order (by position); client can sort chronologically via button
+  withPosition.sort((a, b) => {
+    const dateCmp = compareEventDates(a.event.date_data ?? null, b.event.date_data ?? null, eraOrder);
+    if (dateCmp !== 0) return dateCmp;
+    return a.position - b.position;
+  });
   const events = withPosition.map((x) => x.event);
 
   return (
@@ -279,7 +283,7 @@ export default async function TimelinePage({
           <div className="h-px w-full bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
         </div>
         
-        <TimelineEventsWithSearch events={events} eraOrder={eraOrder} />
+        <TimelineEventsWithSearch events={events} />
       </div>
     </div>
   );

@@ -4,8 +4,9 @@ import { parseEraDate } from './eraDates';
 
 export interface EraConfig {
   name: string;
-  startYear?: number | null;
-  endYear?: number | null;
+  /** Stored as string to preserve format like "0001"; parsed to number for calculations */
+  startYear?: number | string | null;
+  endYear?: number | string | null;
 }
 
 /**
@@ -29,10 +30,13 @@ export function parseEraConfig(eraString: string | null | undefined): EraConfig[
             return { name: item.trim() };
           }
           if (item && typeof item === 'object') {
+            // Accept string ("0001") or number for backward compatibility
+            const startYear = item.startYear == null ? undefined : (typeof item.startYear === 'string' ? item.startYear : item.startYear);
+            const endYear = item.endYear == null ? undefined : (typeof item.endYear === 'string' ? item.endYear : item.endYear);
             return {
               name: item.name?.trim() || '',
-              startYear: typeof item.startYear === 'number' ? item.startYear : (item.startYear === null ? null : undefined),
-              endYear: typeof item.endYear === 'number' ? item.endYear : (item.endYear === null ? null : undefined),
+              startYear: startYear ?? undefined,
+              endYear: endYear ?? undefined,
             };
           }
           return null;
@@ -49,6 +53,14 @@ export function parseEraConfig(eraString: string | null | undefined): EraConfig[
     .map(era => era.trim())
     .filter(era => era)
     .map(era => ({ name: era }));
+}
+
+/** Parse era year (string "0001" or number) to number for calculations */
+function toEraYearNum(val: number | string | null | undefined): number | undefined {
+  if (val === null || val === undefined) return undefined;
+  if (typeof val === 'number') return isNaN(val) ? undefined : val;
+  const n = parseInt(String(val).trim(), 10);
+  return isNaN(n) ? undefined : n;
 }
 
 /**
@@ -159,13 +171,14 @@ function calculateEraAge(birthDate: EraDate, eventDate: EraDate, eraConfig?: Era
   let totalAge = 0;
 
   // Age in birth era (from birth year to end of that era)
-  if (birthEraConfig.endYear !== null && birthEraConfig.endYear !== undefined) {
+  const birthEraEndNum = toEraYearNum(birthEraConfig.endYear);
+  if (birthEraEndNum !== undefined) {
     const birthYear = birthDate.year;
     const birthMonth = birthDate.month ?? 1;
     const birthDay = birthDate.day ?? 1;
     
     // Calculate years from birth to end of birth era
-    const yearsInBirthEra = birthEraConfig.endYear - birthYear;
+    const yearsInBirthEra = birthEraEndNum - birthYear;
     
     // Adjust for partial year (if birthday hasn't occurred yet in the end year)
     // For simplicity, we'll use the full year count
@@ -175,20 +188,22 @@ function calculateEraAge(birthDate: EraDate, eventDate: EraDate, eraConfig?: Era
   // Age in intermediate eras (full era spans)
   for (let i = birthEraIndex + 1; i < eventEraIndex; i++) {
     const era = eraConfig[i];
-    if (era.startYear !== null && era.startYear !== undefined && 
-        era.endYear !== null && era.endYear !== undefined) {
-      totalAge += (era.endYear - era.startYear);
+    const startNum = toEraYearNum(era.startYear);
+    const endNum = toEraYearNum(era.endYear);
+    if (startNum !== undefined && endNum !== undefined) {
+      totalAge += (endNum - startNum);
     }
   }
 
   // Age in event era (from start of event era to event year)
-  if (eventEraConfig.startYear !== null && eventEraConfig.startYear !== undefined) {
+  const eventEraStartNum = toEraYearNum(eventEraConfig.startYear);
+  if (eventEraStartNum !== undefined) {
     const eventYear = eventDate.year;
     const eventMonth = eventDate.month ?? 1;
     const eventDay = eventDate.day ?? 1;
     
     // Calculate years from start of event era to event year
-    let yearsInEventEra = eventYear - eventEraConfig.startYear;
+    let yearsInEventEra = eventYear - eventEraStartNum;
     
     // Adjust if birthday hasn't occurred yet this year
     // We need to know the birth month/day to adjust properly

@@ -9,8 +9,9 @@ import { logger } from '@/lib/logger';
 export interface EraDefinition {
   name: string;
   label?: string; // Optional label like "Past Era", "Current Era", "Future Era"
-  startYear?: number | null; // Year this era starts at (for age calculation across eras)
-  endYear?: number | null; // Year this era ends at (for age calculation across eras)
+  /** Stored as string so "0001" is preserved (not converted to 1) */
+  startYear?: string | null; // Year this era starts at (e.g. "0", "0001")
+  endYear?: string | null;   // Year previous era ended (e.g. "2000")
 }
 
 interface EraSystemManagerProps {
@@ -40,11 +41,14 @@ function parseEras(value: string | undefined | null): EraDefinition[] {
             return { name: item.trim() };
           }
           if (item && typeof item === 'object') {
+            // Preserve string format ("0001"); accept number from old data and convert to string
+            const startYear = item.startYear == null ? undefined : (typeof item.startYear === 'string' ? item.startYear : String(item.startYear));
+            const endYear = item.endYear == null ? undefined : (typeof item.endYear === 'string' ? item.endYear : String(item.endYear));
             return { 
               name: item.name?.trim() || '', 
               label: item.label?.trim() || undefined,
-              startYear: typeof item.startYear === 'number' ? item.startYear : (item.startYear === null ? null : undefined),
-              endYear: typeof item.endYear === 'number' ? item.endYear : (item.endYear === null ? null : undefined),
+              startYear: startYear ?? undefined,
+              endYear: endYear ?? undefined,
             };
           }
           return null;
@@ -72,12 +76,12 @@ function formatEras(eras: EraDefinition[]): string {
   if (!hasExtraData) {
     return eras.map(e => e.name).join(', ');
   }
-  // Otherwise use JSON to preserve all data
+  // Otherwise use JSON to preserve all data (startYear/endYear stored as strings e.g. "0001")
   return JSON.stringify(eras.map(e => ({
     name: e.name,
     ...(e.label && { label: e.label }),
-    ...(e.startYear !== undefined && { startYear: e.startYear }),
-    ...(e.endYear !== undefined && { endYear: e.endYear }),
+    ...(e.startYear !== undefined && e.startYear !== null && { startYear: e.startYear }),
+    ...(e.endYear !== undefined && e.endYear !== null && { endYear: e.endYear }),
   })));
 }
 
@@ -91,9 +95,6 @@ export function EraSystemManager({ value, onChange, disabled }: EraSystemManager
     }
   });
   
-  // Track raw input values for year fields to preserve leading zeros while typing
-  const [rawYearInputs, setRawYearInputs] = useState<Record<string, string>>({});
-
   useEffect(() => {
     try {
       const parsed = parseEras(value);
@@ -217,56 +218,21 @@ export function EraSystemManager({ value, onChange, disabled }: EraSystemManager
                   <FormInput
                     id={`era-start-year-${index}`}
                     type="text"
-                    value={rawYearInputs[`start-${index}`] !== undefined 
-                      ? rawYearInputs[`start-${index}`]
-                      : (era.startYear !== null && era.startYear !== undefined ? era.startYear.toString() : '')}
+                    value={era.startYear ?? ''}
                     onChange={(e) => {
                       const val = e.target.value;
-                      // Store raw input to preserve leading zeros while typing
-                      setRawYearInputs(prev => ({ ...prev, [`start-${index}`]: val }));
-                      
-                      const trimmed = val.trim();
-                      if (trimmed === '') {
+                      if (val === '') {
                         updateEra(index, { startYear: undefined });
-                        setRawYearInputs(prev => {
-                          const next = { ...prev };
-                          delete next[`start-${index}`];
-                          return next;
-                        });
-                      } else if (/^-?\d+$/.test(trimmed)) {
-                        // Valid integer (including negative numbers and numbers with leading zeros)
-                        const num = parseInt(trimmed, 10);
-                        if (!isNaN(num)) {
-                          updateEra(index, { startYear: num });
-                        }
+                      } else if (/^-?\d+$/.test(val)) {
+                        // Store as string so "0001" stays "0001"
+                        updateEra(index, { startYear: val });
                       }
                     }}
-                    onBlur={(e) => {
-                      // On blur, clear raw input so it displays the stored number
-                      const trimmed = e.target.value.trim();
-                      if (trimmed === '' || !/^-?\d+$/.test(trimmed)) {
-                        setRawYearInputs(prev => {
-                          const next = { ...prev };
-                          delete next[`start-${index}`];
-                          return next;
-                        });
-                      } else {
-                        // Convert to number for display (removes leading zeros)
-                        const num = parseInt(trimmed, 10);
-                        if (!isNaN(num)) {
-                          setRawYearInputs(prev => {
-                            const next = { ...prev };
-                            delete next[`start-${index}`];
-                            return next;
-                          });
-                        }
-                      }
-                    }}
-                    placeholder="e.g., 0 or 0000"
+                    placeholder="e.g., 0000 or 0001"
                     disabled={disabled}
                     className="text-sm"
                   />
-                  <p className="text-xs text-gray-500 mt-0.5">Year this era starts</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Year this era starts (format preserved)</p>
                 </div>
 
                 <div>
@@ -276,49 +242,14 @@ export function EraSystemManager({ value, onChange, disabled }: EraSystemManager
                   <FormInput
                     id={`era-end-year-${index}`}
                     type="text"
-                    value={rawYearInputs[`end-${index}`] !== undefined 
-                      ? rawYearInputs[`end-${index}`]
-                      : (era.endYear !== null && era.endYear !== undefined ? era.endYear.toString() : '')}
+                    value={era.endYear ?? ''}
                     onChange={(e) => {
                       const val = e.target.value;
-                      // Store raw input to preserve leading zeros while typing
-                      setRawYearInputs(prev => ({ ...prev, [`end-${index}`]: val }));
-                      
-                      const trimmed = val.trim();
-                      if (trimmed === '') {
+                      if (val === '') {
                         updateEra(index, { endYear: undefined });
-                        setRawYearInputs(prev => {
-                          const next = { ...prev };
-                          delete next[`end-${index}`];
-                          return next;
-                        });
-                      } else if (/^-?\d+$/.test(trimmed)) {
-                        // Valid integer (including negative numbers and numbers with leading zeros)
-                        const num = parseInt(trimmed, 10);
-                        if (!isNaN(num)) {
-                          updateEra(index, { endYear: num });
-                        }
-                      }
-                    }}
-                    onBlur={(e) => {
-                      // On blur, clear raw input so it displays the stored number
-                      const trimmed = e.target.value.trim();
-                      if (trimmed === '' || !/^-?\d+$/.test(trimmed)) {
-                        setRawYearInputs(prev => {
-                          const next = { ...prev };
-                          delete next[`end-${index}`];
-                          return next;
-                        });
-                      } else {
-                        // Convert to number for display (removes leading zeros)
-                        const num = parseInt(trimmed, 10);
-                        if (!isNaN(num)) {
-                          setRawYearInputs(prev => {
-                            const next = { ...prev };
-                            delete next[`end-${index}`];
-                            return next;
-                          });
-                        }
+                      } else if (/^-?\d+$/.test(val)) {
+                        // Store as string so "2000" etc. preserved
+                        updateEra(index, { endYear: val });
                       }
                     }}
                     placeholder="e.g., 2000"

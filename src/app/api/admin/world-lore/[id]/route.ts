@@ -21,23 +21,55 @@ export async function GET(
       return errorResponse('Lore entry ID is required');
     }
 
-    const { data, error } = await supabase
-      .from('world_lore')
-      .select(`
+    const selectWithStoryAlias = `
+      *,
+      world:worlds(id, name, slug),
+      story_alias:story_aliases!fk_world_lore_story_alias_id(id, name, slug, description),
+      related_ocs:world_lore_ocs(
         *,
-        world:worlds(id, name, slug),
-        story_alias:story_aliases!fk_world_lore_story_alias_id(id, name, slug, description),
-        related_ocs:world_lore_ocs(
-          *,
-          oc:ocs(id, name, slug)
-        ),
-        related_events:world_lore_timeline_events(
-          *,
-          event:timeline_events(id, title)
-        )
-      `)
+        oc:ocs(id, name, slug)
+      ),
+      related_events:world_lore_timeline_events(
+        *,
+        event:timeline_events(id, title)
+      )
+    `;
+    const selectWithoutStoryAlias = `
+      *,
+      world:worlds(id, name, slug),
+      related_ocs:world_lore_ocs(
+        *,
+        oc:ocs(id, name, slug)
+      ),
+      related_events:world_lore_timeline_events(
+        *,
+        event:timeline_events(id, title)
+      )
+    `;
+
+    let { data, error } = await supabase
+      .from('world_lore')
+      .select(selectWithStoryAlias)
       .eq('id', id)
       .single();
+
+    if (error && (error.message?.includes('story_aliases') || error.message?.includes('relationship'))) {
+      const retry = await supabase
+        .from('world_lore')
+        .select(selectWithoutStoryAlias)
+        .eq('id', id)
+        .single();
+      data = retry.data;
+      error = retry.error;
+      if (!error && data?.story_alias_id) {
+        const { data: storyAlias } = await supabase
+          .from('story_aliases')
+          .select('id, name, slug, description')
+          .eq('id', data.story_alias_id)
+          .single();
+        if (storyAlias) data.story_alias = storyAlias;
+      }
+    }
 
     if (error) {
       return errorResponse(error.message);
@@ -203,24 +235,56 @@ export async function PUT(
       }
     }
 
-    // Fetch the updated lore entry with relationships
-    const { data: updatedLore, error: fetchError } = await supabase
-      .from('world_lore')
-      .select(`
+    // Fetch the updated lore entry with relationships (fallback if world_lore/story_aliases relationship missing)
+    const selectWithStoryAlias = `
+      *,
+      world:worlds(id, name, slug),
+      story_alias:story_aliases!fk_world_lore_story_alias_id(id, name, slug, description),
+      related_ocs:world_lore_ocs(
         *,
-        world:worlds(id, name, slug),
-        story_alias:story_aliases!fk_world_lore_story_alias_id(id, name, slug, description),
-        related_ocs:world_lore_ocs(
-          *,
-          oc:ocs(id, name, slug)
-        ),
-        related_events:world_lore_timeline_events(
-          *,
-          event:timeline_events(id, title)
-        )
-      `)
+        oc:ocs(id, name, slug)
+      ),
+      related_events:world_lore_timeline_events(
+        *,
+        event:timeline_events(id, title)
+      )
+    `;
+    const selectWithoutStoryAlias = `
+      *,
+      world:worlds(id, name, slug),
+      related_ocs:world_lore_ocs(
+        *,
+        oc:ocs(id, name, slug)
+      ),
+      related_events:world_lore_timeline_events(
+        *,
+        event:timeline_events(id, title)
+      )
+    `;
+
+    let { data: updatedLore, error: fetchError } = await supabase
+      .from('world_lore')
+      .select(selectWithStoryAlias)
       .eq('id', id)
       .single();
+
+    if (fetchError && (fetchError.message?.includes('story_aliases') || fetchError.message?.includes('relationship'))) {
+      const retry = await supabase
+        .from('world_lore')
+        .select(selectWithoutStoryAlias)
+        .eq('id', id)
+        .single();
+      updatedLore = retry.data;
+      fetchError = retry.error;
+      if (!fetchError && updatedLore?.story_alias_id) {
+        const { data: storyAlias } = await supabase
+          .from('story_aliases')
+          .select('id, name, slug, description')
+          .eq('id', updatedLore.story_alias_id)
+          .single();
+        if (storyAlias) updatedLore.story_alias = storyAlias;
+      }
+    }
 
     if (fetchError) {
       return errorResponse(fetchError.message || 'Failed to fetch updated lore entry');

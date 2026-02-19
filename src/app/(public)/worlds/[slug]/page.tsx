@@ -93,10 +93,8 @@ export default async function WorldDetailPage({
   params: Promise<{ slug: string }>;
   searchParams?: Promise<{ story?: string }>;
 }) {
-  console.log('[WorldDetailPage] Server component executing - about to call logMemoryUsage');
   logMemoryUsage('Server', 'WorldDetailPage: Start', { path: 'worlds/[slug]' });
-  console.log('[WorldDetailPage] logMemoryUsage called');
-  
+
   const supabase = await createClient();
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;

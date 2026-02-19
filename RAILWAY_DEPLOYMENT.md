@@ -68,6 +68,15 @@ ENABLE_MEMORY_LOGGING=true
 MEMORY_LOG_INTERVAL_MS=30000
 ```
 
+### Memory warning thresholds (optional)
+To reduce log noise in production, you can raise when warnings are emitted:
+```
+MEMORY_RSS_WARNING_MB=900       # Warn when process RSS exceeds this (MB). Default: 900
+MEMORY_DELTA_WARNING_MB=25     # Warn when heap grows by this much between checks (MB). Default: 25
+MEMORY_EXTERNAL_WARNING_MB=60  # Warn when external memory (buffers/images) exceeds this (MB). Default: 60
+```
+Lower these values if you want earlier warnings for potential leaks.
+
 ## Expected Behavior
 
 - **Development**: Logs every 30 seconds automatically

@@ -2,6 +2,7 @@ import { ImageResponse } from 'next/og';
 import { createClient } from '@/lib/supabase/server';
 import { getSiteConfig } from '@/lib/config/site-config';
 import { logger } from '@/lib/logger';
+import { formatSupabaseErrorForLog } from '@/lib/utils/supabase-error';
 
 export const runtime = 'edge';
 
@@ -24,7 +25,7 @@ export async function GET(
     if (error) {
       logger.error('API', 'Supabase query error while generating OC OG image', {
         slug: resolvedParams.slug,
-        error: error.message,
+        error: formatSupabaseErrorForLog(error),
         code: error.code,
       });
     }

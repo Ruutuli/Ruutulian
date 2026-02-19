@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { fetchTemplates } from '@/lib/templates/ocTemplates.server';
 import { OCList } from '@/components/admin/OCList';
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default async function AdminOCsPage() {
   const templates = await fetchTemplates();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: ocs } = await supabase
     .from('ocs')

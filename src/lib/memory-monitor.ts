@@ -19,9 +19,10 @@ const MEMORY_LOG_INTERVAL_MS = parseInt(
 
 const MEMORY_WARNING_THRESHOLD = 0.8; // Warn if heap used > 80% of limit
 
-// Configurable via env to reduce false positives (Node/Next dev often 400–500 MB RSS)
-const MEMORY_RSS_WARNING_MB = parseInt(process.env.MEMORY_RSS_WARNING_MB || '512', 10);
-const MEMORY_DELTA_WARNING_MB = parseInt(process.env.MEMORY_DELTA_WARNING_MB || '15', 10);
+// Configurable via env to reduce false positives (Node/Next in production often 900MB–1.2GB RSS)
+const MEMORY_RSS_WARNING_MB = parseInt(process.env.MEMORY_RSS_WARNING_MB || '900', 10);
+const MEMORY_DELTA_WARNING_MB = parseInt(process.env.MEMORY_DELTA_WARNING_MB || '25', 10);
+const MEMORY_EXTERNAL_WARNING_MB = parseInt(process.env.MEMORY_EXTERNAL_WARNING_MB || '60', 10);
 
 const isDevOrLoggingEnabled =
   process.env.NODE_ENV === 'development' || process.env.ENABLE_MEMORY_LOGGING === 'true';
@@ -236,7 +237,7 @@ export function logMemoryUsage(
   }
 
   // Warn if external memory is high (buffers, images, etc.)
-  if (stats.external && stats.external > 30) {
+  if (stats.external && stats.external > MEMORY_EXTERNAL_WARNING_MB) {
     logger.warn('Memory', `⚠️ HIGH EXTERNAL: ${stats.external}MB external memory - buffers/images may not be released`, {
       ...stats,
       ...context,

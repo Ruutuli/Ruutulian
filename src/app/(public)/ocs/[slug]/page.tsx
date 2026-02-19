@@ -29,6 +29,7 @@ import { getSiteConfig } from '@/lib/config/site-config';
 import { generateDetailPageMetadata } from '@/lib/seo/page-metadata';
 import { getAbsoluteUrl } from '@/lib/seo/metadata-helpers';
 import { logger } from '@/lib/logger';
+import { formatSupabaseErrorForLog } from '@/lib/utils/supabase-error';
 import { generateProfilePageSchema } from '@/lib/seo/structured-data';
 
 export async function generateMetadata({
@@ -71,7 +72,7 @@ export async function generateMetadata({
   if (error) {
     logger.error('OCMetadata', 'Supabase query error', {
       slug: resolvedParams.slug,
-      error: error.message,
+      error: formatSupabaseErrorForLog(error),
       code: error.code,
     });
   }
@@ -189,7 +190,7 @@ export default async function OCDetailPage({
   if (error) {
     logger.error('OCDetailPage', 'Supabase query error', {
       slug: resolvedParams.slug,
-      error: error.message,
+      error: formatSupabaseErrorForLog(error),
       code: error.code,
     });
   }

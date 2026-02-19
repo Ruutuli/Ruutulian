@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import { OCForm } from '@/components/admin/OCForm';
 import type { RelationshipType } from '@/types/oc';
 import { logger } from '@/lib/logger';
+import { formatSupabaseErrorForLog } from '@/lib/utils/supabase-error';
 
 // Helper function to check if a string is a UUID
 function isUUID(str: string): boolean {
@@ -16,7 +17,7 @@ export async function generateMetadata({
 }: {
   params: { id: string };
 }): Promise<Metadata> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // Support both ID (UUID) and slug
   const query = isUUID(params.id)
@@ -28,7 +29,7 @@ export async function generateMetadata({
   if (error) {
     logger.error('Page', 'admin/ocs/[id]: Supabase query error in generateMetadata', {
       id: params.id,
-      error: error.message,
+      error: formatSupabaseErrorForLog(error),
       code: error.code,
     });
   }
@@ -126,7 +127,7 @@ export default async function EditOCPage({
 }: {
   params: { id: string };
 }) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // Support both ID (UUID) and slug
   // Try multiple approaches for story_aliases relationship to work in both environments

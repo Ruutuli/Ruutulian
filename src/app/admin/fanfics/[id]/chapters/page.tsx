@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import { FanficChaptersManager } from '@/components/admin/FanficChaptersManager';
 import Link from 'next/link';
@@ -13,7 +13,7 @@ export default async function FanficChaptersPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const resolvedParams = await params;
 
   // Support both ID (UUID) and slug

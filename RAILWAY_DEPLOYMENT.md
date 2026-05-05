@@ -15,6 +15,10 @@ To override from the Railway dashboard, set **`NODE_OPTIONS`** on the service—
 2. **Plan / idle behavior** — If your plan supports sleeping or cheaper idle usage for low traffic, enable it so you are not billed 24/7 baseline RSS for an unused site.
 3. **Memory logs** — Production defaults to **no** detailed memory logging in code (see below). Set `ENABLE_MEMORY_LOGGING=true` only when investigating leaks.
 
+### Database migrations
+
+Apply pending Supabase migrations (including `get_public_oc_birthdays_today`) so the home page birthday widget uses the RPC instead of loading every `date_of_birth` row. Without it, the app falls back to a capped client-side filter.
+
 ## Changes Made for Railway Deployment
 
 1. **Updated Next.js config** - Added `'log'` to the excluded console methods so memory logs aren't stripped

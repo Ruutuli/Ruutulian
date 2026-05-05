@@ -6,6 +6,8 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { LoreDetail } from '@/components/lore/LoreDetail';
 import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
 
+export const revalidate = 300;
+
 export async function generateMetadata({
   params,
 }: {

@@ -4,6 +4,9 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { logMemoryUsage } from '@/lib/memory-monitor'
 
+const logNavMemory =
+  typeof process.env.NODE_ENV !== 'undefined' && process.env.NODE_ENV === 'development'
+
 export function NavigationProgress() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -20,29 +23,35 @@ export function NavigationProgress() {
       fn()
     }, ms)
     timeoutsRef.current.add(id)
-    
-    logMemoryUsage('Client', 'NavigationProgress: Timeout scheduled', {
-      component: 'NavigationProgress',
-      timeoutId: id,
-      delay: ms,
-      activeTimeouts: timeoutsRef.current.size,
-    })
-    
+
+    if (logNavMemory) {
+      logMemoryUsage('Client', 'NavigationProgress: Timeout scheduled', {
+        component: 'NavigationProgress',
+        timeoutId: id,
+        delay: ms,
+        activeTimeouts: timeoutsRef.current.size,
+      })
+    }
+
     return id
   }, [])
 
   // Ensure intervals/timeouts can't outlive the component
   useEffect(() => {
-    logMemoryUsage('Client', 'NavigationProgress: Component mounted', {
-      component: 'NavigationProgress',
-    })
+    if (logNavMemory) {
+      logMemoryUsage('Client', 'NavigationProgress: Component mounted', {
+        component: 'NavigationProgress',
+      })
+    }
 
     return () => {
-      logMemoryUsage('Client', 'NavigationProgress: Component unmounting', {
-        component: 'NavigationProgress',
-        activeIntervals: progressIntervalRef.current ? 1 : 0,
-        activeTimeouts: timeoutsRef.current.size,
-      })
+      if (logNavMemory) {
+        logMemoryUsage('Client', 'NavigationProgress: Component unmounting', {
+          component: 'NavigationProgress',
+          activeIntervals: progressIntervalRef.current ? 1 : 0,
+          activeTimeouts: timeoutsRef.current.size,
+        })
+      }
 
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current)

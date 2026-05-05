@@ -5,6 +5,7 @@ import { WorldCard } from '@/components/world/WorldCard';
 import { WorldFilters } from '@/components/filters/WorldFilters';
 import { generatePageMetadata } from '@/lib/config/metadata-helpers';
 import { getSiteConfig } from '@/lib/config/site-config';
+import { WORLD_CARD_LIST_COLUMNS } from '@/lib/supabase/world-public-queries';
 
 export async function generateMetadata() {
   const config = await getSiteConfig();
@@ -32,7 +33,7 @@ export default async function WorldsPage({ searchParams }: WorldsPageProps) {
   // Build query
   let query = supabase
     .from('worlds')
-    .select('*')
+    .select(WORLD_CARD_LIST_COLUMNS)
     .eq('is_public', true);
 
   // Apply series type filter

@@ -5,6 +5,10 @@ import { getSiteConfig } from '@/lib/config/site-config';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { LoreList } from '@/components/lore/LoreList';
 import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
+import { WORLD_LORE_CARD_COLUMNS_PRIMARY } from '@/lib/supabase/world-public-queries';
+import type { WorldLore } from '@/types/oc';
+
+export const revalidate = 300;
 
 export async function generateMetadata({
   params,
@@ -83,7 +87,7 @@ export default async function WorldLorePage({
 
   const { data: world } = await supabase
     .from('worlds')
-    .select('*')
+    .select('id, name, slug')
     .eq('slug', resolvedParams.slug)
     .eq('is_public', true)
     .single();
@@ -94,18 +98,7 @@ export default async function WorldLorePage({
 
   const { data: loreEntries } = await supabase
     .from('world_lore')
-    .select(`
-      *,
-      world:worlds(id, name, slug),
-      related_ocs:world_lore_ocs(
-        *,
-        oc:ocs(id, name, slug)
-      ),
-      related_events:world_lore_timeline_events(
-        *,
-        event:timeline_events(id, title)
-      )
-    `)
+    .select(WORLD_LORE_CARD_COLUMNS_PRIMARY)
     .eq('world_id', world.id)
     .order('lore_type', { ascending: true })
     .order('name', { ascending: true });
@@ -123,7 +116,10 @@ export default async function WorldLorePage({
       />
 
       <section className="mt-8">
-        <LoreList loreEntries={loreEntries || []} searchParams={searchParams || {}} />
+        <LoreList
+          loreEntries={(loreEntries || []) as unknown as WorldLore[]}
+          searchParams={searchParams || {}}
+        />
       </section>
     </div>
   );

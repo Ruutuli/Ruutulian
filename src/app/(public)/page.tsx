@@ -11,6 +11,7 @@ import { getDaySeed, getRandomItemsPerRequest, seededShuffle } from '@/lib/utils
 import { generateWebSiteSchema, generateOrganizationSchema, generatePersonSchema } from '@/lib/seo/structured-data';
 import { getAbsoluteIconUrl } from '@/lib/seo/metadata-helpers';
 import { getDateInEST, formatDateOfBirth } from '@/lib/utils/dateFormat';
+import { filterOcsBirthdayToday } from '@/lib/utils/birthday-match';
 import { logMemoryUsage } from '@/lib/memory-monitor';
 import type { World, OC } from '@/types/oc';
 
@@ -121,59 +122,35 @@ export default async function HomePage() {
     quoteOfTheDay = shuffled[0];
   }
 
-  // Get OCs with birthdays and check if today is anyone's birthday
-  const { data: allOCsWithBirthdays } = await supabase
-    .from('ocs')
-    .select('id, name, slug, date_of_birth, image_url')
-    .eq('is_public', true)
-    .not('date_of_birth', 'is', null);
-
-  // Get today's date in EST timezone
+  // Birthdays (EST calendar): DB RPC avoids loading every DOB row; fallback if RPC missing (pre-migration).
   const today = new Date();
   const todayEST = getDateInEST(today);
-  const todayMonth = todayEST.month; // 1-12
+  const todayMonth = todayEST.month;
   const todayDay = todayEST.day;
-  
-  // Format today's date for display
+
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   const todayDateFormatted = `${monthNames[todayMonth - 1]} ${todayDay}`;
 
-  const birthdayOCs = (allOCsWithBirthdays || []).filter((oc) => {
-    if (!oc.date_of_birth) return false;
-    try {
-      const dateStr = oc.date_of_birth.trim();
-      
-      // Parse YYYY-MM-DD format directly (most common format)
-      const isoMatch = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-      if (isoMatch) {
-        const birthMonth = parseInt(isoMatch[2], 10); // 1-12
-        const birthDay = parseInt(isoMatch[3], 10);
-        return birthMonth === todayMonth && birthDay === todayDay;
-      }
-      
-      // Parse MM/DD or MM/DD/YYYY format
-      const mmddMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?$/);
-      if (mmddMatch) {
-        const birthMonth = parseInt(mmddMatch[1], 10); // 1-12
-        const birthDay = parseInt(mmddMatch[2], 10);
-        return birthMonth === todayMonth && birthDay === todayDay;
-      }
-      
-      // Fallback: try parsing as Date and convert to EST
-      const birthDate = new Date(dateStr);
-      if (!isNaN(birthDate.getTime())) {
-        const birthEST = getDateInEST(birthDate);
-        return birthEST.month === todayMonth && birthEST.day === todayDay;
-      }
-      
-      return false;
-    } catch {
-      return false;
-    }
+  const rpcBirthdays = await supabase.rpc('get_public_oc_birthdays_today', {
+    p_month: todayMonth,
+    p_day: todayDay,
   });
+
+  let birthdayOCs: Pick<OC, 'id' | 'name' | 'slug'>[] = [];
+  if (!rpcBirthdays.error && rpcBirthdays.data) {
+    birthdayOCs = rpcBirthdays.data as Pick<OC, 'id' | 'name' | 'slug'>[];
+  } else {
+    const { data: dobSample } = await supabase
+      .from('ocs')
+      .select('id, name, slug, date_of_birth, image_url')
+      .eq('is_public', true)
+      .not('date_of_birth', 'is', null)
+      .limit(600);
+    birthdayOCs = filterOcsBirthdayToday(dobSample, todayMonth, todayDay);
+  }
 
   // Get current projects section data
   const { data: currentProjectsData } = await supabase

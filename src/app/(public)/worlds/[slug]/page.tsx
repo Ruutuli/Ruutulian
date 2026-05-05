@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { getSiteConfig } from '@/lib/config/site-config';
-import type { StoryAlias } from '@/types/oc';
+import type { OC, StoryAlias, WorldLore } from '@/types/oc';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { WorldHeader } from '@/components/world/WorldHeader';
 import { WorldDetails } from '@/components/world/WorldDetails';
@@ -14,6 +14,14 @@ import { WorldRelationships } from '@/components/world/WorldRelationships';
 import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
 import { generateDetailPageMetadata } from '@/lib/seo/page-metadata';
 import { logMemoryUsage } from '@/lib/memory-monitor';
+import {
+  WORLD_PUBLIC_DETAIL_COLUMNS,
+  WORLD_STORY_OVERLAY_COLUMNS,
+  WORLD_PAGE_OC_COLUMNS,
+  TIMELINE_PUBLIC_COLUMNS,
+  WORLD_LORE_CARD_COLUMNS_PRIMARY,
+  WORLD_LORE_CARD_COLUMNS_FALLBACK,
+} from '@/lib/supabase/world-public-queries';
 import Link from 'next/link';
 
 export async function generateMetadata({
@@ -93,7 +101,9 @@ export default async function WorldDetailPage({
   params: Promise<{ slug: string }>;
   searchParams?: Promise<{ story?: string }>;
 }) {
-  logMemoryUsage('Server', 'WorldDetailPage: Start', { path: 'worlds/[slug]' });
+  if (process.env.NODE_ENV === 'development') {
+    logMemoryUsage('Server', 'WorldDetailPage: Start', { path: 'worlds/[slug]' });
+  }
 
   const supabase = await createClient();
   const resolvedParams = await params;
@@ -103,7 +113,7 @@ export default async function WorldDetailPage({
   const { data: world } = await supabase
     .from('worlds')
     .select(`
-      *,
+      ${WORLD_PUBLIC_DETAIL_COLUMNS},
       story_aliases:story_aliases(
         id,
         name,
@@ -139,7 +149,7 @@ export default async function WorldDetailPage({
     if (selectedStoryAlias) {
       const { data: storyDataResult } = await supabase
         .from('world_story_data')
-        .select('*')
+        .select(WORLD_STORY_OVERLAY_COLUMNS)
         .eq('world_id', world.id)
         .eq('story_alias_id', selectedStoryAlias.id)
         .single();
@@ -204,32 +214,20 @@ export default async function WorldDetailPage({
   const [ocsResult, timelinesResult, loreEntriesResult] = await Promise.all([
     supabase
       .from('ocs')
-      .select('*, world:worlds(*)')
+      .select(WORLD_PAGE_OC_COLUMNS)
       .eq('world_id', world.id)
       .eq('is_public', true)
       .order('name', { ascending: true }),
     supabase
       .from('timelines')
-      .select('*')
+      .select(TIMELINE_PUBLIC_COLUMNS)
       .eq('world_id', world.id)
       .order('name', { ascending: true }),
     (async () => {
       // Try query with story_alias first
       let loreQuery = supabase
         .from('world_lore')
-        .select(`
-          *,
-          world:worlds(id, name, slug),
-          story_alias:story_aliases!fk_world_lore_story_alias_id(id, name, slug, description),
-          related_ocs:world_lore_ocs(
-            *,
-            oc:ocs(id, name, slug)
-          ),
-          related_events:world_lore_timeline_events(
-            *,
-            event:timeline_events(id, title)
-          )
-        `)
+        .select(WORLD_LORE_CARD_COLUMNS_PRIMARY)
         .eq('world_id', world.id);
       
       // Filter by story alias if selected, or show base world lore (null story_alias_id)
@@ -249,18 +247,7 @@ export default async function WorldDetailPage({
           (loreError.message?.includes('story_aliases') || loreError.details?.includes('story_alias'))) {
         let retryQuery = supabase
           .from('world_lore')
-          .select(`
-            *,
-            world:worlds(id, name, slug),
-            related_ocs:world_lore_ocs(
-              *,
-              oc:ocs(id, name, slug)
-            ),
-            related_events:world_lore_timeline_events(
-              *,
-              event:timeline_events(id, title)
-            )
-          `)
+          .select(WORLD_LORE_CARD_COLUMNS_FALLBACK)
           .eq('world_id', world.id);
         
         if (storyAliasId) {
@@ -309,17 +296,19 @@ export default async function WorldDetailPage({
     })(),
   ]);
 
-  const ocs = ocsResult.data;
+  const ocs = ocsResult.data as OC[] | null | undefined;
   const timelines = timelinesResult.data;
-  const loreEntries = loreEntriesResult.data;
+  const loreEntries = loreEntriesResult.data as unknown as WorldLore[] | null | undefined;
 
-  logMemoryUsage('Server', 'WorldDetailPage: Data fetched', {
-    path: 'worlds/[slug]',
-    slug: resolvedParams.slug,
-    ocsCount: ocs?.length || 0,
-    timelinesCount: timelines?.length || 0,
-    loreEntriesCount: loreEntries?.length || 0,
-  });
+  if (process.env.NODE_ENV === 'development') {
+    logMemoryUsage('Server', 'WorldDetailPage: Data fetched', {
+      path: 'worlds/[slug]',
+      slug: resolvedParams.slug,
+      ocsCount: ocs?.length || 0,
+      timelinesCount: timelines?.length || 0,
+      loreEntriesCount: loreEntries?.length || 0,
+    });
+  }
 
   return (
     <div>

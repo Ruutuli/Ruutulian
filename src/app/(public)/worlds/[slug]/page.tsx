@@ -287,7 +287,8 @@ export default async function WorldDetailPage({
                 if (lore.story_alias_id) {
                   const storyAlias = storyAliasMap.get(lore.story_alias_id);
                   if (storyAlias) {
-                    lore.story_alias = storyAlias;
+                    // Card UI only needs id/name/slug/description; full StoryAlias isn't fetched here.
+                    lore.story_alias = storyAlias as unknown as StoryAlias;
                   }
                 }
               });

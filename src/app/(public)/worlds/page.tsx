@@ -49,7 +49,7 @@ export default async function WorldsPage({ searchParams }: WorldsPageProps) {
 
   const { data: worlds } = await query.order('name', { ascending: true });
 
-  const filteredWorlds = (worlds || []) as World[];
+  const filteredWorlds = (worlds || []) as unknown as World[];
 
   // Group by series type if no series type filter is applied
   const canonWorlds = !seriesType

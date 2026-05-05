@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { getSiteConfig } from '@/lib/config/site-config';
-import type { OC, StoryAlias, World, WorldLore, WorldStoryData } from '@/types/oc';
+import type { OC, StoryAlias, Timeline, World, WorldLore, WorldStoryData } from '@/types/oc';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { WorldHeader } from '@/components/world/WorldHeader';
 import { WorldDetails } from '@/components/world/WorldDetails';
@@ -139,7 +139,7 @@ export default async function WorldDetailPage({
   }
 
   // Parsed select is dynamic; assert row shape for TypeScript (runtime unchanged).
-  const world = worldRow as World;
+  const world = worldRow as unknown as World;
 
   // Load story-specific world data if story parameter is provided
   let storyData: Partial<WorldStoryData> | null = null;
@@ -157,7 +157,7 @@ export default async function WorldDetailPage({
         .eq('story_alias_id', selectedStoryAlias.id)
         .single();
       
-      storyData = (storyDataResult as Partial<WorldStoryData> | null) ?? null;
+      storyData = (storyDataResult as unknown as Partial<WorldStoryData> | null) ?? null;
     }
   }
   
@@ -299,8 +299,8 @@ export default async function WorldDetailPage({
     })(),
   ]);
 
-  const ocs = ocsResult.data as OC[] | null | undefined;
-  const timelines = timelinesResult.data;
+  const ocs = ocsResult.data as unknown as OC[] | null | undefined;
+  const timelines = timelinesResult.data as unknown as Timeline[] | null | undefined;
   const loreEntries = loreEntriesResult.data as unknown as WorldLore[] | null | undefined;
 
   if (process.env.NODE_ENV === 'development') {

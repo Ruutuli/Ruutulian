@@ -1,7 +1,12 @@
 'use client'
 
 import { useEffect } from 'react'
-import { startPeriodicLogging, stopPeriodicLogging, logMemoryUsage } from '@/lib/memory-monitor'
+import {
+  startPeriodicLogging,
+  stopPeriodicLogging,
+  logMemoryUsage,
+  MEMORY_LOG_INTERVAL_MS,
+} from '@/lib/memory-monitor'
 
 /**
  * Client-side memory monitoring component.
@@ -10,10 +15,10 @@ import { startPeriodicLogging, stopPeriodicLogging, logMemoryUsage } from '@/lib
  */
 export function MemoryMonitor() {
   useEffect(() => {
-    logMemoryUsage('Client', 'MemoryMonitor: Component mounted');
-    startPeriodicLogging();
+    logMemoryUsage('Client', 'MemoryMonitor: Component mounted', undefined, true);
+    startPeriodicLogging(MEMORY_LOG_INTERVAL_MS, true);
     return () => {
-      logMemoryUsage('Client', 'MemoryMonitor: Component unmounting');
+      logMemoryUsage('Client', 'MemoryMonitor: Component unmounting', undefined, true);
       stopPeriodicLogging();
     };
   }, []);

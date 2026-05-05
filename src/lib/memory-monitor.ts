@@ -8,11 +8,12 @@ import { logger } from './logger';
 // Check if we're in a browser environment
 const isBrowser = typeof window !== 'undefined';
 
-// Configuration - Enable by default, can be disabled with ENABLE_MEMORY_LOGGING=false
+// Production: off unless ENABLE_MEMORY_LOGGING=true. Development: always on.
 const ENABLE_MEMORY_LOGGING =
-  process.env.ENABLE_MEMORY_LOGGING !== 'false';
+  process.env.ENABLE_MEMORY_LOGGING === 'true' ||
+  process.env.NODE_ENV === 'development';
 
-const MEMORY_LOG_INTERVAL_MS = parseInt(
+export const MEMORY_LOG_INTERVAL_MS = parseInt(
   process.env.MEMORY_LOG_INTERVAL_MS || '30000',
   10
 );
@@ -24,10 +25,7 @@ const MEMORY_RSS_WARNING_MB = parseInt(process.env.MEMORY_RSS_WARNING_MB || '900
 const MEMORY_DELTA_WARNING_MB = parseInt(process.env.MEMORY_DELTA_WARNING_MB || '25', 10);
 const MEMORY_EXTERNAL_WARNING_MB = parseInt(process.env.MEMORY_EXTERNAL_WARNING_MB || '60', 10);
 
-const isDevOrLoggingEnabled =
-  process.env.NODE_ENV === 'development' || process.env.ENABLE_MEMORY_LOGGING === 'true';
-
-if (isDevOrLoggingEnabled) {
+if (ENABLE_MEMORY_LOGGING) {
   if (typeof window !== 'undefined') {
     console.log('[Memory Monitor] Client-side initialized', { ENABLE_MEMORY_LOGGING, hasPerfMemory: !!(typeof performance !== 'undefined' && (performance as any).memory) });
   } else {
@@ -38,7 +36,10 @@ if (isDevOrLoggingEnabled) {
 if (ENABLE_MEMORY_LOGGING) {
   logger.info('Memory', `Memory monitoring enabled (interval: ${MEMORY_LOG_INTERVAL_MS}ms, env: ${process.env.NODE_ENV})`);
 } else {
-  logger.info('Memory', 'Memory monitoring disabled (set ENABLE_MEMORY_LOGGING=true to enable)');
+  logger.info(
+    'Memory',
+    'Memory monitoring disabled in production (set ENABLE_MEMORY_LOGGING=true to enable)'
+  );
 }
 
 // Memory stats interface
@@ -168,11 +169,14 @@ function formatMemoryStats(stats: MemoryStats): string {
 export function logMemoryUsage(
   category: string,
   message: string,
-  context?: Record<string, any>
+  context?: Record<string, any>,
+  /** Client bundles omit Railway env; MemoryMonitor passes true when server mounted this component */
+  forceEnable?: boolean
 ): void {
   const stats = getMemoryUsage();
+  const active = ENABLE_MEMORY_LOGGING || !!forceEnable;
 
-  if (!ENABLE_MEMORY_LOGGING) {
+  if (!active) {
     if (stats && stats.heapUsed > 500) {
       console.warn(`[Memory] ⚠️ HIGH MEMORY DETECTED (logging disabled): ${stats.heapUsed}MB`, context);
     }
@@ -248,8 +252,11 @@ export function logMemoryUsage(
 /**
  * Start periodic memory logging
  */
-export function startPeriodicLogging(intervalMs: number = MEMORY_LOG_INTERVAL_MS): void {
-  if (!ENABLE_MEMORY_LOGGING) {
+export function startPeriodicLogging(
+  intervalMs: number = MEMORY_LOG_INTERVAL_MS,
+  forceEnable = false
+): void {
+  if (!ENABLE_MEMORY_LOGGING && !forceEnable) {
     return;
   }
 
@@ -261,11 +268,11 @@ export function startPeriodicLogging(intervalMs: number = MEMORY_LOG_INTERVAL_MS
 
   if (isBrowser) {
     periodicLoggingInterval = window.setInterval(() => {
-      logMemoryUsage('Periodic', 'Memory check');
+      logMemoryUsage('Periodic', 'Memory check', undefined, forceEnable);
     }, intervalMs);
   } else {
     periodicLoggingInterval = setInterval(() => {
-      logMemoryUsage('Periodic', 'Memory check');
+      logMemoryUsage('Periodic', 'Memory check', undefined, forceEnable);
     }, intervalMs);
   }
 

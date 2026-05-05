@@ -1,5 +1,20 @@
 # Railway Deployment - Memory Monitor Verification
 
+## Cost / memory (Nixpacks)
+
+Railway bills heavily by **RAM GB-minutes**. This repo separates Node heap limits:
+
+- **Build only**: [`nixpacks.toml`](nixpacks.toml) runs `NODE_OPTIONS='--max-old-space-size=4096'` only for `npm run build` so large Next.js compiles do not OOM.
+- **Runtime**: `npm start` uses `NODE_OPTIONS='--max-old-space-size=768'`. If you see heap / worker OOM on heavy routes, raise this (e.g. `1024`) in **`[start].cmd`** only—not in global Nixpacks `[variables]`, or builds may lose the 4096 budget.
+
+To override from the Railway dashboard, set **`NODE_OPTIONS`** on the service—know that it applies to **both** install/build/start unless you remove it after debugging; prefer editing `[start].cmd` for a stable runtime cap.
+
+### Dashboard checklist (instance sizing)
+
+1. **Service memory limit** — Use the smallest limit that stays stable after deploy; over-provisioning wastes GB-minutes.
+2. **Plan / idle behavior** — If your plan supports sleeping or cheaper idle usage for low traffic, enable it so you are not billed 24/7 baseline RSS for an unused site.
+3. **Memory logs** — Production defaults to **no** detailed memory logging in code (see below). Set `ENABLE_MEMORY_LOGGING=true` only when investigating leaks.
+
 ## Changes Made for Railway Deployment
 
 1. **Updated Next.js config** - Added `'log'` to the excluded console methods so memory logs aren't stripped
@@ -33,10 +48,11 @@ You should see periodic logs like:
 3. Redeploy
 
 #### Option B: Add Environment Variable
-In Railway dashboard → Variables, add:
+To enable verbose memory logs in **production**, add in Railway dashboard → Variables:
 ```
 ENABLE_MEMORY_LOGGING=true
 ```
+Omit this variable (or leave unset) for normal production — monitoring stays **off** unless `NODE_ENV=development`.
 
 #### Option C: Verify Build
 Check Railway build logs for:

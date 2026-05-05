@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { getSiteConfig } from '@/lib/config/site-config';
-import type { OC, StoryAlias, WorldLore } from '@/types/oc';
+import type { OC, StoryAlias, World, WorldLore, WorldStoryData } from '@/types/oc';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { WorldHeader } from '@/components/world/WorldHeader';
 import { WorldDetails } from '@/components/world/WorldDetails';
@@ -110,7 +110,7 @@ export default async function WorldDetailPage({
   const resolvedSearchParams = await searchParams;
   const storySlug = resolvedSearchParams?.story;
 
-  const { data: world } = await supabase
+  const { data: worldRow } = await supabase
     .from('worlds')
     .select(`
       ${WORLD_PUBLIC_DETAIL_COLUMNS},
@@ -134,12 +134,15 @@ export default async function WorldDetailPage({
     .eq('is_public', true)
     .single();
 
-  if (!world) {
+  if (!worldRow) {
     notFound();
   }
 
+  // Parsed select is dynamic; assert row shape for TypeScript (runtime unchanged).
+  const world = worldRow as World;
+
   // Load story-specific world data if story parameter is provided
-  let storyData = null;
+  let storyData: Partial<WorldStoryData> | null = null;
   let selectedStoryAlias = null;
   
   if (storySlug && world.series_type === 'canon') {
@@ -154,7 +157,7 @@ export default async function WorldDetailPage({
         .eq('story_alias_id', selectedStoryAlias.id)
         .single();
       
-      storyData = storyDataResult;
+      storyData = (storyDataResult as Partial<WorldStoryData> | null) ?? null;
     }
   }
   

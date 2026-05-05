@@ -6,6 +6,7 @@ import { WorldFilters } from '@/components/filters/WorldFilters';
 import { generatePageMetadata } from '@/lib/config/metadata-helpers';
 import { getSiteConfig } from '@/lib/config/site-config';
 import { WORLD_CARD_LIST_COLUMNS } from '@/lib/supabase/world-public-queries';
+import type { World } from '@/types/oc';
 
 export async function generateMetadata() {
   const config = await getSiteConfig();
@@ -48,8 +49,7 @@ export default async function WorldsPage({ searchParams }: WorldsPageProps) {
 
   const { data: worlds } = await query.order('name', { ascending: true });
 
-  // Use worlds directly (already filtered on server)
-  const filteredWorlds = worlds || [];
+  const filteredWorlds = (worlds || []) as World[];
 
   // Group by series type if no series type filter is applied
   const canonWorlds = !seriesType

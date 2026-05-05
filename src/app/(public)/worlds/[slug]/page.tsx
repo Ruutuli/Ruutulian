@@ -269,20 +269,21 @@ export default async function WorldDetailPage({
         
         // Fetch story_aliases separately for lore entries that need them
         if (loreData) {
-          const loreIdsWithStoryAlias = loreData
+          const loreRows = loreData as unknown as WorldLore[];
+          const loreIdsWithStoryAlias = loreRows
             .filter(l => l.story_alias_id !== null && l.story_alias_id !== undefined)
             .map(l => l.story_alias_id as string);
-          
+
           if (loreIdsWithStoryAlias.length > 0) {
             const storyAliasIds = [...new Set(loreIdsWithStoryAlias)];
             const { data: storyAliases } = await supabase
               .from('story_aliases')
               .select('id, name, slug, description')
               .in('id', storyAliasIds);
-            
+
             if (storyAliases) {
               const storyAliasMap = new Map(storyAliases.map(sa => [sa.id, sa]));
-              loreData.forEach(lore => {
+              loreRows.forEach(lore => {
                 if (lore.story_alias_id) {
                   const storyAlias = storyAliasMap.get(lore.story_alias_id);
                   if (storyAlias) {

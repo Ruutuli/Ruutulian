@@ -98,7 +98,7 @@ export default async function WorldLorePage({
 
   const { data: loreEntries } = await supabase
     .from('world_lore')
-    .select(WORLD_LORE_CARD_COLUMNS_PRIMARY)
+    .select(WORLD_LORE_CARD_COLUMNS_PRIMARY as any)
     .eq('world_id', world.id)
     .order('lore_type', { ascending: true })
     .order('name', { ascending: true });

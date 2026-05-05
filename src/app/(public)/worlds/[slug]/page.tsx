@@ -129,7 +129,7 @@ export default async function WorldDetailPage({
         picture_url,
         position
       )
-    `)
+    ` as any)
     .eq('slug', resolvedParams.slug)
     .eq('is_public', true)
     .single();
@@ -149,7 +149,7 @@ export default async function WorldDetailPage({
     if (selectedStoryAlias) {
       const { data: storyDataResult } = await supabase
         .from('world_story_data')
-        .select(WORLD_STORY_OVERLAY_COLUMNS)
+        .select(WORLD_STORY_OVERLAY_COLUMNS as any)
         .eq('world_id', world.id)
         .eq('story_alias_id', selectedStoryAlias.id)
         .single();
@@ -214,20 +214,20 @@ export default async function WorldDetailPage({
   const [ocsResult, timelinesResult, loreEntriesResult] = await Promise.all([
     supabase
       .from('ocs')
-      .select(WORLD_PAGE_OC_COLUMNS)
+      .select(WORLD_PAGE_OC_COLUMNS as any)
       .eq('world_id', world.id)
       .eq('is_public', true)
       .order('name', { ascending: true }),
     supabase
       .from('timelines')
-      .select(TIMELINE_PUBLIC_COLUMNS)
+      .select(TIMELINE_PUBLIC_COLUMNS as any)
       .eq('world_id', world.id)
       .order('name', { ascending: true }),
     (async () => {
       // Try query with story_alias first
       let loreQuery = supabase
         .from('world_lore')
-        .select(WORLD_LORE_CARD_COLUMNS_PRIMARY)
+        .select(WORLD_LORE_CARD_COLUMNS_PRIMARY as any)
         .eq('world_id', world.id);
       
       // Filter by story alias if selected, or show base world lore (null story_alias_id)
@@ -247,7 +247,7 @@ export default async function WorldDetailPage({
           (loreError.message?.includes('story_aliases') || loreError.details?.includes('story_alias'))) {
         let retryQuery = supabase
           .from('world_lore')
-          .select(WORLD_LORE_CARD_COLUMNS_FALLBACK)
+          .select(WORLD_LORE_CARD_COLUMNS_FALLBACK as any)
           .eq('world_id', world.id);
         
         if (storyAliasId) {

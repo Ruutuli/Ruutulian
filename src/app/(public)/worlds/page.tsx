@@ -33,7 +33,7 @@ export default async function WorldsPage({ searchParams }: WorldsPageProps) {
   // Build query
   let query = supabase
     .from('worlds')
-    .select(WORLD_CARD_LIST_COLUMNS)
+    .select(WORLD_CARD_LIST_COLUMNS as any)
     .eq('is_public', true);
 
   // Apply series type filter

@@ -1,5 +1,7 @@
 /**
  * Narrow selects for public world pages — smaller payloads than select('*').
+ * Call sites must use `.select(... as any)` (or equivalent): Supabase's ParserQuery
+ * only accepts string literals, not composed `string`-typed fragments.
  */
 
 /** Worlds table columns used by WorldHeader / WorldDetails / story merge (excludes heavy JSON admin blobs). */

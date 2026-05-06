@@ -106,6 +106,14 @@ export function cleanupRateLimit(): void {
   }
 }
 
+// Expired entries were only removed when the same client checked again — scanners hit unique IPs forever and the Map grew without bound.
+if (typeof setInterval !== 'undefined' && typeof window === 'undefined') {
+  const g = globalThis as unknown as { __ruutulianRateLimitCleanupInterval?: ReturnType<typeof setInterval> };
+  if (!g.__ruutulianRateLimitCleanupInterval) {
+    g.__ruutulianRateLimitCleanupInterval = setInterval(() => cleanupRateLimit(), 30 * 60 * 1000);
+  }
+}
+
 
 
 

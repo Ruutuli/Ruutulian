@@ -1,7 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { logger } from '@/lib/logger'
+
+/** Single shared admin/service-role client per Node isolate — avoids churn from thousands of client instances (middleware + APIs). */
+let adminClientSingleton: SupabaseClient | undefined
 
 export async function createClient() {
   const cookieStore = await cookies()
@@ -37,29 +40,35 @@ export async function createClient() {
  * 
  * Supports both old naming (SUPABASE_SERVICE_ROLE_KEY) and new naming (SUPABASE_SECRET_KEY).
  */
-export function createAdminClient() {
+export function createAdminClient(): SupabaseClient {
+  if (adminClientSingleton) {
+    return adminClientSingleton
+  }
+
   // Try new secret key first, then fall back to old service role key
   const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-  
+
   if (secretKey) {
-    return createSupabaseClient(
+    adminClientSingleton = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       secretKey,
       {
         auth: {
           autoRefreshToken: false,
-          persistSession: false
-        }
+          persistSession: false,
+        },
       }
     );
+    return adminClientSingleton;
   }
-  
+
   // Fallback to regular client if service role key is not available
   // This will use the anon key and be subject to RLS
-  return createSupabaseClient(
+  adminClientSingleton = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+  return adminClientSingleton;
 }
 
 /**

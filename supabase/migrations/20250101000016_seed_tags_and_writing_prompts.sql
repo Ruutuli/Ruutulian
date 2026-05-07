@@ -123,8 +123,10 @@ INSERT INTO tags (name, category, description) VALUES
   ('Oneshot', 'fanfic', 'Single chapter story (alternate spelling)')
 ON CONFLICT (name) DO NOTHING;
 
--- Writing prompts (two-character)
-INSERT INTO writing_prompts (category, prompt_text, requires_two_characters, is_active) VALUES
+-- Writing prompts (two-character) — idempotent: skip rows already present
+INSERT INTO writing_prompts (category, prompt_text, requires_two_characters, is_active)
+SELECT category, prompt_text, requires_two_characters, is_active
+FROM (VALUES
 ('First Meeting', 'What happens when {character1} and {character2} meet for the first time?', true, true),
 ('First Meeting', 'Describe {character1}''s first impression of {character2}.', true, true),
 ('First Meeting', 'How does {character2} misjudge {character1} at first?', true, true),
@@ -219,10 +221,17 @@ INSERT INTO writing_prompts (category, prompt_text, requires_two_characters, is_
 ('Choices & Endings', 'Describe their final conversation before everything changes.', true, true),
 ('Choices & Endings', 'Write an ending where {character1} and {character2} part ways.', true, true),
 ('Choices & Endings', 'What if they never met at all?', true, true),
-('Choices & Endings', 'What ending neither of them wanted but accepted?', true, true);
+('Choices & Endings', 'What ending neither of them wanted but accepted?', true, true)
+) AS x(category, prompt_text, requires_two_characters, is_active)
+WHERE NOT EXISTS (
+  SELECT 1 FROM writing_prompts w
+  WHERE w.category = x.category AND w.prompt_text = x.prompt_text AND w.requires_two_characters = x.requires_two_characters
+);
 
 -- Writing prompts (single-character)
-INSERT INTO writing_prompts (category, prompt_text, requires_two_characters, is_active) VALUES
+INSERT INTO writing_prompts (category, prompt_text, requires_two_characters, is_active)
+SELECT category, prompt_text, requires_two_characters, is_active
+FROM (VALUES
 ('Character Reflection', 'What is {character1}''s greatest fear, and how do they cope with it?', false, true),
 ('Character Reflection', 'Describe a day in {character1}''s life when everything goes wrong.', false, true),
 ('Character Reflection', 'What secret does {character1} keep from the world, and why?', false, true),
@@ -237,4 +246,9 @@ INSERT INTO writing_prompts (category, prompt_text, requires_two_characters, is_
 ('Character Reflection', 'Describe {character1}''s ideal future, and what stands in their way.', false, true),
 ('Character Reflection', 'How does {character1} react to a sudden, drastic change in their environment?', false, true),
 ('Character Reflection', 'Write a scene where {character1} receives unexpected news.', false, true),
-('Character Reflection', 'What is {character1}''s philosophy on life, and how did they develop it?', false, true);
+('Character Reflection', 'What is {character1}''s philosophy on life, and how did they develop it?', false, true)
+) AS x(category, prompt_text, requires_two_characters, is_active)
+WHERE NOT EXISTS (
+  SELECT 1 FROM writing_prompts w
+  WHERE w.category = x.category AND w.prompt_text = x.prompt_text AND w.requires_two_characters = x.requires_two_characters
+);

@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Markdown } from '@/lib/utils/markdown';
@@ -8,6 +9,12 @@ import { formatLastUpdated } from '@/lib/utils/dateFormat';
 import { getSiteConfig } from '@/lib/config/site-config';
 import { ChapterNavigation } from '@/components/fanfic/ChapterNavigation';
 import type { Fanfic, FanficChapter } from '@/types/oc';
+import {
+  convertGoogleDriveUrl,
+  getProxyUrl,
+  isAnimatedImage,
+  isGoogleSitesUrl,
+} from '@/lib/utils/googleDriveImage';
 
 export async function generateMetadata({
   params,
@@ -231,11 +238,24 @@ export default async function ChapterPage({
           {/* Chapter Image */}
           {chapter.image_url && (
             <div className="mb-10 rounded-xl overflow-hidden shadow-2xl">
-              <img
-                src={chapter.image_url}
-                alt={chapter.title || `Chapter ${chapterNum}`}
-                className="w-full h-[150px] md:h-[200px] object-cover object-center"
-              />
+              <div className="relative w-full h-[150px] md:h-[200px]">
+                <Image
+                  src={
+                    chapter.image_url.includes('drive.google.com')
+                      ? getProxyUrl(chapter.image_url)
+                      : convertGoogleDriveUrl(chapter.image_url)
+                  }
+                  alt={chapter.title || `Chapter ${chapterNum}`}
+                  fill
+                  sizes="100vw"
+                  className="object-cover object-center"
+                  unoptimized={
+                    chapter.image_url.includes('drive.google.com') ||
+                    isGoogleSitesUrl(chapter.image_url) ||
+                    isAnimatedImage(chapter.image_url)
+                  }
+                />
+              </div>
             </div>
           )}
 

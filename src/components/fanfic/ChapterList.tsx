@@ -2,6 +2,13 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import {
+  convertGoogleDriveUrl,
+  getProxyUrl,
+  isAnimatedImage,
+  isGoogleSitesUrl,
+} from '@/lib/utils/googleDriveImage';
 
 interface Chapter {
   id: string;
@@ -238,11 +245,24 @@ export function ChapterList({ chapters, fanficSlug }: ChapterListProps) {
               {/* Chapter Image Thumbnail */}
               {chapter.image_url && (
                 <div className="mb-4 rounded-lg overflow-hidden aspect-video">
-                  <img
-                    src={chapter.image_url}
-                    alt={chapter.title || `Chapter ${chapter.chapter_number}`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={
+                        chapter.image_url.includes('drive.google.com')
+                          ? getProxyUrl(chapter.image_url)
+                          : convertGoogleDriveUrl(chapter.image_url)
+                      }
+                      alt={chapter.title || `Chapter ${chapter.chapter_number}`}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      unoptimized={
+                        chapter.image_url.includes('drive.google.com') ||
+                        isGoogleSitesUrl(chapter.image_url) ||
+                        isAnimatedImage(chapter.image_url)
+                      }
+                    />
+                  </div>
                 </div>
               )}
               

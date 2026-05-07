@@ -25,10 +25,10 @@ export function LoreCard({ lore }: LoreCardProps) {
       href={`/worlds/${lore.world?.slug}/lore/${lore.slug}`}
       prefetch={true}
       onClick={handleClick}
-      className="relative block"
+      className="relative block h-full"
     >
       <div
-        className="wiki-card wiki-card-hover character-card overflow-hidden relative"
+        className="wiki-card wiki-card-hover character-card overflow-hidden relative h-full flex flex-col"
         style={themeStyles}
       >
         {isLoading && (
@@ -39,7 +39,7 @@ export function LoreCard({ lore }: LoreCardProps) {
             </div>
           </div>
         )}
-        <div className="relative h-48 w-full overflow-hidden">
+        <div className="relative h-48 w-full overflow-hidden flex-shrink-0">
           {lore.banner_image_url ? (
             <Image
               src={lore.banner_image_url.includes('drive.google.com') 
@@ -68,26 +68,30 @@ export function LoreCard({ lore }: LoreCardProps) {
                 </span>
               )}
             </div>
-            <h3 className="text-xl font-bold text-white mb-1">{lore.name}</h3>
+            <h3 className="text-xl font-bold text-white mb-1 line-clamp-2">{lore.name}</h3>
             {lore.world && (
-              <p className="text-sm text-white/80">{lore.world.name}</p>
+              <p className="text-sm text-white/80 line-clamp-1">{lore.world.name}</p>
             )}
           </div>
         </div>
-        {lore.description && (
-          <div className="p-4">
-            <div className="text-sm text-gray-300 prose prose-sm prose-invert max-w-none line-clamp-3 [&>*]:line-clamp-3 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-              <Markdown content={lore.description} />
-            </div>
+        <div className="flex flex-col flex-grow p-4">
+          <div className="flex-grow">
+            {lore.description ? (
+              <div className="text-sm text-gray-300 prose prose-sm prose-invert max-w-none line-clamp-3 [&>*]:line-clamp-3 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                <Markdown content={lore.description} />
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 italic">No description available.</p>
+            )}
           </div>
-        )}
-        {(lore.related_ocs && lore.related_ocs.length > 0) && (
-          <div className="px-4 pb-4">
+          <div className="mt-3 pt-3 border-t border-gray-700/60">
             <p className="text-xs text-gray-400">
-              {lore.related_ocs.length} related character{lore.related_ocs.length !== 1 ? 's' : ''}
+              {lore.related_ocs && lore.related_ocs.length > 0
+                ? `${lore.related_ocs.length} related character${lore.related_ocs.length !== 1 ? 's' : ''}`
+                : 'No related characters'}
             </p>
           </div>
-        )}
+        </div>
       </div>
     </Link>
   );

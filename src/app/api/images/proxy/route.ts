@@ -12,11 +12,21 @@ export async function GET(request: NextRequest) {
   const rawFileId = searchParams.get('fileId');
 
   if (!url && !rawFileId) {
-    logger.warn('ImageProxy', 'Missing url or fileId parameter', { url, fileId: rawFileId });
-    return NextResponse.json(
-      { error: 'Missing url or fileId parameter' },
-      { status: 400 }
+    // This route is occasionally hit by bots/health checks without query params.
+    // Return a tiny transparent image to avoid broken-image icons + reduce log noise.
+    logger.info('ImageProxy', 'Missing url or fileId parameter', { url, fileId: rawFileId });
+    const transparentPng = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      'base64'
     );
+    return new NextResponse(transparentPng, {
+      status: 200,
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'no-cache',
+        'X-Image-Error': 'true',
+      },
+    });
   }
 
   // Prefer file ID from URL to avoid mangled query params; sanitize if provided as fileId

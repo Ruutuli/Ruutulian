@@ -165,11 +165,11 @@ const twoCharacterPromptTemplates: PromptTemplate[] = [
     // Choices & Endings
     // ============================
     { category: 'Choices & Endings', prompt: 'Write a scene where {character1} must choose between {character2} and something else.' },
-    { category: 'Choices & Endings', prompt: 'What happens when {character2} leaves without saying goodbye?' },
-    { category: 'Choices & Endings', prompt: 'Describe their final conversation before everything changes.' },
+    { category: 'Choices & Endings', prompt: 'What happens when {character2} leaves {character1} without saying goodbye?' },
+    { category: 'Choices & Endings', prompt: 'Describe the final conversation between {character1} and {character2} before everything changes.' },
     { category: 'Choices & Endings', prompt: 'Write an ending where {character1} and {character2} part ways.' },
     { category: 'Choices & Endings', prompt: 'What if they never met at all?', requiresTwoCharacters: true },
-    { category: 'Choices & Endings', prompt: 'What ending neither of them wanted but accepted?', requiresTwoCharacters: true },
+    { category: 'Choices & Endings', prompt: 'What ending neither {character1} nor {character2} wanted but accepted?', requiresTwoCharacters: true },
   ];
 
 const singleCharacterPromptTemplates: PromptTemplate[] = [

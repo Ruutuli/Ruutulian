@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Markdown } from '@/lib/utils/markdown';
@@ -13,7 +14,12 @@ import type { Fanfic, FanficCharacter, FanficRelationship, FanficChapter, Tag, O
 import { generateDetailPageMetadata } from '@/lib/seo/page-metadata';
 import { generateArticleSchema, generatePersonSchema } from '@/lib/seo/structured-data';
 import { getAbsoluteUrl } from '@/lib/seo/metadata-helpers';
-import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
+import {
+  convertGoogleDriveUrl,
+  getProxyUrl,
+  isAnimatedImage,
+  isGoogleSitesUrl,
+} from '@/lib/utils/googleDriveImage';
 
 // Types for Supabase query responses
 interface FanficCharacterResponse {
@@ -243,11 +249,25 @@ export default async function FanficDetailPage({
         {/* Hero Section with Image */}
         {fanfic.image_url && (
           <div className="mb-8 rounded-xl overflow-hidden shadow-2xl">
-            <img
-              src={fanfic.image_url}
-              alt={fanfic.title}
-              className="w-full h-[250px] object-cover object-center"
-            />
+            <div className="relative w-full h-[250px]">
+              <Image
+                src={
+                  fanfic.image_url.includes('drive.google.com')
+                    ? getProxyUrl(fanfic.image_url)
+                    : convertGoogleDriveUrl(fanfic.image_url)
+                }
+                alt={fanfic.title}
+                fill
+                sizes="100vw"
+                priority
+                className="object-cover object-center"
+                unoptimized={
+                  fanfic.image_url.includes('drive.google.com') ||
+                  isGoogleSitesUrl(fanfic.image_url) ||
+                  isAnimatedImage(fanfic.image_url)
+                }
+              />
+            </div>
           </div>
         )}
 

@@ -7,7 +7,16 @@ const VALID_FILE_ID_REGEX = /^[a-zA-Z0-9_-]{15,50}$/;
  */
 export function sanitizeGoogleDriveFileId(fileId: string | null | undefined): string | null {
   if (!fileId || typeof fileId !== 'string') return null;
-  const trimmed = fileId.trim();
+  let trimmed = fileId.trim();
+
+  // Normalize common "escaped ampersand" variants that can appear when a URL
+  // was serialized through JSON/HTML and then partially stripped/decoded.
+  // Examples we’ve seen in logs:
+  // - "...\u0026url=..." (literal backslash-u sequence)
+  // - "...u0026url=..." (backslash stripped, leaving "u0026")
+  trimmed = trimmed.replace(/\\u0026/gi, '&');
+  trimmed = trimmed.replace(/u0026/gi, '&');
+
   // If the value contains & it may be a mangled "id&url=..." query string
   const firstSegment = trimmed.includes('&') ? trimmed.split('&')[0]!.trim() : trimmed;
   if (VALID_FILE_ID_REGEX.test(firstSegment)) return firstSegment;

@@ -2,8 +2,15 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Fanfic } from '@/types/oc';
 import { getRatingColorClasses } from '@/lib/utils/fanficRating';
+import {
+  convertGoogleDriveUrl,
+  getProxyUrl,
+  isAnimatedImage,
+  isGoogleSitesUrl,
+} from '@/lib/utils/googleDriveImage';
 
 interface FanficCardProps {
   fanfic: Fanfic;
@@ -35,11 +42,24 @@ export function FanficCard({ fanfic }: FanficCardProps) {
         {/* Fanfic Image */}
         {fanfic.image_url && (
           <div className="w-full h-[100px] overflow-hidden">
-            <img
-              src={fanfic.image_url}
-              alt={fanfic.title}
-              className="w-full h-full object-cover object-center"
-            />
+            <div className="relative w-full h-full">
+              <Image
+                src={
+                  fanfic.image_url.includes('drive.google.com')
+                    ? getProxyUrl(fanfic.image_url)
+                    : convertGoogleDriveUrl(fanfic.image_url)
+                }
+                alt={fanfic.title}
+                fill
+                sizes="100vw"
+                className="object-cover object-center"
+                unoptimized={
+                  fanfic.image_url.includes('drive.google.com') ||
+                  isGoogleSitesUrl(fanfic.image_url) ||
+                  isAnimatedImage(fanfic.image_url)
+                }
+              />
+            </div>
           </div>
         )}
         <div className="p-6 space-y-4">

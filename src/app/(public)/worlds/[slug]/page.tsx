@@ -110,7 +110,8 @@ export default async function WorldDetailPage({
   const resolvedSearchParams = await searchParams;
   const storySlug = resolvedSearchParams?.story;
 
-  const { data: worldRow } = await supabase
+  // Query with limit(1) to prevent PGRST116 when multiple rows exist
+  let { data: worldRow, error: worldError } = await supabase
     .from('worlds')
     .select(`
       ${WORLD_PUBLIC_DETAIL_COLUMNS},
@@ -132,7 +133,40 @@ export default async function WorldDetailPage({
     ` as any)
     .eq('slug', resolvedParams.slug)
     .eq('is_public', true)
-    .single();
+    .limit(1)
+    .maybeSingle();
+
+  // If PGRST116 error (multiple rows), retry with explicit limit and take first
+  if (worldError && worldError.code === 'PGRST116') {
+    const { data: worldArray } = await supabase
+      .from('worlds')
+      .select(
+        `
+        ${WORLD_PUBLIC_DETAIL_COLUMNS},
+        story_aliases:story_aliases(
+          id,
+          name,
+          slug,
+          description
+        ),
+        races:world_races(
+          id,
+          world_id,
+          story_alias_id,
+          name,
+          info,
+          picture_url,
+          position
+        )
+      ` as any
+      )
+      .eq('slug', resolvedParams.slug)
+      .eq('is_public', true)
+      .limit(1);
+
+    worldRow = worldArray?.[0] ?? null;
+    worldError = null;
+  }
 
   if (!worldRow) {
     notFound();

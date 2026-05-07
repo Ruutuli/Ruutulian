@@ -367,14 +367,6 @@ export default async function AdminDashboard() {
             actionLabel="Manage →"
           />
           <FeatureTile
-            title="Manage Dropdown Options"
-            description="Edit available options for form dropdowns"
-            href="/admin/dropdown-options"
-            icon="fas fa-list"
-            color="blue"
-            actionLabel="Manage →"
-          />
-          <FeatureTile
             title="Site Settings"
             description="Configure your site's name, description, colors, and appearance"
             href="/admin/settings"

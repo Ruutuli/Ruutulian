@@ -14,6 +14,7 @@ import { WorldRelationships } from '@/components/world/WorldRelationships';
 import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
 import { generateDetailPageMetadata } from '@/lib/seo/page-metadata';
 import { logMemoryUsage } from '@/lib/memory-monitor';
+import { logger } from '@/lib/logger';
 import {
   WORLD_PUBLIC_DETAIL_COLUMNS,
   WORLD_STORY_OVERLAY_COLUMNS,
@@ -136,6 +137,16 @@ export default async function WorldDetailPage({
     .limit(1)
     .maybeSingle();
 
+  if (worldError) {
+    logger.warn('Worlds', 'World detail: initial query error', {
+      slug: resolvedParams.slug,
+      code: (worldError as any).code,
+      message: (worldError as any).message,
+      details: (worldError as any).details,
+      hint: (worldError as any).hint,
+    });
+  }
+
   // If PGRST116 error (multiple rows), retry with explicit limit and take first
   if (worldError && worldError.code === 'PGRST116') {
     const { data: worldArray } = await supabase
@@ -166,11 +177,16 @@ export default async function WorldDetailPage({
 
     worldRow = worldArray?.[0] ?? null;
     worldError = null;
+
+    logger.warn('Worlds', 'World detail: duplicate slug rows; using first match', {
+      slug: resolvedParams.slug,
+      returned: worldArray?.length ?? 0,
+    });
   }
 
   // If the relational select fails (e.g. missing FK/relationship in prod), retry with a minimal select
   if (!worldRow && worldError) {
-    const { data: minimalWorld } = await supabase
+    const { data: minimalWorld, error: minimalError } = await supabase
       .from('worlds')
       .select(WORLD_PUBLIC_DETAIL_COLUMNS as any)
       .eq('slug', resolvedParams.slug)
@@ -185,10 +201,38 @@ export default async function WorldDetailPage({
         races: [],
       };
       worldError = null;
+
+      logger.warn('Worlds', 'World detail: relational select failed; fell back to minimal world row', {
+        slug: resolvedParams.slug,
+        originalError: {
+          code: (worldError as any)?.code,
+          message: (worldError as any)?.message,
+        },
+      });
+    } else if (minimalError) {
+      logger.error('Worlds', 'World detail: minimal fallback query also errored', {
+        slug: resolvedParams.slug,
+        code: (minimalError as any).code,
+        message: (minimalError as any).message,
+        details: (minimalError as any).details,
+        hint: (minimalError as any).hint,
+      });
     }
   }
 
   if (!worldRow) {
+    logger.error('Worlds', 'World detail: not found after all retries', {
+      slug: resolvedParams.slug,
+      hadError: Boolean(worldError),
+      error: worldError
+        ? {
+            code: (worldError as any).code,
+            message: (worldError as any).message,
+            details: (worldError as any).details,
+            hint: (worldError as any).hint,
+          }
+        : null,
+    });
     notFound();
   }
 

@@ -168,6 +168,26 @@ export default async function WorldDetailPage({
     worldError = null;
   }
 
+  // If the relational select fails (e.g. missing FK/relationship in prod), retry with a minimal select
+  if (!worldRow && worldError) {
+    const { data: minimalWorld } = await supabase
+      .from('worlds')
+      .select(WORLD_PUBLIC_DETAIL_COLUMNS as any)
+      .eq('slug', resolvedParams.slug)
+      .eq('is_public', true)
+      .limit(1)
+      .maybeSingle();
+
+    if (minimalWorld) {
+      worldRow = {
+        ...(minimalWorld as any),
+        story_aliases: [],
+        races: [],
+      };
+      worldError = null;
+    }
+  }
+
   if (!worldRow) {
     notFound();
   }

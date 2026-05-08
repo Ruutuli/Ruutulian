@@ -31,6 +31,9 @@ yarn-error.log*
 # user configuration files (these contain user-specific settings)
 site-config.json
 
+# Google service account keys (Drive / gallery sync — never commit)
+ruutuli-07f405959e17.json
+
 # vercel
 .vercel
 

@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { google } from 'googleapis';
 import type { drive_v3 } from 'googleapis';
 
@@ -12,11 +14,25 @@ interface ServiceAccountCredentials {
   private_key: string;
 }
 
-function parseServiceAccountCredentials(): ServiceAccountCredentials {
-  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim();
-  if (!raw) {
-    throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON is not set');
+function getServiceAccountJsonRaw(): string {
+  const inline = process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim();
+  if (inline) return inline;
+
+  const filePath =
+    process.env.GOOGLE_SERVICE_ACCOUNT_JSON_PATH?.trim() ||
+    process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim();
+  if (filePath) {
+    const resolved = path.isAbsolute(filePath) ? filePath : path.resolve(process.cwd(), filePath);
+    return fs.readFileSync(resolved, 'utf8').trim();
   }
+
+  throw new Error(
+    'Set GOOGLE_SERVICE_ACCOUNT_JSON (inline or base64), or GOOGLE_SERVICE_ACCOUNT_JSON_PATH / GOOGLE_APPLICATION_CREDENTIALS pointing at your service account .json file'
+  );
+}
+
+function parseServiceAccountCredentials(): ServiceAccountCredentials {
+  const raw = getServiceAccountJsonRaw();
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(raw) as Record<string, unknown>;
@@ -25,7 +41,7 @@ function parseServiceAccountCredentials(): ServiceAccountCredentials {
       const decoded = Buffer.from(raw, 'base64').toString('utf8');
       parsed = JSON.parse(decoded) as Record<string, unknown>;
     } catch {
-      throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON must be valid JSON or base64-encoded JSON');
+      throw new Error('Service account JSON must be valid JSON or base64-encoded JSON');
     }
   }
   const client_email = parsed.client_email;

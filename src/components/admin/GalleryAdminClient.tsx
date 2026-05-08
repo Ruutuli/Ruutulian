@@ -140,7 +140,9 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
       ) : items.length === 0 ? (
         <div className="text-gray-400 text-sm">
           No items yet. Run sync after sharing folders with the service account and setting{' '}
-          <code className="text-purple-300">GOOGLE_SERVICE_ACCOUNT_JSON</code>.
+          <code className="text-purple-300">GOOGLE_SERVICE_ACCOUNT_JSON</code>,{' '}
+          <code className="text-purple-300">GOOGLE_SERVICE_ACCOUNT_JSON_PATH</code>, or{' '}
+          <code className="text-purple-300">GOOGLE_APPLICATION_CREDENTIALS</code>.
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">

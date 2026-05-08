@@ -3,6 +3,8 @@ import { errorResponse, successResponse, handleError } from '@/lib/api/route-hel
 import { checkAuth } from '@/lib/auth/require-auth';
 import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
+import { DEFAULT_GALLERY_DRIVE_FOLDER_IDS } from '@/lib/gallery/constants';
+import { revalidateTag } from 'next/cache';
 
 // Ensure runtime is set to nodejs for proper route handler execution
 export const runtime = 'nodejs';
@@ -73,7 +75,20 @@ export async function PUT(request: Request) {
       altIconUrl,
       authorName,
       shortName,
+      galleryEnabled,
+      galleryDriveFolderIds,
     } = body;
+
+    let galleryEnabledDb: boolean | undefined;
+    if (typeof galleryEnabled === 'boolean') {
+      galleryEnabledDb = galleryEnabled;
+    }
+
+    let galleryDriveFolderIdsDb: string[] | undefined;
+    if (Array.isArray(galleryDriveFolderIds) && galleryDriveFolderIds.every((x: unknown) => typeof x === 'string')) {
+      const trimmed = (galleryDriveFolderIds as string[]).map((id) => id.trim()).filter(Boolean);
+      galleryDriveFolderIdsDb = trimmed.length > 0 ? trimmed : [...DEFAULT_GALLERY_DRIVE_FOLDER_IDS];
+    }
 
     // Normalize iconUrl: trim whitespace
     const normalizedIconUrl = iconUrl && typeof iconUrl === 'string' ? iconUrl.trim() : '';
@@ -114,7 +129,7 @@ export async function PUT(request: Request) {
     let result;
     if (existing) {
       // Update existing row
-      const updateData = {
+      const updateData: Record<string, unknown> = {
         website_name: websiteName.trim(),
         website_description: websiteDescription.trim(),
         icon_url: normalizedIconUrl,
@@ -124,6 +139,12 @@ export async function PUT(request: Request) {
         short_name: shortName.trim(),
         updated_at: new Date().toISOString(),
       };
+      if (galleryEnabledDb !== undefined) {
+        updateData.gallery_enabled = galleryEnabledDb;
+      }
+      if (galleryDriveFolderIdsDb !== undefined) {
+        updateData.gallery_drive_folder_ids = galleryDriveFolderIdsDb;
+      }
       
       logger.debug('SiteSettings', 'Updating with data', {
         icon_url: updateData.icon_url,
@@ -164,6 +185,12 @@ export async function PUT(request: Request) {
         site_url: siteUrl,
         author_name: authorName.trim(),
         short_name: shortName.trim(),
+        gallery_enabled:
+          galleryEnabledDb !== undefined ? galleryEnabledDb : false,
+        gallery_drive_folder_ids:
+          galleryDriveFolderIdsDb !== undefined
+            ? galleryDriveFolderIdsDb
+            : [...DEFAULT_GALLERY_DRIVE_FOLDER_IDS],
       };
       
       logger.debug('SiteSettings', 'Inserting with data', {
@@ -250,6 +277,12 @@ export async function PUT(request: Request) {
     } catch (projectsError) {
       // Log but don't fail the request if current_projects update fails
       logger.warn('SiteSettings', 'Failed to sync current_projects description', projectsError);
+    }
+
+    try {
+      revalidateTag('site-config');
+    } catch {
+      /* ignore */
     }
 
     return NextResponse.json({ success: true, data: result });

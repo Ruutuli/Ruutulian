@@ -29,9 +29,6 @@ export const revalidate = 60; // Cache RSC payload to reduce repeated full fetch
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  if (process.env.NODE_ENV === 'development') {
-    logMemoryUsage('Server', 'HomePage: Start', { path: '/' });
-  }
   const supabase = await createClient();
   
   // Batch initial data fetches in parallel

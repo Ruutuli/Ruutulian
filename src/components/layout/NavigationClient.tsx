@@ -6,21 +6,28 @@ import { SiteName } from './SiteName';
 
 interface NavigationClientProps {
   isAuthenticated: boolean;
+  galleryEnabled: boolean;
 }
 
-export function NavigationClient({ isAuthenticated }: NavigationClientProps) {
+export function NavigationClient({ isAuthenticated, galleryEnabled }: NavigationClientProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const regularNavLinks = useMemo(() => [
-    { href: '/', label: 'Home', prefetch: true },
-    { href: '/worlds', label: 'Worlds', prefetch: true },
-    { href: '/ocs', label: 'Characters', prefetch: true },
-    { href: '/fanfics', label: 'Fanfics', prefetch: true },
-    { href: '/lore', label: 'Lore', prefetch: true },
-    { href: '/timelines', label: 'Timelines', prefetch: true },
-    { href: '/calendar', label: 'Calendar', prefetch: true },
-    { href: '/stats', label: 'Statistics', prefetch: true },
-    { href: '/tools', label: 'Tools', prefetch: true },
-  ], []);
+  const regularNavLinks = useMemo(() => {
+    const links = [
+      { href: '/', label: 'Home', prefetch: true },
+      { href: '/worlds', label: 'Worlds', prefetch: true },
+      { href: '/ocs', label: 'Characters', prefetch: true },
+      { href: '/fanfics', label: 'Fanfics', prefetch: true },
+      { href: '/lore', label: 'Lore', prefetch: true },
+      { href: '/timelines', label: 'Timelines', prefetch: true },
+      { href: '/calendar', label: 'Calendar', prefetch: true },
+      { href: '/stats', label: 'Statistics', prefetch: true },
+      { href: '/tools', label: 'Tools', prefetch: true },
+    ];
+    if (galleryEnabled) {
+      links.splice(4, 0, { href: '/gallery', label: 'Gallery', prefetch: true });
+    }
+    return links;
+  }, [galleryEnabled]);
   
   const adminLink = useMemo(() => ({
     href: isAuthenticated ? '/admin' : '/admin/login',

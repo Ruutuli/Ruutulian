@@ -10,6 +10,8 @@ interface SiteSettings {
   altIconUrl: string;
   authorName: string;
   shortName: string;
+  galleryEnabled: boolean;
+  galleryDriveFolderIdsText: string;
 }
 
 export function SiteSettingsForm() {
@@ -20,6 +22,8 @@ export function SiteSettingsForm() {
     altIconUrl: '',
     authorName: '',
     shortName: '',
+    galleryEnabled: false,
+    galleryDriveFolderIdsText: '',
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -79,6 +83,10 @@ export function SiteSettingsForm() {
           altIconUrl: result.data.alt_icon_url || '',
           authorName: result.data.author_name || '',
           shortName: result.data.short_name || '',
+          galleryEnabled: Boolean(result.data.gallery_enabled),
+          galleryDriveFolderIdsText: Array.isArray(result.data.gallery_drive_folder_ids)
+            ? (result.data.gallery_drive_folder_ids as string[]).join('\n')
+            : '',
         });
       }
     } catch (error) {
@@ -96,10 +104,19 @@ export function SiteSettingsForm() {
 
     try {
       // Prepare data for submission, converting empty strings to null for optional fields
+      const galleryDriveFolderIds = settings.galleryDriveFolderIdsText
+        .split(/[\n,]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      const { galleryDriveFolderIdsText: _omit, ...settingsRest } = settings;
+
       const submitData = {
-        ...settings,
+        ...settingsRest,
         iconUrl: settings.iconUrl?.trim() || '',
         altIconUrl: settings.altIconUrl?.trim() || null,
+        galleryEnabled: settings.galleryEnabled,
+        galleryDriveFolderIds,
       };
 
       logger.debug('Component', 'SiteSettingsForm: Submitting data', {
@@ -265,6 +282,43 @@ export function SiteSettingsForm() {
               className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
               placeholder="Your Name"
             />
+          </div>
+
+          <div className="md:col-span-2 border-t border-gray-700 pt-6 mt-2">
+            <h3 className="text-lg font-semibold text-gray-200 mb-4">Gallery</h3>
+            <div className="flex items-start gap-3 mb-4">
+              <input
+                id="galleryEnabled"
+                type="checkbox"
+                checked={settings.galleryEnabled}
+                onChange={(e) => setSettings({ ...settings, galleryEnabled: e.target.checked })}
+                className="mt-1 h-4 w-4 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500"
+              />
+              <div>
+                <label htmlFor="galleryEnabled" className="text-sm font-medium text-gray-300">
+                  Enable public gallery
+                </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  When off, the Gallery nav link is hidden and the gallery page shows nothing. Individual artworks still need to be published from Admin → Gallery.
+                </p>
+              </div>
+            </div>
+            <div>
+              <label htmlFor="galleryDriveFolders" className="block text-sm font-medium text-gray-300 mb-2">
+                Google Drive folder IDs
+              </label>
+              <textarea
+                id="galleryDriveFolders"
+                rows={3}
+                value={settings.galleryDriveFolderIdsText}
+                onChange={(e) => setSettings({ ...settings, galleryDriveFolderIdsText: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm"
+                placeholder={'One folder ID per line (sync pulls images from these folders).'}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Sync uses a Google service account; share each folder with that account (Viewer).
+              </p>
+            </div>
           </div>
 
         </div>

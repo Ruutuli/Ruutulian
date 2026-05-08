@@ -1,0 +1,48 @@
+# Apply supabase/migrations to the hosted database when migration files change on main.
+#
+# Add these GitHub repository secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_ACCESS_TOKEN   — https://supabase.com/dashboard/account/tokens
+#   SUPABASE_PROJECT_REF    — Project Settings → General → Reference ID
+#   SUPABASE_DB_PASSWORD    — Project Settings → Database → database password
+#
+# Railway: push still goes through GitHub first; this job runs on GitHub, not on Railway’s servers.
+
+name: Supabase migrations
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/config.toml'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/supabase-db-push.yml'
+  workflow_dispatch: {}
+
+concurrency:
+  group: supabase-db-push-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (Supabase CLI from package-lock)
+        run: npm ci
+
+      - name: Link project & push migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          npx supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" --password "$SUPABASE_DB_PASSWORD"
+          npx supabase db push

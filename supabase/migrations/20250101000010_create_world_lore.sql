@@ -18,6 +18,15 @@ CREATE TABLE IF NOT EXISTS world_lore (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(world_id, slug)
 );
+-- Legacy DBs may have world_lore without newer columns; CREATE TABLE IF NOT EXISTS does not alter them.
+ALTER TABLE world_lore ADD COLUMN IF NOT EXISTS description_markdown TEXT;
+ALTER TABLE world_lore ADD COLUMN IF NOT EXISTS image_url TEXT;
+ALTER TABLE world_lore ADD COLUMN IF NOT EXISTS icon_url TEXT;
+ALTER TABLE world_lore ADD COLUMN IF NOT EXISTS banner_image_url TEXT;
+ALTER TABLE world_lore ADD COLUMN IF NOT EXISTS world_fields JSONB;
+ALTER TABLE world_lore ADD COLUMN IF NOT EXISTS modular_fields JSONB;
+ALTER TABLE world_lore ADD COLUMN IF NOT EXISTS story_alias_id UUID REFERENCES story_aliases(id) ON DELETE SET NULL;
+ALTER TABLE world_lore ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT false;
 CREATE INDEX IF NOT EXISTS idx_world_lore_world_id ON world_lore(world_id);
 CREATE INDEX IF NOT EXISTS idx_world_lore_slug ON world_lore(slug);
 CREATE INDEX IF NOT EXISTS idx_world_lore_lore_type ON world_lore(lore_type);

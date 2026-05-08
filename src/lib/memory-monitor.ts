@@ -23,22 +23,20 @@ const MEMORY_WARNING_THRESHOLD = 0.8; // Warn if heap used > 80% of limit
 // Configurable via env to reduce false positives (Node/Next in production often 900MB–1.2GB RSS)
 const MEMORY_RSS_WARNING_MB = parseInt(process.env.MEMORY_RSS_WARNING_MB || '900', 10);
 const MEMORY_DELTA_WARNING_MB = parseInt(process.env.MEMORY_DELTA_WARNING_MB || '25', 10);
-const MEMORY_EXTERNAL_WARNING_MB = parseInt(process.env.MEMORY_EXTERNAL_WARNING_MB || '60', 10);
+// Next/dev often holds 200–350MB in `external` (buffers); default avoids constant false-positive warns.
+const MEMORY_EXTERNAL_WARNING_MB = parseInt(process.env.MEMORY_EXTERNAL_WARNING_MB || '400', 10);
 
-if (ENABLE_MEMORY_LOGGING) {
-  if (typeof window !== 'undefined') {
-    console.log('[Memory Monitor] Client-side initialized', { ENABLE_MEMORY_LOGGING, hasPerfMemory: !!(typeof performance !== 'undefined' && (performance as any).memory) });
-  } else {
-    console.log('[Memory Monitor] Server-side initialized', { ENABLE_MEMORY_LOGGING });
-  }
+const g = globalThis as typeof globalThis & { __memoryMonitorInit?: boolean };
+if (ENABLE_MEMORY_LOGGING && !g.__memoryMonitorInit) {
+  g.__memoryMonitorInit = true;
+  const side = typeof window !== 'undefined' ? 'client' : 'server';
+  logger.debug('Memory', `Monitor · ${side} · ${MEMORY_LOG_INTERVAL_MS}ms`);
 }
 
-if (ENABLE_MEMORY_LOGGING) {
-  logger.info('Memory', `Memory monitoring enabled (interval: ${MEMORY_LOG_INTERVAL_MS}ms, env: ${process.env.NODE_ENV})`);
-} else {
+if (!ENABLE_MEMORY_LOGGING) {
   logger.info(
     'Memory',
-    'Memory monitoring disabled in production (set ENABLE_MEMORY_LOGGING=true to enable)'
+    'Memory monitoring off in production (ENABLE_MEMORY_LOGGING=true to enable)'
   );
 }
 
@@ -130,37 +128,28 @@ export function getMemoryUsage(): MemoryStats | null {
   }
 }
 
-/**
- * Format memory stats for logging
- */
-function formatMemoryStats(stats: MemoryStats): string {
-  const parts: string[] = [];
-  
-  parts.push(`heapUsed: ${stats.heapUsed}MB`);
-  parts.push(`heapTotal: ${stats.heapTotal}MB`);
-  
-  if (stats.heapLimit) {
-    parts.push(`heapLimit: ${stats.heapLimit}MB`);
-  }
-  
-  if (stats.usagePercent !== undefined) {
-    parts.push(`usage: ${stats.usagePercent}%`);
-  }
-  
+/** One short line for logs (avoids duplicate console + logger and huge JSON payloads). */
+function compactMemoryStats(stats: MemoryStats): string {
+  const parts: string[] = [`heap ${stats.heapUsed}MB`];
   if (stats.delta !== undefined) {
-    const deltaSign = stats.delta >= 0 ? '+' : '';
-    parts.push(`delta: ${deltaSign}${stats.delta}MB`);
+    const sign = stats.delta >= 0 ? '+' : '';
+    parts.push(`Δ${sign}${stats.delta}MB`);
   }
-  
-  if (stats.rss !== undefined) {
-    parts.push(`rss: ${stats.rss}MB`);
+  if (stats.rss !== undefined) parts.push(`rss ${stats.rss}MB`);
+  if (stats.external !== undefined) parts.push(`ext ${stats.external}MB`);
+  return parts.join(' · ');
+}
+
+function formatContextBrief(context?: Record<string, unknown>): string {
+  if (!context || !Object.keys(context).length) return '';
+  try {
+    const s = JSON.stringify(context);
+    const max = 160;
+    const shown = s.length > max ? `${s.slice(0, max)}…` : s;
+    return ` · ${shown}`;
+  } catch {
+    return '';
   }
-  
-  if (stats.external !== undefined) {
-    parts.push(`external: ${stats.external}MB`);
-  }
-  
-  return `{ ${parts.join(', ')} }`;
 }
 
 /**
@@ -184,68 +173,38 @@ export function logMemoryUsage(
   }
 
   if (!stats) {
-    const msg = `${category}: ${message} [Memory stats unavailable]`;
-    logger.info('Memory', msg, context);
+    logger.info('Memory', `${category}: ${message} (stats n/a)${formatContextBrief(context)}`);
     return;
   }
 
-  const contextStr = context ? ` ${JSON.stringify(context)}` : '';
-  const memoryStr = formatMemoryStats(stats);
-  
-  // Always log to console directly for visibility (use error/warn so they're not stripped)
-  // Use error for high memory/RSS, warn for medium, log for low
-  const isHighMemory = stats.heapUsed > 500 || (stats.rss !== undefined && stats.rss > MEMORY_RSS_WARNING_MB);
-  const isMediumMemory = stats.heapUsed > 200 || (stats.rss !== undefined && stats.rss > 200);
-  
-  if (isHighMemory) {
-    console.error(`[Memory] ${category}: ${message} ${memoryStr}${contextStr}`);
-  } else if (isMediumMemory) {
-    console.warn(`[Memory] ${category}: ${message} ${memoryStr}${contextStr}`);
+  const line = `${category} · ${message} · ${compactMemoryStats(stats)}${formatContextBrief(context)}`;
+  const isPeriodic = category === 'Periodic';
+
+  if (isPeriodic) {
+    logger.debug('Memory', line);
   } else {
-    console.log(`[Memory] ${category}: ${message} ${memoryStr}${contextStr}`);
-  }
-  
-  // Also use logger for formatted output
-  logger.info('Memory', `${category}: ${message} ${memoryStr}${contextStr}`);
-
-  // Warn if memory usage is high
-  if (stats.usagePercent && stats.usagePercent > MEMORY_WARNING_THRESHOLD * 100) {
-    logger.warn('Memory', `⚠️ HIGH MEMORY USAGE: ${stats.usagePercent}% of heap limit (${stats.heapUsed}MB / ${stats.heapLimit}MB)`, {
-      ...stats,
-      ...context,
-    });
+    logger.info('Memory', line);
   }
 
-  // Warn if memory is growing significantly (threshold configurable via MEMORY_DELTA_WARNING_MB)
+  const alerts: string[] = [];
+  if (stats.usagePercent !== undefined && stats.usagePercent > MEMORY_WARNING_THRESHOLD * 100) {
+    alerts.push(`heap ${stats.usagePercent.toFixed(0)}% of limit`);
+  }
   if (stats.delta !== undefined && stats.delta > MEMORY_DELTA_WARNING_MB) {
-    logger.warn('Memory', `⚠️ MEMORY GROWTH: +${stats.delta}MB since last check`, {
-      ...stats,
-      ...context,
-    });
+    alerts.push(`growth +${stats.delta}MB`);
   }
-
-  // Warn if memory exceeds 500MB (potential leak indicator)
   if (stats.heapUsed > 500) {
-    logger.warn('Memory', `⚠️ HIGH MEMORY: ${stats.heapUsed}MB used - potential memory leak?`, {
-      ...stats,
-      ...context,
-    });
+    alerts.push(`heap ${stats.heapUsed}MB`);
   }
-
-  // Warn if RSS (total process memory) is high (threshold configurable via MEMORY_RSS_WARNING_MB)
   if (stats.rss !== undefined && stats.rss > MEMORY_RSS_WARNING_MB) {
-    logger.warn('Memory', `⚠️ HIGH RSS: ${stats.rss}MB total process memory - potential leak?`, {
-      ...stats,
-      ...context,
-    });
+    alerts.push(`rss ${stats.rss}MB`);
+  }
+  if (stats.external !== undefined && stats.external > MEMORY_EXTERNAL_WARNING_MB) {
+    alerts.push(`ext ${stats.external}MB`);
   }
 
-  // Warn if external memory is high (buffers, images, etc.)
-  if (stats.external && stats.external > MEMORY_EXTERNAL_WARNING_MB) {
-    logger.warn('Memory', `⚠️ HIGH EXTERNAL: ${stats.external}MB external memory - buffers/images may not be released`, {
-      ...stats,
-      ...context,
-    });
+  if (alerts.length > 0) {
+    logger.warn('Memory', `Threshold · ${alerts.join(' · ')}`);
   }
 }
 
@@ -276,7 +235,7 @@ export function startPeriodicLogging(
     }, intervalMs);
   }
 
-  logger.info('Memory', `Started periodic memory logging (interval: ${intervalMs}ms)`);
+  logger.debug('Memory', `Periodic logging · ${intervalMs}ms`);
 }
 
 /**
@@ -290,7 +249,7 @@ export function stopPeriodicLogging(): void {
       clearInterval(periodicLoggingInterval as NodeJS.Timeout);
     }
     periodicLoggingInterval = null;
-    logger.info('Memory', 'Stopped periodic memory logging');
+    logger.debug('Memory', 'Periodic logging stopped');
   }
 }
 

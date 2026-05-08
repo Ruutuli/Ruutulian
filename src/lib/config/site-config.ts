@@ -10,6 +10,7 @@ export interface SiteConfig {
   siteUrl: string;
   authorName: string;
   shortName: string;
+  galleryEnabled: boolean;
 }
 
 interface SiteSettingsRow {
@@ -21,6 +22,7 @@ interface SiteSettingsRow {
   site_url: string;
   author_name: string;
   short_name: string;
+  gallery_enabled?: boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -33,6 +35,7 @@ const DEFAULT_SITE_CONFIG: SiteConfig = {
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com',
   authorName: '',
   shortName: 'OC Wiki',
+  galleryEnabled: false,
 };
 
 /**
@@ -66,6 +69,7 @@ const fetchSiteConfigFromDB = cache(async (): Promise<SiteConfig> => {
     siteUrl,
     authorName: data.author_name,
     shortName: data.short_name,
+    galleryEnabled: Boolean(data.gallery_enabled),
   };
 });
 

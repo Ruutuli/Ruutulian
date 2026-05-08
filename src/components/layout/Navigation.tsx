@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { cache } from 'react';
 import { NavigationClient } from './NavigationClient';
 import { getSession } from '@/lib/auth/session-store';
+import { getSiteConfig } from '@/lib/config/site-config';
 
 const checkAuth = cache(async () => {
   const cookieStore = await cookies();
@@ -23,6 +23,12 @@ const checkAuth = cache(async () => {
 
 export async function Navigation() {
   const isAuthenticated = await checkAuth();
+  const siteConfig = await getSiteConfig();
 
-  return <NavigationClient isAuthenticated={isAuthenticated} />;
+  return (
+    <NavigationClient
+      isAuthenticated={isAuthenticated}
+      galleryEnabled={siteConfig.galleryEnabled}
+    />
+  );
 }

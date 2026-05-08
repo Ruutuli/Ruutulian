@@ -12,6 +12,7 @@ const DEFAULT_SITE_CONFIG = {
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com',
   authorName: '',
   shortName: 'OC Wiki',
+  galleryEnabled: false,
 };
 
 // Cache the site config fetch for 60 seconds
@@ -62,6 +63,7 @@ export async function GET(request: Request) {
           siteUrl: process.env.NEXT_PUBLIC_SITE_URL || data.site_url || 'https://example.com',
           authorName: data.author_name,
           shortName: data.short_name,
+          galleryEnabled: Boolean(data.gallery_enabled),
         }
       : { ...DEFAULT_SITE_CONFIG, siteUrl: process.env.NEXT_PUBLIC_SITE_URL || DEFAULT_SITE_CONFIG.siteUrl };
 

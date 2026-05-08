@@ -15,6 +15,7 @@ export function getSiteConfigSync(): SiteConfig {
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com',
     authorName: '',
     shortName: 'Ruutulian',
+    galleryEnabled: false,
   };
 }
 

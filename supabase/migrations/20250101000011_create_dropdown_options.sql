@@ -9,6 +9,10 @@ CREATE TABLE IF NOT EXISTS dropdown_options (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(field, option)
 );
+-- Legacy dropdown_options rows may lack newer columns.
+ALTER TABLE dropdown_options ADD COLUMN IF NOT EXISTS hex_code TEXT;
+ALTER TABLE dropdown_options ADD COLUMN IF NOT EXISTS display_order INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE dropdown_options ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_dropdown_options_field ON dropdown_options(field);
 CREATE INDEX IF NOT EXISTS idx_dropdown_options_display_order ON dropdown_options(field, display_order);
 CREATE INDEX IF NOT EXISTS idx_dropdown_options_created_at ON dropdown_options(created_at);

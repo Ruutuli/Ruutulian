@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   fetchDriveFileMediaBuffer,
+  fetchDriveFileThumbnailBuffer,
   fetchPublicDriveFileWithApiKey,
+  getImageProxyMaxBytes,
 } from '@/lib/google-drive/galleryDrive';
 import {
   detectImageContentType,
@@ -65,8 +67,7 @@ export async function GET(request: NextRequest) {
 
   const errors: Array<{ url: string; error: string; status?: number; contentType?: string }> = [];
 
-  // Cap buffer size to avoid memory spikes (8MB per image)
-  const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+  const MAX_IMAGE_BYTES = getImageProxyMaxBytes();
 
   function serveBuffer(buffer: Buffer): NextResponse | null {
     const contentType = detectImageContentType(buffer);
@@ -83,9 +84,17 @@ export async function GET(request: NextRequest) {
   }
 
   const driveApiMedia = await fetchDriveFileMediaBuffer(driveFileId, MAX_IMAGE_BYTES);
-  if (driveApiMedia) {
+  if (driveApiMedia.status === 'ok') {
     const served = serveBuffer(driveApiMedia.buffer);
     if (served) return served;
+  }
+
+  if (driveApiMedia.status === 'too_large') {
+    const thumb = await fetchDriveFileThumbnailBuffer(driveFileId, MAX_IMAGE_BYTES);
+    if (thumb) {
+      const served = serveBuffer(thumb.buffer);
+      if (served) return served;
+    }
   }
 
   const apiKeyMedia = await fetchPublicDriveFileWithApiKey(driveFileId, MAX_IMAGE_BYTES);
@@ -245,14 +254,19 @@ export async function GET(request: NextRequest) {
   }
 
   // All URLs failed - log comprehensive error details
-  const isPublicAccessIssue = errors.some(e => 
-    e.error.includes('not publicly accessible') || 
-    e.error.includes('login/access page') ||
-    e.error.toLowerCase().includes('access denied') ||
-    e.error.toLowerCase().includes('request access') ||
-    e.status === 401 ||
-    e.status === 403
-  );
+  const driveFileTooLarge = driveApiMedia.status === 'too_large';
+
+  const isPublicAccessIssue =
+    !driveFileTooLarge &&
+    errors.some(
+      (e) =>
+        e.error.includes('not publicly accessible') ||
+        e.error.includes('login/access page') ||
+        e.error.toLowerCase().includes('access denied') ||
+        e.error.toLowerCase().includes('request access') ||
+        e.status === 401 ||
+        e.status === 403
+    );
 
   const shouldLogAsError = errors.some(e => 
     (typeof e.status === 'number' && e.status >= 500) ||
@@ -262,7 +276,15 @@ export async function GET(request: NextRequest) {
   // For public access issues, use info level since it's a user configuration issue, not a code bug
   // For actual errors (500s, network issues), use error level
   // For other failures, use warn level
-  if (isPublicAccessIssue) {
+  if (driveFileTooLarge) {
+    logger.warn('ImageProxy', 'Google Drive image exceeds proxy size limit', {
+      fileId: driveFileId,
+      maxBytes: MAX_IMAGE_BYTES,
+      maxMb: Math.round(MAX_IMAGE_BYTES / 1024 / 1024),
+      recommendation:
+        'Compress the source image, set IMAGE_PROXY_MAX_BYTES on Railway (max 32MB), or rely on the Drive thumbnail fallback after deploy.',
+    });
+  } else if (isPublicAccessIssue) {
     const hasApiKey = Boolean(process.env.GOOGLE_API_KEY?.trim());
     logger.info('ImageProxy', 'Google Drive file not publicly accessible', {
       fileId: driveFileId,

@@ -3,11 +3,12 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { generatePageMetadata } from '@/lib/config/metadata-helpers';
 import { getSiteConfig } from '@/lib/config/site-config';
 import { GalleryFilterLinks } from '@/components/gallery/GalleryFilterLinks';
-import { GalleryImageTile } from '@/components/gallery/GalleryImageTile';
-import { GalleryPagination } from '@/components/gallery/GalleryPagination';
+import { GalleryPublicClient } from '@/components/gallery/GalleryPublicClient';
+import type { GalleryPublicItem } from '@/components/gallery/gallery-public-types';
 import { GALLERY_PUBLIC_PAGE_SIZE } from '@/lib/gallery/constants';
 import { getGalleryPublicFacetsCached } from '@/lib/gallery/get-public-facets';
 import { redirect } from 'next/navigation';
+import type { ReactNode } from 'react';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,6 +63,22 @@ function collectCharacters(items: GalleryFacetRow[]): { slug: string; name: stri
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+function toPublicItems(items: GalleryPublicRow[]): GalleryPublicItem[] {
+  return items.map((item) => ({
+    id: item.id,
+    fileId: item.drive_file_id,
+    title: item.name?.trim() || '',
+    tags: [...(item.tags ?? [])].filter(Boolean),
+    characterNames: (item.gallery_item_ocs ?? [])
+      .filter((row) => row.oc?.is_public)
+      .map((row) => ({
+        name: row.oc!.name,
+        slug: row.oc!.slug,
+        href: `/ocs/${row.oc!.slug}`,
+      })),
+  }));
+}
+
 function galleryQueryString(page: number, tagFilter: string, characterSlug: string): string {
   const sp = new URLSearchParams();
   if (tagFilter) sp.set('tag', tagFilter);
@@ -92,6 +109,9 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
           { label: 'Gallery' },
         ]}
       />
+      <p className="text-gray-400 text-sm sm:text-base -mt-4 mb-2 max-w-2xl">
+        Browse published artwork. Filter by tag or character, then click any piece to view it full size.
+      </p>
 
       {!config.galleryEnabled ? (
         <section className="wiki-card p-8 mt-8">
@@ -196,17 +216,22 @@ async function GalleryEnabledBody({
     }
   }
 
+  const activeCharacterName =
+    characterOptions.find((c) => c.slug === characterSlug)?.name ?? '';
+
   if (itemIdFilter !== null && itemIdFilter.length === 0) {
     return (
-      <section className="mt-8 space-y-6">
-        <GalleryFilterLinks
-          tags={tagOptions}
-          characters={characterOptions}
-          activeTag={tagFilter}
-          activeCharacter={characterSlug}
-        />
-        <div className="wiki-card p-6 text-gray-400 text-sm">No images match these filters.</div>
-      </section>
+      <GalleryPageLayout
+        tagOptions={tagOptions}
+        characterOptions={characterOptions}
+        tagFilter={tagFilter}
+        characterSlug={characterSlug}
+      >
+        <div className="wiki-card p-8 text-center text-gray-400 text-sm">
+          <i className="fas fa-image text-2xl text-gray-600 mb-3 block" aria-hidden />
+          No images match these filters.
+        </div>
+      </GalleryPageLayout>
     );
   }
 
@@ -267,46 +292,57 @@ async function GalleryEnabledBody({
   const items = (pageItems ?? []) as unknown as GalleryPublicRow[];
 
   return (
-    <section className="mt-8 space-y-6">
-      <GalleryFilterLinks
-        tags={tagOptions}
-        characters={characterOptions}
-        activeTag={tagFilter}
-        activeCharacter={characterSlug}
-      />
+    <GalleryPageLayout
+      tagOptions={tagOptions}
+      characterOptions={characterOptions}
+      tagFilter={tagFilter}
+      characterSlug={characterSlug}
+    >
       {filteredTotal === 0 ? (
-        <div className="wiki-card p-6 text-gray-400 text-sm">No images match these filters.</div>
+        <div className="wiki-card p-8 text-center text-gray-400 text-sm">
+          <i className="fas fa-image text-2xl text-gray-600 mb-3 block" aria-hidden />
+          No images match these filters.
+        </div>
       ) : (
-        <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {items.map((item) => {
-              const characterNames = (item.gallery_item_ocs ?? [])
-                .filter((row) => row.oc?.is_public)
-                .map((row) => ({
-                  name: row.oc!.name,
-                  slug: row.oc!.slug,
-                  href: `/ocs/${row.oc!.slug}`,
-                }));
-              return (
-                <GalleryImageTile
-                  key={item.id}
-                  fileId={item.drive_file_id}
-                  title={item.name?.trim() || ''}
-                  tags={[...(item.tags ?? [])].filter(Boolean)}
-                  characterNames={characterNames}
-                />
-              );
-            })}
-          </div>
-          <GalleryPagination
-            page={page}
-            perPage={perPage}
-            total={filteredTotal}
-            tagFilter={tagFilter}
-            characterSlug={characterSlug}
-          />
-        </>
+        <GalleryPublicClient
+          items={toPublicItems(items)}
+          page={page}
+          perPage={perPage}
+          total={filteredTotal}
+          tagFilter={tagFilter}
+          characterSlug={characterSlug}
+          activeCharacterName={activeCharacterName}
+        />
       )}
+    </GalleryPageLayout>
+  );
+}
+
+function GalleryPageLayout({
+  tagOptions,
+  characterOptions,
+  tagFilter,
+  characterSlug,
+  children,
+}: {
+  tagOptions: string[];
+  characterOptions: { slug: string; name: string }[];
+  tagFilter: string;
+  characterSlug: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="mt-6 lg:mt-8">
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+        <GalleryFilterLinks
+          tags={tagOptions}
+          characters={characterOptions}
+          activeTag={tagFilter}
+          activeCharacter={characterSlug}
+          className="w-full lg:w-64 xl:w-72 shrink-0 lg:sticky lg:top-6 z-10"
+        />
+        <div className="flex-1 min-w-0 w-full">{children}</div>
+      </div>
     </section>
   );
 }

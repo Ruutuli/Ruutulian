@@ -149,6 +149,25 @@ export async function createGalleryDriveClient(): Promise<drive_v3.Drive> {
   return galleryDriveSingleton;
 }
 
+const DEFAULT_IMAGE_PROXY_MAX_BYTES = 8 * 1024 * 1024;
+const ABSOLUTE_IMAGE_PROXY_MAX_BYTES = 32 * 1024 * 1024;
+
+/** Max bytes per proxied image (env `IMAGE_PROXY_MAX_BYTES`, capped at 32MB). */
+export function getImageProxyMaxBytes(): number {
+  const raw = process.env.IMAGE_PROXY_MAX_BYTES?.trim();
+  if (!raw) return DEFAULT_IMAGE_PROXY_MAX_BYTES;
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 256 * 1024) return DEFAULT_IMAGE_PROXY_MAX_BYTES;
+  return Math.min(n, ABSOLUTE_IMAGE_PROXY_MAX_BYTES);
+}
+
+class DriveMediaTooLargeError extends Error {
+  constructor(maxBytes: number) {
+    super(`Drive media exceeds maxBytes (${maxBytes})`);
+    this.name = 'DriveMediaTooLargeError';
+  }
+}
+
 function collectReadableWithByteLimit(stream: Readable, maxBytes: number): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
@@ -158,7 +177,7 @@ function collectReadableWithByteLimit(stream: Readable, maxBytes: number): Promi
       total += buf.length;
       if (total > maxBytes) {
         stream.destroy();
-        reject(new Error(`Drive media exceeds maxBytes (${maxBytes})`));
+        reject(new DriveMediaTooLargeError(maxBytes));
         return;
       }
       chunks.push(buf);
@@ -167,6 +186,11 @@ function collectReadableWithByteLimit(stream: Readable, maxBytes: number): Promi
     stream.on('error', reject);
   });
 }
+
+export type DriveFileMediaResult =
+  | { status: 'ok'; buffer: Buffer; contentTypeHeader: string | null }
+  | { status: 'too_large' }
+  | { status: 'error' };
 
 /**
  * Download a link-shared ("Anyone with the link") file using a Google Cloud API key.
@@ -213,12 +237,12 @@ export async function fetchPublicDriveFileWithApiKey(
 export async function fetchDriveFileMediaBuffer(
   fileId: string,
   maxBytes: number
-): Promise<{ buffer: Buffer; contentTypeHeader: string | null } | null> {
+): Promise<DriveFileMediaResult> {
   let drive: drive_v3.Drive;
   try {
     drive = await createGalleryDriveClient();
   } catch {
-    return null;
+    return { status: 'error' };
   }
 
   try {
@@ -237,10 +261,63 @@ export async function fetchDriveFileMediaBuffer(
       typeof rawCt === 'string' ? rawCt : Array.isArray(rawCt) ? rawCt[0] ?? null : null;
 
     const buffer = await collectReadableWithByteLimit(stream, maxBytes);
-    if (buffer.length <= 100) return null;
-    return { buffer, contentTypeHeader };
+    if (buffer.length <= 100) return { status: 'error' };
+    return { status: 'ok', buffer, contentTypeHeader };
   } catch (err) {
+    if (err instanceof DriveMediaTooLargeError) {
+      logger.info('GalleryDrive', 'fetchDriveFileMediaBuffer too large, use thumbnail fallback', {
+        fileId,
+        maxBytes,
+      });
+      return { status: 'too_large' };
+    }
     logger.warn('GalleryDrive', 'fetchDriveFileMediaBuffer failed', {
+      fileId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return { status: 'error' };
+  }
+}
+
+/**
+ * Drive-hosted thumbnail when full `alt=media` exceeds the proxy byte cap.
+ * Uses the API thumbnailLink (upsized when Google exposes `=sNNN` in the URL).
+ */
+export async function fetchDriveFileThumbnailBuffer(
+  fileId: string,
+  maxBytes: number
+): Promise<{ buffer: Buffer } | null> {
+  let drive: drive_v3.Drive;
+  try {
+    drive = await createGalleryDriveClient();
+  } catch {
+    return null;
+  }
+
+  try {
+    const meta = await drive.files.get({
+      fileId,
+      fields: 'thumbnailLink',
+      supportsAllDrives: true,
+    });
+    const rawLink = meta.data.thumbnailLink;
+    if (!rawLink) return null;
+
+    const thumbnailUrl = rawLink.replace(/=s\d+$/i, '=s1920');
+    const res = await fetch(thumbnailUrl, { redirect: 'follow' });
+    if (!res.ok) {
+      logger.warn('GalleryDrive', 'fetchDriveFileThumbnailBuffer HTTP error', {
+        fileId,
+        status: res.status,
+      });
+      return null;
+    }
+
+    const buffer = Buffer.from(await res.arrayBuffer());
+    if (buffer.length <= 100 || buffer.length > maxBytes) return null;
+    return { buffer };
+  } catch (err) {
+    logger.warn('GalleryDrive', 'fetchDriveFileThumbnailBuffer failed', {
       fileId,
       error: err instanceof Error ? err.message : String(err),
     });

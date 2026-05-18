@@ -1,90 +1,97 @@
 'use client';
 
-import { useRef } from 'react';
+import Link from 'next/link';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
 import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
 import { driveFileViewUrl } from '@/lib/gallery/constants';
+import type { GalleryLayoutMode } from '@/components/gallery/gallery-public-types';
 
 interface GalleryImageTileProps {
   fileId: string;
   title: string;
   tags: string[];
   characterNames: { name: string; slug: string; href: string }[];
+  layout: GalleryLayoutMode;
+  onOpen: () => void;
 }
 
-export function GalleryImageTile({ fileId, title, tags, characterNames }: GalleryImageTileProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+export function GalleryImageTile({
+  fileId,
+  title,
+  tags,
+  characterNames,
+  layout,
+  onOpen,
+}: GalleryImageTileProps) {
   const src = convertGoogleDriveUrl(driveFileViewUrl(fileId));
+  const displayTitle = title?.trim() || 'Untitled';
+  const isMasonry = layout === 'masonry';
 
   return (
-    <>
+    <article
+      className={
+        isMasonry
+          ? 'break-inside-avoid mb-4'
+          : undefined
+      }
+    >
       <button
         type="button"
-        onClick={() => dialogRef.current?.showModal()}
-        className="group relative block w-full text-left rounded-lg overflow-hidden border border-gray-700/80 bg-gray-900/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+        onClick={onOpen}
+        className={`group relative block w-full text-left overflow-hidden border border-gray-700/60 bg-gray-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 transition-all duration-300 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-950/30 ${
+          isMasonry ? 'rounded-xl' : 'rounded-xl aspect-square'
+        }`}
       >
-        <div className="aspect-square relative bg-gray-950">
+        <div
+          className={
+            isMasonry
+              ? 'relative bg-gray-950 min-h-[8rem]'
+              : 'absolute inset-0 bg-gray-950'
+          }
+        >
           <GoogleDriveImage
             src={src}
-            alt={title || 'Artwork'}
-            className="w-full h-full object-contain transition-transform group-hover:scale-[1.02]"
+            alt={displayTitle}
+            className={
+              isMasonry
+                ? 'w-full h-auto object-contain'
+                : 'w-full h-full object-contain transition-transform duration-300 group-hover:scale-[1.03]'
+            }
           />
         </div>
-        <div className="p-2 text-xs text-gray-300 truncate border-t border-gray-800">
-          {title && title.trim() ? title : fileId}
+        <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/20 to-transparent opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-300 pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 p-3 translate-y-1 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 transition-all duration-300 pointer-events-none">
+          <p className="text-sm font-medium text-white truncate drop-shadow-sm">{displayTitle}</p>
+          {characterNames.length > 0 && (
+            <p className="text-xs text-purple-200/90 mt-0.5 truncate">
+              {characterNames.map((c) => c.name).join(' · ')}
+            </p>
+          )}
+          {tags.length > 0 && (
+            <p className="text-[11px] text-gray-400 mt-1 truncate">{tags.slice(0, 3).join(' · ')}</p>
+          )}
         </div>
+        <span className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity rounded-full bg-black/50 backdrop-blur-sm p-1.5 text-white/90 pointer-events-none">
+          <i className="fas fa-expand text-xs" aria-hidden />
+        </span>
       </button>
-
-      <dialog
-        ref={dialogRef}
-        className="max-w-[min(96vw,56rem)] w-full rounded-xl border border-gray-700 bg-gray-900 text-gray-100 p-0 backdrop:bg-black/70"
-        onClick={(e) => {
-          if (e.target === dialogRef.current) dialogRef.current?.close();
-        }}
-      >
-        <div className="max-h-[90vh] overflow-auto p-4">
-          <div className="flex justify-between items-start gap-2 mb-3">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-100">{title || 'Artwork'}</h3>
-              <p className="text-xs text-gray-500 mt-1 font-mono truncate" title={title || fileId}>
-                File: {title && title.trim() ? title : fileId}
-              </p>
-              {tags.length > 0 && (
-                <p className="text-sm text-gray-400 mt-1">{tags.join(' · ')}</p>
-              )}
-              {characterNames.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {characterNames.map((c) => (
-                    <a
-                      key={c.slug}
-                      href={c.href}
-                      className="text-xs text-purple-300 hover:text-pink-300 underline"
-                    >
-                      {c.name}
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
-            <form method="dialog">
-              <button
-                type="submit"
-                className="px-3 py-1 text-sm rounded bg-gray-800 border border-gray-600 hover:bg-gray-700"
-              >
-                Close
-              </button>
-            </form>
-          </div>
-          <div className="rounded-lg overflow-hidden bg-gray-950 border border-gray-800">
-            <GoogleDriveImage
-              src={src}
-              alt={title || 'Artwork'}
-              className="w-full h-auto max-h-[75vh] object-contain mx-auto"
-              priority={false}
-            />
-          </div>
+      {!isMasonry && characterNames.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-2 px-0.5">
+          {characterNames.slice(0, 2).map((c) => (
+            <Link
+              key={c.slug}
+              href={c.href}
+              onClick={(e) => e.stopPropagation()}
+              className="text-[11px] px-2 py-0.5 rounded-full border border-gray-700/80 text-gray-400 hover:text-purple-200 hover:border-purple-500/40 transition-colors"
+            >
+              {c.name}
+            </Link>
+          ))}
+          {characterNames.length > 2 && (
+            <span className="text-[11px] text-gray-500 self-center">+{characterNames.length - 2}</span>
+          )}
         </div>
-      </dialog>
-    </>
+      )}
+    </article>
   );
 }

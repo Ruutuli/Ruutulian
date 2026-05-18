@@ -621,10 +621,11 @@ function GalleryAdminEditDrawer({
     (item.gallery_item_ocs ?? []).map((r) => r.oc_id)
   );
   const [ocSearch, setOcSearch] = useState('');
-  const [mainImageOcId, setMainImageOcId] = useState('');
+  const [profileImageOcId, setProfileImageOcId] = useState('');
   const [saving, setSaving] = useState(false);
   const [settingMainImage, setSettingMainImage] = useState(false);
   const [localMessage, setLocalMessage] = useState<string | null>(null);
+  const [imageLightbox, setImageLightbox] = useState(false);
 
   const src = convertGoogleDriveUrl(driveFileViewUrl(item.drive_file_id));
 
@@ -634,8 +635,9 @@ function GalleryAdminEditDrawer({
     setSortOrder(String(item.sort_order ?? 0));
     setSelectedOcIds((item.gallery_item_ocs ?? []).map((r) => r.oc_id));
     setOcSearch('');
-    setMainImageOcId((item.gallery_item_ocs ?? [])[0]?.oc_id ?? '');
+    setProfileImageOcId((item.gallery_item_ocs ?? [])[0]?.oc_id ?? '');
     setLocalMessage(null);
+    setImageLightbox(false);
   }, [item]);
 
   const initialOcIds = useMemo(
@@ -697,14 +699,25 @@ function GalleryAdminEditDrawer({
   }
 
   function toggleOc(ocId: string) {
-    setSelectedOcIds((prev) =>
-      prev.includes(ocId) ? prev.filter((id) => id !== ocId) : [...prev, ocId]
-    );
+    setSelectedOcIds((prev) => {
+      if (prev.includes(ocId)) {
+        const next = prev.filter((id) => id !== ocId);
+        if (profileImageOcId === ocId) {
+          setProfileImageOcId(next[0] ?? '');
+        }
+        return next;
+      }
+      const next = [...prev, ocId];
+      if (!profileImageOcId || !prev.includes(profileImageOcId)) {
+        setProfileImageOcId(ocId);
+      }
+      return next;
+    });
   }
 
   async function setAsMainImage() {
-    if (!mainImageOcId) return;
-    const ocName = ocOptions.find((o) => o.id === mainImageOcId)?.name ?? 'this character';
+    if (!profileImageOcId || !selectedOcIds.includes(profileImageOcId)) return;
+    const ocName = ocOptions.find((o) => o.id === profileImageOcId)?.name ?? 'this character';
     if (
       !window.confirm(
         `Set this image as ${ocName}'s primary profile image? This replaces their current primary image on profiles and cards.`
@@ -719,15 +732,12 @@ function GalleryAdminEditDrawer({
       const res = await fetch(`/api/admin/gallery/items/${item.id}/set-main-image`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ocId: mainImageOcId }),
+        body: JSON.stringify({ ocId: profileImageOcId }),
       });
       const json = await res.json();
       if (!json.success) {
         setLocalMessage(json.error || 'Failed to set profile image');
         return;
-      }
-      if (!selectedOcIds.includes(mainImageOcId)) {
-        setSelectedOcIds((prev) => [...prev, mainImageOcId]);
       }
       await onSaved();
       setLocalMessage(`Profile image updated for ${json.data?.ocName ?? ocName}`);
@@ -740,12 +750,26 @@ function GalleryAdminEditDrawer({
   }
 
   useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        if (imageLightbox) {
+          setImageLightbox(false);
+        } else {
+          onClose();
+        }
+      }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, imageLightbox]);
 
   return (
     <>
@@ -755,7 +779,7 @@ function GalleryAdminEditDrawer({
         aria-label="Close editor"
         onClick={onClose}
       />
-      <aside className="fixed top-0 right-0 z-50 h-full w-full max-w-md bg-gray-900 border-l border-gray-700 shadow-2xl flex flex-col overflow-hidden">
+      <aside className="fixed top-0 right-0 z-50 h-dvh w-full max-w-md bg-gray-900 border-l border-gray-700 shadow-2xl flex flex-col overflow-hidden">
         <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-700 shrink-0">
           <h2 className="text-sm font-semibold text-gray-100 truncate">Edit gallery item</h2>
           <button
@@ -768,16 +792,21 @@ function GalleryAdminEditDrawer({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          <div className="aspect-video bg-gray-950 border-b border-gray-700">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+          <button
+            type="button"
+            onClick={() => setImageLightbox(true)}
+            className="w-full shrink-0 border-b border-gray-700 bg-gray-950 p-2 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-inset"
+            title="Click to view full image"
+          >
             <GoogleDriveImage
               src={src}
               alt={item.name || item.drive_file_id}
-              className="w-full h-full object-contain"
+              className="max-w-full max-h-[min(38vh,320px)] w-auto h-auto object-contain mx-auto"
             />
-          </div>
+          </button>
 
-          <div className="p-4 space-y-4">
+          <div className="p-4 space-y-4 pb-6">
             {item.name ? (
               <div className="text-sm text-gray-200 font-medium break-words">{item.name}</div>
             ) : null}
@@ -814,40 +843,14 @@ function GalleryAdminEditDrawer({
               />
             </div>
 
-            <div className="rounded-md border border-purple-800/50 bg-purple-950/20 p-3 space-y-2">
-              <div>
-                <p className="text-xs font-medium text-gray-200">Character profile image</p>
-                <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">
-                  Sets this piece as the character&apos;s primary image (profile, discovery cards). Replaces
-                  the current primary image URL.
-                </p>
-              </div>
-              <select
-                value={mainImageOcId}
-                onChange={(e) => setMainImageOcId(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-gray-950 border border-gray-600 rounded-md text-gray-100"
-              >
-                <option value="">Choose character…</option>
-                {ocOptions.map((oc) => (
-                  <option key={oc.id} value={oc.id}>
-                    {oc.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                disabled={!mainImageOcId || settingMainImage}
-                onClick={() => void setAsMainImage()}
-                className="w-full py-2 text-sm rounded-md border border-purple-600/60 bg-purple-900/40 text-purple-100 hover:bg-purple-900/60 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-              >
-                {settingMainImage ? 'Updating…' : 'Set as main profile image'}
-              </button>
-            </div>
-
             <div>
               <label className="block text-xs text-gray-400 mb-1">
                 Characters ({selectedOcIds.length} selected)
               </label>
+              <p className="text-[11px] text-gray-500 mb-2 leading-snug">
+                Check who appears in this piece. Select <span className="text-purple-300/90">Profile</span>{' '}
+                on one linked character, then apply below.
+              </p>
               <input
                 type="search"
                 value={ocSearch}
@@ -859,22 +862,58 @@ function GalleryAdminEditDrawer({
                 {filteredOcOptions.length === 0 ? (
                   <p className="text-xs text-gray-500 px-1 py-2">No characters match.</p>
                 ) : (
-                  filteredOcOptions.map((oc) => (
-                    <label
-                      key={oc.id}
-                      className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer py-0.5"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedOcIds.includes(oc.id)}
-                        onChange={() => toggleOc(oc.id)}
-                        className="rounded border-gray-600 bg-gray-700 text-purple-600"
-                      />
-                      <span className="truncate">{oc.name}</span>
-                    </label>
-                  ))
+                  filteredOcOptions.map((oc) => {
+                    const isLinked = selectedOcIds.includes(oc.id);
+                    return (
+                      <div
+                        key={oc.id}
+                        className={`flex items-center gap-2 text-xs py-0.5 rounded px-1 ${
+                          isLinked ? 'text-gray-200' : 'text-gray-400'
+                        }`}
+                      >
+                        <label className="flex items-center gap-2 cursor-pointer min-w-0 flex-1">
+                          <input
+                            type="checkbox"
+                            checked={isLinked}
+                            onChange={() => toggleOc(oc.id)}
+                            className="rounded border-gray-600 bg-gray-700 text-purple-600 shrink-0"
+                          />
+                          <span className="truncate">{oc.name}</span>
+                        </label>
+                        {isLinked ? (
+                          <label
+                            className="flex items-center gap-1 shrink-0 cursor-pointer text-[10px] text-purple-300/90"
+                            title="Use as this character's profile image"
+                          >
+                            <input
+                              type="radio"
+                              name={`profile-image-${item.id}`}
+                              checked={profileImageOcId === oc.id}
+                              onChange={() => setProfileImageOcId(oc.id)}
+                              className="border-gray-600 bg-gray-700 text-purple-500"
+                            />
+                            <span className="whitespace-nowrap">Profile</span>
+                          </label>
+                        ) : null}
+                      </div>
+                    );
+                  })
                 )}
               </div>
+              {selectedOcIds.length > 0 ? (
+                <button
+                  type="button"
+                  disabled={!profileImageOcId || settingMainImage}
+                  onClick={() => void setAsMainImage()}
+                  className="mt-2 w-full py-2 text-sm rounded-md border border-purple-600/60 bg-purple-900/40 text-purple-100 hover:bg-purple-900/60 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                  {settingMainImage
+                    ? 'Updating…'
+                    : `Set as ${
+                        ocOptions.find((o) => o.id === profileImageOcId)?.name ?? 'character'
+                      }'s profile image`}
+                </button>
+              ) : null}
             </div>
 
             {isDirty ? (
@@ -917,6 +956,36 @@ function GalleryAdminEditDrawer({
           </a>
         </div>
       </aside>
+
+      {imageLightbox ? (
+        <div
+          className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Gallery image preview"
+          onClick={() => setImageLightbox(false)}
+        >
+          <button
+            type="button"
+            className="absolute top-4 right-4 z-10 p-2.5 rounded-full bg-black/60 text-gray-200 hover:text-white"
+            onClick={() => setImageLightbox(false)}
+            aria-label="Close preview"
+          >
+            ✕
+          </button>
+          <div
+            className="max-w-full max-h-[92vh] flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GoogleDriveImage
+              src={src}
+              alt={item.name || item.drive_file_id}
+              className="max-w-full max-h-[min(92vh,900px)] w-auto h-auto object-contain mx-auto"
+              priority
+            />
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

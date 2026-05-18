@@ -6,6 +6,11 @@ import { logger } from '@/lib/logger';
 /** Not `immutable` so clients can recover if an older proxy build cached a bad body as an image. */
 const PROXY_CACHE_CONTROL = 'public, max-age=604800';
 
+/** Node Buffer is not assignable to `BodyInit` under strict DOM typings. */
+function bufferAsBody(buf: Buffer): BodyInit {
+  return new Uint8Array(buf);
+}
+
 /**
  * API route to proxy Google Drive images
  * This bypasses CORS restrictions by fetching images server-side
@@ -23,7 +28,7 @@ export async function GET(request: NextRequest) {
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
       'base64'
     );
-    return new NextResponse(transparentPng, {
+    return new NextResponse(bufferAsBody(transparentPng), {
       status: 200,
       headers: {
         'Content-Type': 'image/png',
@@ -62,8 +67,8 @@ export async function GET(request: NextRequest) {
   // Cap buffer size to avoid memory spikes (8MB per image)
   const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
-  const detectImageContentType = (buffer: ArrayBuffer): string | null => {
-    const bytes = new Uint8Array(buffer);
+  const detectImageContentType = (data: ArrayBuffer | Uint8Array): string | null => {
+    const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
     if (bytes.length < 12) return null;
 
     // PNG: 89 50 4E 47 0D 0A 1A 0A
@@ -127,8 +132,7 @@ export async function GET(request: NextRequest) {
   const driveApiMedia = await fetchDriveFileMediaBuffer(driveFileId, MAX_IMAGE_BYTES);
   if (driveApiMedia) {
     const { buffer, contentTypeHeader } = driveApiMedia;
-    const bodyAb = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
-    const detected = detectImageContentType(bodyAb);
+    const detected = detectImageContentType(buffer);
     const headerBase = contentTypeHeader?.split(';')[0]?.trim() || '';
 
     let contentType: string | null = detected;
@@ -146,7 +150,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (contentType) {
-      return new NextResponse(buffer, {
+      return new NextResponse(bufferAsBody(buffer), {
         status: 200,
         headers: {
           'Content-Type': contentType,
@@ -368,7 +372,7 @@ export async function GET(request: NextRequest) {
     'base64'
   );
 
-  return new NextResponse(transparentPng, {
+  return new NextResponse(bufferAsBody(transparentPng), {
     status: 200,
     headers: {
       'Content-Type': 'image/png',

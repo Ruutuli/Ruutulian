@@ -91,7 +91,21 @@ function tryParseServiceAccountJson(raw: string): Record<string, unknown> | null
   return null;
 }
 
+/** Supports GOOGLE_CLIENT_EMAIL + GOOGLE_PRIVATE_KEY or legacy flat .env keys (client_email, private_key). */
+function getServiceAccountFromFlatEnv(): ServiceAccountCredentials | null {
+  const client_email =
+    process.env.GOOGLE_CLIENT_EMAIL?.trim() || process.env.client_email?.trim();
+  const rawKey =
+    process.env.GOOGLE_PRIVATE_KEY?.trim() || process.env.private_key?.trim();
+  if (!client_email || !rawKey) return null;
+  const private_key = rawKey.includes('\\n') ? rawKey.replace(/\\n/g, '\n') : rawKey;
+  return { client_email, private_key };
+}
+
 function parseServiceAccountCredentials(): ServiceAccountCredentials {
+  const flat = getServiceAccountFromFlatEnv();
+  if (flat) return flat;
+
   const raw = getServiceAccountJsonRaw();
   const parsed = tryParseServiceAccountJson(raw);
   if (!parsed) {
@@ -103,6 +117,19 @@ function parseServiceAccountCredentials(): ServiceAccountCredentials {
     throw new Error('Service account JSON must include client_email and private_key');
   }
   return { client_email, private_key };
+}
+
+/** Service account email for sharing Drive files (gallery + optional markdown images). */
+export function getServiceAccountClientEmail(): string | null {
+  try {
+    return parseServiceAccountCredentials().client_email;
+  } catch {
+    return (
+      process.env.GOOGLE_CLIENT_EMAIL?.trim() ||
+      process.env.client_email?.trim() ||
+      null
+    );
+  }
 }
 
 let galleryDriveSingleton: Promise<drive_v3.Drive> | undefined;
@@ -139,6 +166,44 @@ function collectReadableWithByteLimit(stream: Readable, maxBytes: number): Promi
     stream.on('end', () => resolve(Buffer.concat(chunks)));
     stream.on('error', reject);
   });
+}
+
+/**
+ * Download a link-shared ("Anyone with the link") file using a Google Cloud API key.
+ * Does not require the service account to be granted access to the file.
+ * @see https://developers.google.com/drive/api/guides/api-specific-auth
+ */
+export async function fetchPublicDriveFileWithApiKey(
+  fileId: string,
+  maxBytes: number
+): Promise<{ buffer: Buffer } | null> {
+  const apiKey = process.env.GOOGLE_API_KEY?.trim();
+  if (!apiKey) return null;
+
+  const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&key=${encodeURIComponent(apiKey)}`;
+
+  try {
+    const res = await fetch(url, { redirect: 'follow' });
+    if (!res.ok) {
+      logger.warn('GalleryDrive', 'fetchPublicDriveFileWithApiKey HTTP error', {
+        fileId,
+        status: res.status,
+      });
+      return null;
+    }
+
+    const buffer = Buffer.from(await res.arrayBuffer());
+    if (buffer.length <= 100 || buffer.length > maxBytes) {
+      return null;
+    }
+    return { buffer };
+  } catch (err) {
+    logger.warn('GalleryDrive', 'fetchPublicDriveFileWithApiKey failed', {
+      fileId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
 }
 
 /**

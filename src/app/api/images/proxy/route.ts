@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchDriveFileMediaBuffer } from '@/lib/google-drive/galleryDrive';
+import {
+  fetchDriveFileMediaBuffer,
+  fetchPublicDriveFileWithApiKey,
+} from '@/lib/google-drive/galleryDrive';
 import {
   detectImageContentType,
   getGoogleDriveFileId,
@@ -56,38 +59,39 @@ export async function GET(request: NextRequest) {
   }
 
   // Try multiple URL formats in parallel for faster response
-  const urls = url 
+  const urls = url
     ? getGoogleDriveImageUrls(url)
-    : [
-        `https://lh3.googleusercontent.com/d/${driveFileId}`,
-        `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w1920-h1080`,
-        `https://drive.google.com/thumbnail?id=${driveFileId}`,
-        `https://drive.google.com/uc?export=view&id=${driveFileId}`,
-        `https://drive.google.com/uc?export=download&id=${driveFileId}`,
-        `https://drive.usercontent.google.com/download?id=${driveFileId}&export=view`,
-      ];
+    : getGoogleDriveImageUrls(`https://drive.google.com/file/d/${driveFileId}/view`);
 
   const errors: Array<{ url: string; error: string; status?: number; contentType?: string }> = [];
 
   // Cap buffer size to avoid memory spikes (8MB per image)
   const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
+  function serveBuffer(buffer: Buffer): NextResponse | null {
+    const contentType = detectImageContentType(buffer);
+    if (!contentType) return null;
+    return new NextResponse(bufferAsBody(buffer), {
+      status: 200,
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': PROXY_CACHE_CONTROL,
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET',
+      },
+    });
+  }
+
   const driveApiMedia = await fetchDriveFileMediaBuffer(driveFileId, MAX_IMAGE_BYTES);
   if (driveApiMedia) {
-    const { buffer } = driveApiMedia;
-    const contentType = detectImageContentType(buffer);
+    const served = serveBuffer(driveApiMedia.buffer);
+    if (served) return served;
+  }
 
-    if (contentType) {
-      return new NextResponse(bufferAsBody(buffer), {
-        status: 200,
-        headers: {
-          'Content-Type': contentType,
-          'Cache-Control': PROXY_CACHE_CONTROL,
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET',
-        },
-      });
-    }
+  const apiKeyMedia = await fetchPublicDriveFileWithApiKey(driveFileId, MAX_IMAGE_BYTES);
+  if (apiKeyMedia) {
+    const served = serveBuffer(apiKeyMedia.buffer);
+    if (served) return served;
   }
 
   // Helper function to fetch a single URL with timeout. Only one buffer in memory at a time.
@@ -106,7 +110,7 @@ export async function GET(request: NextRequest) {
     try {
       // Create abort controller for timeout (reduced to 5 seconds)
       const controller = new AbortController();
-      timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      timeoutId = setTimeout(() => controller.abort(), 15000);
       
       const response = await fetch(imageUrl, {
         headers: {
@@ -259,10 +263,14 @@ export async function GET(request: NextRequest) {
   // For actual errors (500s, network issues), use error level
   // For other failures, use warn level
   if (isPublicAccessIssue) {
+    const hasApiKey = Boolean(process.env.GOOGLE_API_KEY?.trim());
     logger.info('ImageProxy', 'Google Drive file not publicly accessible', {
       fileId: driveFileId,
       originalUrl: url,
-      recommendation: 'File needs to be shared with "Anyone with the link" permission in Google Drive',
+      hasGoogleApiKey: hasApiKey,
+      recommendation: hasApiKey
+        ? 'File must be shared as "Anyone with the link" (viewer). If it already is, confirm GOOGLE_API_KEY has Drive API enabled and is not IP-restricted.'
+        : 'Set GOOGLE_API_KEY (Google Cloud → Drive API → API key) for link-shared images, OR share the file with your service account email, OR use "Anyone with the link" viewer sharing.',
     });
   } else {
     const logFn = shouldLogAsError ? logger.error : logger.warn;

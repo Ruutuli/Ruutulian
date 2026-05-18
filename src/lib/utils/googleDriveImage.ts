@@ -98,7 +98,9 @@ export function sanitizeGoogleDriveFileId(fileId: string | null | undefined): st
  */
 export function getGoogleDriveFileId(url: string | null | undefined): string | null {
   if (!url) return null;
-  
+
+  const decoded = decodeUrlEntities(url.trim());
+
   const patterns = [
     /\/file\/d\/([a-zA-Z0-9_-]+)/,
     /[?&]id=([a-zA-Z0-9_-]+)/,
@@ -108,7 +110,7 @@ export function getGoogleDriveFileId(url: string | null | undefined): string | n
   ];
   
   for (const pattern of patterns) {
-    const match = url.match(pattern);
+    const match = decoded.match(pattern);
     if (match) return match[1];
   }
   return null;
@@ -127,28 +129,27 @@ export function getGoogleDriveFileId(url: string | null | undefined): string | n
  */
 export function convertGoogleDriveUrl(url: string | null | undefined): string {
   if (!url) return '';
-  
-  // Pattern 1: https://drive.google.com/file/d/{FILE_ID}/view?usp=sharing
-  const pattern1 = /^https?:\/\/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)\/view/;
-  const match1 = url.match(pattern1);
-  if (match1) {
-    return `https://drive.google.com/uc?export=view&id=${match1[1]}`;
+
+  const trimmed = decodeUrlEntities(url.trim());
+  const fileId = getGoogleDriveFileId(trimmed);
+  if (fileId && /drive\.google\.com/i.test(trimmed)) {
+    return `https://drive.google.com/uc?export=view&id=${fileId}`;
   }
-  
-  // Pattern 2: https://drive.google.com/open?id={FILE_ID}
-  const pattern2 = /^https?:\/\/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/;
-  const match2 = url.match(pattern2);
-  if (match2) {
-    return `https://drive.google.com/uc?export=view&id=${match2[1]}`;
+
+  if (trimmed.includes('drive.google.com/uc') && /[?&]id=/.test(trimmed)) {
+    return trimmed;
   }
-  
-  // Pattern 3: Already a direct Google Drive image URL (uc?export=view&id=...)
-  if (url.includes('drive.google.com/uc?export=view&id=')) {
-    return url;
-  }
-  
-  // Not a Google Drive link, return as-is
-  return url;
+
+  return trimmed;
+}
+
+/** Decode common HTML/JSON entity encodings in pasted image URLs. */
+export function decodeUrlEntities(url: string): string {
+  return url
+    .replace(/&amp;/gi, '&')
+    .replace(/&#0*38;/gi, '&')
+    .replace(/\\u0026/gi, '&')
+    .replace(/u0026/gi, '&');
 }
 
 /**
@@ -160,14 +161,14 @@ export function getGoogleDriveImageUrls(url: string | null | undefined): string[
   const fileId = getGoogleDriveFileId(url);
   if (!fileId) return [url];
   
-  // Try multiple formats - thumbnail API is often more reliable
+  // Thumbnail + lh3 with size suffix are most reliable for link-shared files from servers
   return [
-    `https://lh3.googleusercontent.com/d/${fileId}`, // Google CDN (most reliable)
-    `https://drive.google.com/thumbnail?id=${fileId}&sz=w1920-h1080`, // Thumbnail API with size
-    `https://drive.google.com/thumbnail?id=${fileId}`, // Thumbnail API
-    `https://drive.google.com/uc?export=view&id=${fileId}`, // Direct view
-    `https://drive.google.com/uc?export=download&id=${fileId}`, // Direct download (sometimes more reliable)
-    `https://drive.usercontent.google.com/download?id=${fileId}&export=view`, // Newer direct download host
+    `https://drive.google.com/thumbnail?id=${fileId}&sz=w1920`,
+    `https://lh3.googleusercontent.com/d/${fileId}=w1920-rw`,
+    `https://lh3.googleusercontent.com/d/${fileId}`,
+    `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`,
+    `https://drive.google.com/uc?export=download&id=${fileId}`,
+    `https://drive.usercontent.google.com/download?id=${fileId}&export=download`,
   ];
 }
 
@@ -274,12 +275,13 @@ export function shouldUseUnoptimizedImage(src: string | null | undefined): boole
 export function getProxyUrl(url: string | null | undefined): string {
   if (!url) return '';
 
-  const fileId = getGoogleDriveFileId(url);
-  if (fileId && isGoogleHostedImageUrl(url)) {
-    return `/api/images/proxy?fileId=${encodeURIComponent(fileId)}&url=${encodeURIComponent(url)}`;
+  const trimmed = decodeUrlEntities(url.trim());
+  const fileId = getGoogleDriveFileId(trimmed);
+  if (fileId && isGoogleHostedImageUrl(trimmed)) {
+    return `/api/images/proxy?fileId=${encodeURIComponent(fileId)}&url=${encodeURIComponent(trimmed)}`;
   }
 
-  return url;
+  return trimmed;
 }
 
 /**
@@ -287,12 +289,53 @@ export function getProxyUrl(url: string | null | undefined): string {
  */
 export function resolveImageSrc(url: string | null | undefined): string {
   if (!url?.trim()) return IMAGE_PLACEHOLDER_URL;
-  if (isGoogleHostedImageUrl(url)) {
-    const proxied = getProxyUrl(url);
+  const trimmed = decodeUrlEntities(url.trim());
+  if (isGoogleHostedImageUrl(trimmed)) {
+    const proxied = getProxyUrl(trimmed);
     if (proxied.startsWith('/api/images/proxy')) return proxied;
+    // Never load Drive/googleusercontent URLs directly — wrong Content-Type → green corrupt decode
+    return IMAGE_PLACEHOLDER_URL;
   }
-  const converted = convertGoogleDriveUrl(url);
+  const converted = convertGoogleDriveUrl(trimmed);
   return converted || IMAGE_PLACEHOLDER_URL;
+}
+
+/**
+ * Prepare markdown from textareas for rendering: bare image URL lines, HTML img tags,
+ * and entity-encoded URLs become proper `![](url)` images.
+ */
+export function preprocessMarkdownContent(content: string): string {
+  if (!content) return '';
+
+  let text = content.replace(/\r\n/g, '\n');
+
+  text = text.replace(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*\/?>/gi, (_, src: string) => {
+    const url = decodeUrlEntities(src.trim());
+    return isImageUrl(url) ? `\n\n![](${url})\n\n` : `\n\n${src}\n\n`;
+  });
+
+  text = text
+    .split('\n')
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('![')) return line;
+
+      const angleUrl = trimmed.match(/^<(https?:\/\/[^>]+)>$/);
+      const plainUrl = trimmed.match(/^(https?:\/\/\S+)$/);
+      const mdLink = trimmed.match(/^\[[^\]]*\]\((https?:\/\/[^)\s]+)\)$/);
+
+      const raw = (angleUrl?.[1] ?? plainUrl?.[1] ?? mdLink?.[1])?.replace(/[),.;\]]+$/, '');
+      if (!raw) return line;
+
+      const url = decodeUrlEntities(raw);
+      if (isImageUrl(url)) {
+        return `![](${url})`;
+      }
+      return line;
+    })
+    .join('\n');
+
+  return text;
 }
 
 /**

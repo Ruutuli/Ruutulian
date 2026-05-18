@@ -4,11 +4,22 @@ import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import { MarkdownImage } from '@/components/content/MarkdownImage';
-import { isImageUrl } from '@/lib/utils/googleDriveImage';
+import {
+  decodeUrlEntities,
+  isImageUrl,
+  preprocessMarkdownContent,
+} from '@/lib/utils/googleDriveImage';
 
 interface MarkdownProps {
   content: string | null | undefined;
   className?: string;
+}
+
+function normalizeUrlProp(value: unknown): string {
+  if (!value) return '';
+  if (typeof value === 'string') return decodeUrlEntities(value.trim());
+  if (Array.isArray(value) && value[0]) return decodeUrlEntities(String(value[0]).trim());
+  return decodeUrlEntities(String(value).trim());
 }
 
 function childrenToAlt(children: React.ReactNode): string {
@@ -25,20 +36,21 @@ function childrenToAlt(children: React.ReactNode): string {
 
 const markdownComponents: Components = {
   a: ({ href, children, ...props }) => {
-    if (href && isImageUrl(href)) {
-      return <MarkdownImage src={href} alt={childrenToAlt(children)} />;
+    const url = normalizeUrlProp(href);
+    if (url && isImageUrl(url)) {
+      return <MarkdownImage src={url} alt={childrenToAlt(children)} />;
     }
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+      <a href={url || href} target="_blank" rel="noopener noreferrer" {...props}>
         {children}
       </a>
     );
   },
   img: ({ src, alt, node }) => {
     const imageSrc =
-      (typeof src === 'string' && src) ||
+      normalizeUrlProp(src) ||
       (node?.type === 'element' && node.tagName === 'img'
-        ? String(node.properties?.src ?? '')
+        ? normalizeUrlProp(node.properties?.src)
         : '');
     if (!imageSrc) return null;
     return <MarkdownImage src={imageSrc} alt={alt?.trim() || 'Image'} />;
@@ -48,10 +60,12 @@ const markdownComponents: Components = {
 export function Markdown({ content, className = '' }: MarkdownProps) {
   if (!content) return null;
 
+  const processed = preprocessMarkdownContent(content);
+
   return (
     <div className={`prose prose-invert max-w-none ${className}`}>
       <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
-        {content}
+        {processed}
       </ReactMarkdown>
     </div>
   );

@@ -146,7 +146,11 @@ export function LoreDetail({ lore }: LoreDetailProps) {
                 <div key={fieldDef.key} className="border-b border-gray-700/60 pb-4 last:border-b-0">
                   <dt className="font-semibold text-gray-200 mb-1 text-sm">{fieldDef.label}</dt>
                   <dd className="text-gray-300">
-                    {fieldDef.type === 'number' ? value : String(value)}
+                    {fieldDef.type === 'number' ? (
+                      value
+                    ) : (
+                      <Markdown content={String(value)} />
+                    )}
                   </dd>
                 </div>
               );

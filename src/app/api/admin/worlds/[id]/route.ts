@@ -122,6 +122,23 @@ export async function PUT(
       logger.error('World', 'Error fetching before update', beforeError);
     }
 
+    if (body.slug && body.slug !== beforeUpdate?.slug) {
+      const { data: slugConflict, error: slugCheckError } = await supabase
+        .from('worlds')
+        .select('id')
+        .eq('slug', body.slug)
+        .neq('id', id)
+        .maybeSingle();
+
+      if (slugCheckError) {
+        return errorResponse(`Error checking slug: ${slugCheckError.message}`);
+      }
+
+      if (slugConflict) {
+        return errorResponse('A world with this slug already exists');
+      }
+    }
+
     // Fetch templates from database
     const templates = await fetchTemplates();
 

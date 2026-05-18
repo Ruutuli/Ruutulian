@@ -1,12 +1,6 @@
 import type { World } from '@/types/oc';
 import { Markdown } from '@/lib/utils/markdown';
-import Image from 'next/image';
-import {
-  convertGoogleDriveUrl,
-  getProxyUrl,
-  IMAGE_PLACEHOLDER_URL,
-  shouldUseUnoptimizedImage,
-} from '@/lib/utils/googleDriveImage';
+import { ProxiedNextImage } from '@/components/oc/GoogleDriveImage';
 import { SpotifyEmbed } from '@/components/oc/SpotifyEmbed';
 
 interface WorldDetailsProps {
@@ -41,19 +35,12 @@ function SectionWithImage({
         {imageUrl && (
           <div className="float-right ml-6 mb-4 w-full md:w-80 flex-shrink-0">
             <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-gray-700/50">
-              <Image
-                src={imageUrl?.includes('drive.google.com')
-                  ? getProxyUrl(imageUrl)
-                  : (convertGoogleDriveUrl(imageUrl) || IMAGE_PLACEHOLDER_URL)}
+              <ProxiedNextImage
+                src={imageUrl}
                 alt={title}
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, 320px"
-                unoptimized={shouldUseUnoptimizedImage(
-                  imageUrl?.includes('drive.google.com')
-                    ? getProxyUrl(imageUrl)
-                    : (convertGoogleDriveUrl(imageUrl) || IMAGE_PLACEHOLDER_URL)
-                )}
               />
             </div>
           </div>
@@ -78,13 +65,14 @@ export function WorldDetails({ world }: WorldDetailsProps) {
             <i className="fas fa-info-circle text-blue-400"></i>
             About
           </h2>
-          {world.description_markdown ? (
-            <Markdown content={world.description_markdown} />
-          ) : (
-            <div className="text-gray-300 prose max-w-none">
-              <p>{world.summary}</p>
-            </div>
-          )}
+          <div className="text-gray-300 space-y-4">
+            {world.summary && (
+              <Markdown content={world.summary} className="prose-invert" />
+            )}
+            {world.description_markdown && (
+              <Markdown content={world.description_markdown} className="prose-invert" />
+            )}
+          </div>
         </div>
       )}
 
@@ -233,19 +221,12 @@ export function WorldDetails({ world }: WorldDetailsProps) {
                   <div className={`flex flex-col ${imageOnLeft ? 'md:flex-row' : 'md:flex-row-reverse'} gap-6 p-6`}>
                     {race.picture_url && (
                       <div className={`flex-shrink-0 w-full md:w-64 h-64 relative rounded-lg overflow-hidden border border-gray-700/50 bg-gray-900`}>
-                        <Image
-                          src={race.picture_url.includes('drive.google.com')
-                            ? getProxyUrl(race.picture_url)
-                            : (convertGoogleDriveUrl(race.picture_url) || IMAGE_PLACEHOLDER_URL)}
+                        <ProxiedNextImage
+                          src={race.picture_url}
                           alt={race.name}
                           fill
                           className="object-cover object-top"
                           sizes="(max-width: 768px) 100vw, 256px"
-                          unoptimized={shouldUseUnoptimizedImage(
-                            race.picture_url.includes('drive.google.com')
-                              ? getProxyUrl(race.picture_url)
-                              : (convertGoogleDriveUrl(race.picture_url) || IMAGE_PLACEHOLDER_URL)
-                          )}
                         />
                       </div>
                     )}

@@ -34,9 +34,14 @@ const markdownComponents: Components = {
       </a>
     );
   },
-  img: ({ src, alt }) => {
-    if (!src) return null;
-    return <MarkdownImage src={src} alt={alt?.trim() || 'Image'} />;
+  img: ({ src, alt, node }) => {
+    const imageSrc =
+      (typeof src === 'string' && src) ||
+      (node?.type === 'element' && node.tagName === 'img'
+        ? String(node.properties?.src ?? '')
+        : '');
+    if (!imageSrc) return null;
+    return <MarkdownImage src={imageSrc} alt={alt?.trim() || 'Image'} />;
   },
 };
 
@@ -44,7 +49,7 @@ export function Markdown({ content, className = '' }: MarkdownProps) {
   if (!content) return null;
 
   return (
-    <div className={`prose prose-slate max-w-none ${className}`}>
+    <div className={`prose prose-invert max-w-none ${className}`}>
       <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
         {content}
       </ReactMarkdown>

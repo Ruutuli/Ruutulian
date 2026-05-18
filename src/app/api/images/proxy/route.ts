@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchDriveFileMediaBuffer } from '@/lib/google-drive/galleryDrive';
-import { getGoogleDriveFileId, getGoogleDriveImageUrls, sanitizeGoogleDriveFileId } from '@/lib/utils/googleDriveImage';
+import {
+  detectImageContentType,
+  getGoogleDriveFileId,
+  getGoogleDriveImageUrls,
+  sanitizeGoogleDriveFileId,
+} from '@/lib/utils/googleDriveImage';
 import { logger } from '@/lib/logger';
 
-/** Not `immutable` so clients can recover if an older proxy build cached a bad body as an image. */
-const PROXY_CACHE_CONTROL = 'public, max-age=604800';
+/** Not `immutable`; must-revalidate helps drop old wrong Content-Type bodies after proxy fixes. */
+const PROXY_CACHE_CONTROL = 'public, max-age=604800, must-revalidate';
 
 /** Node Buffer is not assignable to `BodyInit` under strict DOM typings. */
 function bufferAsBody(buf: Buffer): BodyInit {
@@ -67,87 +72,10 @@ export async function GET(request: NextRequest) {
   // Cap buffer size to avoid memory spikes (8MB per image)
   const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
-  const detectImageContentType = (data: ArrayBuffer | Uint8Array): string | null => {
-    const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
-    if (bytes.length < 12) return null;
-
-    // PNG: 89 50 4E 47 0D 0A 1A 0A
-    if (
-      bytes[0] === 0x89 &&
-      bytes[1] === 0x50 &&
-      bytes[2] === 0x4e &&
-      bytes[3] === 0x47 &&
-      bytes[4] === 0x0d &&
-      bytes[5] === 0x0a &&
-      bytes[6] === 0x1a &&
-      bytes[7] === 0x0a
-    ) {
-      return 'image/png';
-    }
-
-    // JPEG: FF D8 FF
-    if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
-      return 'image/jpeg';
-    }
-
-    // GIF: "GIF8"
-    if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
-      return 'image/gif';
-    }
-
-    // WebP: "RIFF" .... "WEBP"
-    if (
-      bytes[0] === 0x52 &&
-      bytes[1] === 0x49 &&
-      bytes[2] === 0x46 &&
-      bytes[3] === 0x46 &&
-      bytes[8] === 0x57 &&
-      bytes[9] === 0x45 &&
-      bytes[10] === 0x42 &&
-      bytes[11] === 0x50
-    ) {
-      return 'image/webp';
-    }
-
-    // AVIF / HEIF: .... "ftyp" + brand (avif, avis, heic, heix, mif1)
-    if (bytes.length >= 12) {
-      const ftyp =
-        bytes[4] === 0x66 &&
-        bytes[5] === 0x74 &&
-        bytes[6] === 0x79 &&
-        bytes[7] === 0x70;
-      if (ftyp) {
-        const b = (i: number) => bytes[i] ?? 0;
-        const brand = String.fromCharCode(b(8), b(9), b(10), b(11));
-        if (brand === 'avif' || brand === 'avis') return 'image/avif';
-        if (brand === 'heic' || brand === 'heix' || brand === 'mif1' || brand === 'msf1') {
-          return 'image/heic';
-        }
-      }
-    }
-
-    return null;
-  };
-
   const driveApiMedia = await fetchDriveFileMediaBuffer(driveFileId, MAX_IMAGE_BYTES);
   if (driveApiMedia) {
-    const { buffer, contentTypeHeader } = driveApiMedia;
-    const detected = detectImageContentType(buffer);
-    const headerBase = contentTypeHeader?.split(';')[0]?.trim() || '';
-
-    let contentType: string | null = detected;
-    if (!contentType && headerBase.startsWith('image/')) {
-      contentType = headerBase;
-    }
-
-    if (!contentType) {
-      const snippet = buffer.subarray(0, Math.min(buffer.length, 2048)).toString('utf-8');
-      const looksLikeHtml =
-        /^\s*</.test(snippet) && /<(html|head|body|!doctype)\b/i.test(snippet);
-      if (!looksLikeHtml && buffer.length > 100) {
-        contentType = null;
-      }
-    }
+    const { buffer } = driveApiMedia;
+    const contentType = detectImageContentType(buffer);
 
     if (contentType) {
       return new NextResponse(bufferAsBody(buffer), {
@@ -259,8 +187,6 @@ export async function GET(request: NextRequest) {
         };
       }
 
-      const baseResponseCt = responseContentType.split(';')[0]?.trim() || '';
-
       let snippet = '';
       try {
         const b = new Uint8Array(buffer);
@@ -275,24 +201,13 @@ export async function GET(request: NextRequest) {
       const looksLikeHtmlDoc =
         /^\s*</.test(snippet) && /<(html|head|body|!doctype)\b/i.test(snippet);
 
-      if (baseResponseCt.startsWith('image/') && !isAccessPage && !looksLikeHtmlDoc) {
-        return {
-          success: true,
-          status,
-          responseContentType,
-          data: buffer,
-          contentType: baseResponseCt,
-        };
-      }
-
-      // Likely HTML/error body with 200 OK
       return {
         success: false,
         status,
         responseContentType,
         error: isAccessPage
           ? 'File not publicly accessible (login/access page)'
-          : `Non-image response received${responseContentType ? ` (${responseContentType})` : ''}`,
+          : `Non-image response (no valid magic bytes)${responseContentType ? `, claimed ${responseContentType}` : ''}`,
       };
     } catch (error) {
       // Clear timeout if still active

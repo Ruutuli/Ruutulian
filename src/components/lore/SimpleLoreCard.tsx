@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import type { WorldLore } from '@/types/oc';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
-import { convertGoogleDriveUrl, getProxyUrl, shouldUseUnoptimizedImage } from '@/lib/utils/googleDriveImage';
+import { ProxiedNextImage } from '@/components/oc/GoogleDriveImage';
 
 interface SimpleLoreCardProps {
   lore: WorldLore;
@@ -18,10 +17,6 @@ export function SimpleLoreCard({ lore }: SimpleLoreCardProps) {
   const handleClick = () => {
     setIsLoading(true);
   };
-
-  const imageUrl = lore.banner_image_url?.includes('drive.google.com')
-    ? getProxyUrl(lore.banner_image_url)
-    : convertGoogleDriveUrl(lore.banner_image_url);
 
   return (
     <Link
@@ -43,14 +38,13 @@ export function SimpleLoreCard({ lore }: SimpleLoreCardProps) {
           </div>
         )}
         <div className="relative h-48 w-full overflow-hidden flex-shrink-0">
-          {imageUrl ? (
-            <Image
-              src={imageUrl}
+          {lore.banner_image_url ? (
+            <ProxiedNextImage
+              src={lore.banner_image_url}
               alt={lore.name}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
               className="object-cover object-top"
-              unoptimized={shouldUseUnoptimizedImage(imageUrl)}
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">

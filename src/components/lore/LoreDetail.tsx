@@ -1,13 +1,12 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import type { WorldLore } from '@/types/oc';
 import { Markdown } from '@/lib/utils/markdown';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
 import { getWorldLoreFieldDefinitions, getFieldValue } from '@/lib/fields/worldFields';
 import { TagList } from '@/components/wiki/TagList';
-import { convertGoogleDriveUrl, getProxyUrl, shouldUseUnoptimizedImage } from '@/lib/utils/googleDriveImage';
+import { ProxiedNextImage } from '@/components/oc/GoogleDriveImage';
 import { formatLastUpdated } from '@/lib/utils/dateFormat';
 
 interface LoreDetailProps {
@@ -18,24 +17,17 @@ export function LoreDetail({ lore }: LoreDetailProps) {
   const themeStyles = applyWorldThemeStyles(lore.world);
   const fieldDefinitions = getWorldLoreFieldDefinitions(lore);
 
-  const bannerSrc = lore.banner_image_url
-    ? lore.banner_image_url.includes('drive.google.com')
-      ? getProxyUrl(lore.banner_image_url)
-      : convertGoogleDriveUrl(lore.banner_image_url)
-    : null;
-
   return (
     <div className="space-y-6">
       {/* Banner Image */}
       {lore.banner_image_url && (
         <div className="relative w-full h-64 md:h-80 lg:h-96 overflow-hidden rounded-lg">
-          <Image
-            src={bannerSrc!}
+          <ProxiedNextImage
+            src={lore.banner_image_url}
             alt={`${lore.name} banner`}
             fill
             sizes="100vw"
             className="object-cover"
-            unoptimized={shouldUseUnoptimizedImage(bannerSrc)}
           />
         </div>
       )}

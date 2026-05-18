@@ -1,13 +1,7 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import type { OC } from '@/types/oc';
 import { Infobox } from '@/components/wiki/Infobox';
 import { InfoRow } from '@/components/wiki/InfoRow';
-import {
-  convertGoogleDriveUrl,
-  IMAGE_PLACEHOLDER_URL,
-  shouldUseUnoptimizedImage,
-} from '@/lib/utils/googleDriveImage';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
 import { formatDateOfBirth } from '@/lib/utils/dateFormat';
 
@@ -19,27 +13,13 @@ export async function OCInfobox({ oc }: OCInfoboxProps) {
   return (
     <Infobox sticky={false} className="w-full lg:w-96">
       <div className="relative w-full aspect-[4/5] mb-4 rounded-lg overflow-hidden" suppressHydrationWarning>
-        {oc.image_url?.includes('drive.google.com') ? (
-          <GoogleDriveImage
-            src={oc.image_url}
-            alt={oc.name}
-            className="wiki-image w-full h-full object-contain"
-            style={{ position: 'absolute', inset: 0, objectPosition: 'center 10%' }}
-          />
-        ) : (
-          <Image
-            src={convertGoogleDriveUrl(oc.image_url) || IMAGE_PLACEHOLDER_URL}
-            alt={oc.name}
-            fill
-            sizes="(max-width: 768px) 100vw, 384px"
-            priority
-            className="wiki-image"
-            style={{ objectPosition: 'center 10%' }}
-            unoptimized={shouldUseUnoptimizedImage(
-              convertGoogleDriveUrl(oc.image_url) || IMAGE_PLACEHOLDER_URL
-            )}
-          />
-        )}
+        <GoogleDriveImage
+          src={oc.image_url || ''}
+          alt={oc.name}
+          className="wiki-image w-full h-full object-contain"
+          style={{ position: 'absolute', inset: 0, objectPosition: 'center 10%' }}
+          priority
+        />
       </div>
       <dl className="space-y-0" suppressHydrationWarning>
         {/* Basic Information Section */}

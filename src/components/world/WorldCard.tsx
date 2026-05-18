@@ -2,15 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import type { World } from '@/types/oc';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
-import {
-  convertGoogleDriveUrl,
-  getProxyUrl,
-  IMAGE_PLACEHOLDER_URL,
-  shouldUseUnoptimizedImage,
-} from '@/lib/utils/googleDriveImage';
+import { ProxiedNextImage } from '@/components/oc/GoogleDriveImage';
 
 interface WorldCardProps {
   world: World;
@@ -19,13 +13,6 @@ interface WorldCardProps {
 export function WorldCard({ world }: WorldCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const themeStyles = applyWorldThemeStyles(world);
-
-  const headerSrc = world.header_image_url?.includes('drive.google.com')
-    ? getProxyUrl(world.header_image_url)
-    : (convertGoogleDriveUrl(world.header_image_url) || IMAGE_PLACEHOLDER_URL);
-  const iconSrc = world.icon_url?.includes('drive.google.com')
-    ? getProxyUrl(world.icon_url)
-    : (convertGoogleDriveUrl(world.icon_url) || IMAGE_PLACEHOLDER_URL);
 
   const handleClick = () => {
     setIsLoading(true);
@@ -51,13 +38,12 @@ export function WorldCard({ world }: WorldCardProps) {
           </div>
         )}
         <div className="relative h-48 w-full overflow-hidden flex-shrink-0">
-          <Image
-            src={headerSrc}
+          <ProxiedNextImage
+            src={world.header_image_url}
             alt={world.name}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className="object-cover"
-            unoptimized={shouldUseUnoptimizedImage(headerSrc)}
           />
           <div
             className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"
@@ -66,13 +52,12 @@ export function WorldCard({ world }: WorldCardProps) {
         <div className="p-4 md:p-6 flex flex-col flex-grow">
           <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
             <div className="relative w-10 h-10 md:w-12 md:h-12 flex-shrink-0">
-              <Image
-                src={iconSrc}
+              <ProxiedNextImage
+                src={world.icon_url}
                 alt={world.name}
                 fill
                 sizes="(max-width: 768px) 40px, 48px"
                 className="object-contain rounded-lg"
-                unoptimized={shouldUseUnoptimizedImage(iconSrc)}
               />
             </div>
             <h3 className="text-lg md:text-2xl font-bold text-gray-100 truncate">{world.name}</h3>

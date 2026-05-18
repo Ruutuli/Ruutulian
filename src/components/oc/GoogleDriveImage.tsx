@@ -1,7 +1,12 @@
 'use client';
 
-import { useState, useRef, useMemo, useEffect, memo } from 'react';
-import { getProxyUrl, IMAGE_PLACEHOLDER_URL } from '@/lib/utils/googleDriveImage';
+import { useState, useRef, useMemo, useEffect, memo, useCallback } from 'react';
+import Image, { type ImageProps } from 'next/image';
+import {
+  resolveImageSrc,
+  IMAGE_PLACEHOLDER_URL,
+  shouldUseUnoptimizedImage,
+} from '@/lib/utils/googleDriveImage';
 import { logger } from '@/lib/logger';
 
 interface GoogleDriveImageProps {
@@ -14,56 +19,44 @@ interface GoogleDriveImageProps {
   priority?: boolean;
 }
 
-function GoogleDriveImageComponent({ 
-  src, 
-  alt, 
-  className = '', 
+function GoogleDriveImageComponent({
+  src,
+  alt,
+  className = '',
   style,
   fallbackSrc = IMAGE_PLACEHOLDER_URL,
   priority = false,
 }: GoogleDriveImageProps) {
-  // Calculate proxy URL immediately, not in useEffect - memoize to prevent recalculation
-  const imageUrl = useMemo(() => {
-    if (src.includes('drive.google.com')) {
-      return getProxyUrl(src);
-    }
-    return src;
-  }, [src]);
+  const imageUrl = useMemo(() => resolveImageSrc(src), [src]);
 
-  // Track the current image URL to prevent unnecessary state changes
   const currentImageUrlRef = useRef<string>(imageUrl);
-  const [hasError, setHasError] = useState(false);
+  const [displayUrl, setDisplayUrl] = useState(imageUrl);
   const errorCountRef = useRef<number>(0);
 
-  // Only update ref when imageUrl actually changes
   useEffect(() => {
     if (currentImageUrlRef.current !== imageUrl) {
       currentImageUrlRef.current = imageUrl;
-      // Reset error state only when URL changes
-      setHasError(false);
+      setDisplayUrl(imageUrl);
       errorCountRef.current = 0;
     }
   }, [imageUrl]);
 
   const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    // Prevent infinite error loops - only show error after first attempt
     errorCountRef.current += 1;
     const img = e.currentTarget;
-    
-    // Check if the response was the transparent PNG fallback (1x1 pixel)
-    // This indicates the proxy returned an error fallback
-    if (img.naturalWidth === 1 && img.naturalHeight === 1 && !hasError) {
-      // This is the transparent PNG fallback from the proxy
-      setHasError(true);
-      logger.warn('Component', 'GoogleDriveImage: Google Drive image not accessible. File may need to be shared publicly.', {
+
+    if (img.naturalWidth === 1 && img.naturalHeight === 1) {
+      setDisplayUrl(fallbackSrc);
+      logger.warn('Component', 'GoogleDriveImage: proxy returned fallback (file may not be public)', {
         originalUrl: src,
         proxyUrl: imageUrl,
-        fileId: src.includes('drive.google.com') ? src.match(/\/file\/d\/([a-zA-Z0-9_-]+)/)?.[1] : null,
       });
-    } else if (errorCountRef.current >= 2 && !hasError) {
-      // After 2 attempts, show fallback
-      setHasError(true);
-      logger.error('Component', 'GoogleDriveImage: Failed to load image after multiple attempts.', {
+      return;
+    }
+
+    if (errorCountRef.current >= 1) {
+      setDisplayUrl(fallbackSrc);
+      logger.warn('Component', 'GoogleDriveImage: failed to load, using placeholder', {
         originalUrl: src,
         proxyUrl: imageUrl,
         attempts: errorCountRef.current,
@@ -72,15 +65,8 @@ function GoogleDriveImageComponent({
   };
 
   const handleLoad = () => {
-    // Successfully loaded - reset error state and count
-    if (hasError) {
-      setHasError(false);
-    }
     errorCountRef.current = 0;
   };
-
-  // Use the current image URL, or fallback if there's an error
-  const displayUrl = hasError ? fallbackSrc : imageUrl;
 
   return (
     <img
@@ -97,18 +83,37 @@ function GoogleDriveImageComponent({
   );
 }
 
-// Memoize to prevent unnecessary re-renders when parent components update
 export const GoogleDriveImage = memo(GoogleDriveImageComponent);
 
+type ProxiedNextImageProps = Omit<ImageProps, 'src' | 'onError'> & {
+  src: string | null | undefined;
+  fallbackSrc?: string;
+};
 
+/** next/image wrapper: Google URLs via proxy, onError → placeholder (never green corrupt frames). */
+export function ProxiedNextImage({
+  src,
+  fallbackSrc = IMAGE_PLACEHOLDER_URL,
+  unoptimized,
+  ...props
+}: ProxiedNextImageProps) {
+  const resolved = useMemo(() => resolveImageSrc(src), [src]);
+  const [displaySrc, setDisplaySrc] = useState(resolved);
 
+  useEffect(() => {
+    setDisplaySrc(resolved);
+  }, [resolved]);
 
+  const handleError = useCallback(() => {
+    setDisplaySrc(fallbackSrc);
+  }, [fallbackSrc]);
 
-
-
-
-
-
-
-
-
+  return (
+    <Image
+      {...props}
+      src={displaySrc}
+      unoptimized={unoptimized ?? shouldUseUnoptimizedImage(displaySrc)}
+      onError={handleError}
+    />
+  );
+}

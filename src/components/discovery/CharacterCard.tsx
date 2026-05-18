@@ -1,9 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import type { OC } from '@/types/oc';
-import { convertGoogleDriveUrl, shouldUseUnoptimizedImage } from '@/lib/utils/googleDriveImage';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
 
@@ -27,23 +25,12 @@ export function CharacterCard({ oc, className = '' }: CharacterCardProps) {
         {/* Card Image */}
         <div className="relative w-full aspect-[3/4] bg-gray-900 overflow-hidden">
           {oc.image_url ? (
-            oc.image_url.includes('drive.google.com') ? (
-              <GoogleDriveImage
-                src={oc.image_url}
-                alt={oc.name}
-                className="object-cover w-full h-full"
-                style={{ position: 'absolute', inset: 0 }}
-              />
-            ) : (
-              <Image
-                src={convertGoogleDriveUrl(oc.image_url)}
-                alt={oc.name}
-                fill
-                sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                className="object-cover"
-                unoptimized={shouldUseUnoptimizedImage(convertGoogleDriveUrl(oc.image_url))}
-              />
-            )
+            <GoogleDriveImage
+              src={oc.image_url}
+              alt={oc.name}
+              className="object-cover w-full h-full"
+              style={{ position: 'absolute', inset: 0 }}
+            />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">
               <span className="text-gray-500 text-4xl">?</span>

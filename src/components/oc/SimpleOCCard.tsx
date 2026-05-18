@@ -2,10 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import type { OC } from '@/types/oc';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
-import { convertGoogleDriveUrl, shouldUseUnoptimizedImage } from '@/lib/utils/googleDriveImage';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
 
 interface SimpleOCCardProps {
@@ -41,27 +39,14 @@ export function SimpleOCCard({ oc }: SimpleOCCardProps) {
         )}
         <div className="relative h-48 w-full overflow-hidden bg-gray-900 flex-shrink-0">
           {oc.image_url ? (
-            oc.image_url.includes('drive.google.com') ? (
-              <div className="relative w-full h-full flex items-center justify-center">
-                <GoogleDriveImage
-                  src={oc.image_url}
-                  alt={oc.name}
-                  className="object-contain w-full h-full"
-                  style={{ position: 'absolute', inset: 0 }}
-                />
-              </div>
-            ) : (
-              <div className="relative w-full h-full">
-                <Image
-                  src={convertGoogleDriveUrl(oc.image_url)}
-                  alt={oc.name}
-                  fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  className="object-contain"
-                  unoptimized={shouldUseUnoptimizedImage(convertGoogleDriveUrl(oc.image_url))}
-                />
-              </div>
-            )
+            <div className="relative w-full h-full flex items-center justify-center">
+              <GoogleDriveImage
+                src={oc.image_url}
+                alt={oc.name}
+                className="object-contain w-full h-full"
+                style={{ position: 'absolute', inset: 0 }}
+              />
+            </div>
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">
               <span className="text-gray-500 text-2xl">?</span>

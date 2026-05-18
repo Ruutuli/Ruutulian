@@ -749,7 +749,7 @@ export function WorldForm({ world }: WorldFormProps) {
             {...register('description_markdown')}
             rows={10}
             markdown
-            placeholder="Full detailed description of your world. Supports Markdown formatting. This is the main content that appears on the world's page."
+            placeholder="Full detailed description of your world. Supports Markdown — paste an image URL on its own line, use ![alt](url), or link to Google Drive / Imgur / Discord CDN images."
             disabled={isSubmitting}
           />
         </div>

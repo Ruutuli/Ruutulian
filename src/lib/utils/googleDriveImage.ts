@@ -1,6 +1,74 @@
 /** Google Drive file IDs are alphanumeric, hyphen, underscore; typically 20–44 chars (legacy can be shorter) */
 const VALID_FILE_ID_REGEX = /^[a-zA-Z0-9_-]{15,50}$/;
 
+/** Hosts that should be loaded via `/api/images/proxy` (avoids wrong Content-Type → green corrupt decode). */
+export function isGoogleHostedImageUrl(url: string | null | undefined): boolean {
+  if (!url?.trim()) return false;
+  return (
+    /drive\.google\.com/i.test(url) ||
+    /googleusercontent\.com/i.test(url) ||
+    /drive\.usercontent\.google/i.test(url)
+  );
+}
+
+/**
+ * Sniffs image format from magic bytes. Never trust CDN Content-Type alone — Drive often
+ * labels WebP/PNG bodies as image/jpeg, which browsers decode as green/purple garbage.
+ */
+export function detectImageContentType(data: ArrayBuffer | Uint8Array): string | null {
+  const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+  if (bytes.length < 12) return null;
+
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  ) {
+    return 'image/png';
+  }
+
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return 'image/jpeg';
+  }
+
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
+    return 'image/gif';
+  }
+
+  if (
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return 'image/webp';
+  }
+
+  if (bytes.length >= 12) {
+    const ftyp =
+      bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70;
+    if (ftyp) {
+      const b = (i: number) => bytes[i] ?? 0;
+      const brand = String.fromCharCode(b(8), b(9), b(10), b(11));
+      if (brand === 'avif' || brand === 'avis') return 'image/avif';
+      if (brand === 'heic' || brand === 'heix' || brand === 'mif1' || brand === 'msf1') {
+        return 'image/heic';
+      }
+    }
+  }
+
+  return null;
+}
+
 /**
  * Sanitizes a possibly malformed fileId (e.g. "id&url=..." from mangled query strings).
  * Returns only the first valid Google Drive file ID segment.
@@ -145,12 +213,26 @@ export function isImageUrl(url: string | null | undefined): boolean {
   if (/lh3\.googleusercontent\.com\//i.test(trimmed)) return true;
   if (/drive\.usercontent\.google\.com\//i.test(trimmed)) return true;
   if (/i\.pinimg\.com\//i.test(trimmed)) return true;
+  if (/i\.imgur\.com\//i.test(trimmed)) return true;
+  if (/cdn\.discordapp\.com\/|media\.discordapp\.net\//i.test(trimmed)) return true;
+  if (/i\.ibb\.co\/|i\.postimg\.cc\/|postimg\.cc\//i.test(trimmed)) return true;
+  if (/files\.catbox\.moe\//i.test(trimmed)) return true;
+  if (/static\.wikia\.nocookie\.net\//i.test(trimmed)) return true;
+  if (/supabase\.co\/storage\/v1\/object\//i.test(trimmed)) return true;
   if (IMAGE_EXTENSION.test(trimmed)) return true;
 
   try {
-    const { pathname, search } = new URL(trimmed);
+    const { pathname, search, hostname } = new URL(trimmed);
     if (IMAGE_EXTENSION.test(pathname)) return true;
     if (/[?&]id=[a-zA-Z0-9_-]+/i.test(search) && /thumbnail|export=view/i.test(trimmed)) {
+      return true;
+    }
+    // Hosts that serve images without file extensions in the path
+    if (
+      /^(i\.imgur\.com|cdn\.discordapp\.com|media\.discordapp\.net|i\.ibb\.co|i\.postimg\.cc)$/i.test(
+        hostname
+      )
+    ) {
       return true;
     }
   } catch {
@@ -191,15 +273,26 @@ export function shouldUseUnoptimizedImage(src: string | null | undefined): boole
  */
 export function getProxyUrl(url: string | null | undefined): string {
   if (!url) return '';
-  
-  if (url.includes('drive.google.com')) {
-    const fileId = getGoogleDriveFileId(url);
-    if (fileId) {
-      return `/api/images/proxy?fileId=${encodeURIComponent(fileId)}&url=${encodeURIComponent(url)}`;
-    }
+
+  const fileId = getGoogleDriveFileId(url);
+  if (fileId && isGoogleHostedImageUrl(url)) {
+    return `/api/images/proxy?fileId=${encodeURIComponent(fileId)}&url=${encodeURIComponent(url)}`;
   }
-  
+
   return url;
+}
+
+/**
+ * Resolves a user image URL for display: Google-hosted → proxy, Drive share links → direct view, else as-is.
+ */
+export function resolveImageSrc(url: string | null | undefined): string {
+  if (!url?.trim()) return IMAGE_PLACEHOLDER_URL;
+  if (isGoogleHostedImageUrl(url)) {
+    const proxied = getProxyUrl(url);
+    if (proxied.startsWith('/api/images/proxy')) return proxied;
+  }
+  const converted = convertGoogleDriveUrl(url);
+  return converted || IMAGE_PLACEHOLDER_URL;
 }
 
 /**

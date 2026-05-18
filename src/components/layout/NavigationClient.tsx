@@ -23,9 +23,8 @@ export function NavigationClient({ isAuthenticated, galleryEnabled }: Navigation
       { href: '/stats', label: 'Statistics', prefetch: true },
       { href: '/tools', label: 'Tools', prefetch: true },
     ];
-    if (galleryEnabled) {
-      links.splice(4, 0, { href: '/gallery', label: 'Gallery', prefetch: true });
-    }
+    // Always show Gallery in the nav; the page itself handles the "disabled" state.
+    links.splice(4, 0, { href: '/gallery', label: 'Gallery', prefetch: galleryEnabled });
     return links;
   }, [galleryEnabled]);
   

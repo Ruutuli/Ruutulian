@@ -1,7 +1,12 @@
 import Image from 'next/image';
 import type { World } from '@/types/oc';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
-import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl, isAnimatedImage } from '@/lib/utils/googleDriveImage';
+import {
+  convertGoogleDriveUrl,
+  getProxyUrl,
+  IMAGE_PLACEHOLDER_URL,
+  shouldUseUnoptimizedImage,
+} from '@/lib/utils/googleDriveImage';
 import { formatLastUpdated } from '@/lib/utils/dateFormat';
 
 interface WorldHeaderProps {
@@ -11,6 +16,13 @@ interface WorldHeaderProps {
 export function WorldHeader({ world }: WorldHeaderProps) {
   const themeStyles = applyWorldThemeStyles(world);
 
+  const headerSrc = world.header_image_url?.includes('drive.google.com')
+    ? getProxyUrl(world.header_image_url)
+    : (convertGoogleDriveUrl(world.header_image_url) || IMAGE_PLACEHOLDER_URL);
+  const iconSrc = world.icon_url?.includes('drive.google.com')
+    ? getProxyUrl(world.icon_url)
+    : (convertGoogleDriveUrl(world.icon_url) || IMAGE_PLACEHOLDER_URL);
+
   return (
     <div
       className="relative rounded-xl overflow-hidden mb-8 shadow-lg"
@@ -18,14 +30,12 @@ export function WorldHeader({ world }: WorldHeaderProps) {
     >
       <div className="relative h-64 md:h-96 w-full">
         <Image
-          src={world.header_image_url?.includes('drive.google.com')
-            ? getProxyUrl(world.header_image_url)
-            : (convertGoogleDriveUrl(world.header_image_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png')}
+          src={headerSrc}
           alt={world.name}
           fill
           sizes="100vw"
           className="object-cover"
-          unoptimized={world.header_image_url?.includes('drive.google.com') || isGoogleSitesUrl(world.header_image_url) || isAnimatedImage(world.header_image_url)}
+          unoptimized={shouldUseUnoptimizedImage(headerSrc)}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
       </div>
@@ -33,14 +43,12 @@ export function WorldHeader({ world }: WorldHeaderProps) {
         <div className="flex items-center gap-4 mb-4">
           <div className="relative w-16 h-16 md:w-20 md:h-20 flex-shrink-0">
             <Image
-              src={world.icon_url?.includes('drive.google.com')
-                ? getProxyUrl(world.icon_url)
-                : (convertGoogleDriveUrl(world.icon_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png')}
+              src={iconSrc}
               alt={world.name}
               fill
               sizes="(max-width: 768px) 64px, 80px"
               className="object-contain rounded-lg bg-white/20 backdrop-blur-sm p-1"
-              unoptimized={world.icon_url?.includes('drive.google.com') || isGoogleSitesUrl(world.icon_url) || isAnimatedImage(world.icon_url)}
+              unoptimized={shouldUseUnoptimizedImage(iconSrc)}
             />
           </div>
           <div>

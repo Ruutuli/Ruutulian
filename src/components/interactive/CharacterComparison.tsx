@@ -5,7 +5,7 @@ import type { OC } from '@/types/oc';
 import { DnDRadarChart } from '@/components/visualizations/RadarChart';
 import Image from 'next/image';
 import Link from 'next/link';
-import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, shouldUseUnoptimizedImage } from '@/lib/utils/googleDriveImage';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
 
 interface CharacterComparisonProps {
@@ -63,6 +63,7 @@ export function CharacterComparison({
                 fill
                 sizes="(max-width: 768px) 100vw, 300px"
                 className="object-cover"
+                unoptimized={shouldUseUnoptimizedImage(convertGoogleDriveUrl(oc.image_url))}
               />
             )}
           </div>

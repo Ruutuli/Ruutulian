@@ -19,7 +19,7 @@ import { WritingPromptResponses } from '@/components/content/WritingPromptRespon
 import { getEffectiveFieldDefinitions, getFieldValue } from '@/lib/fields/worldFields';
 import type { WorldFieldDefinition, OC } from '@/types/oc';
 import { TagList } from '@/components/wiki/TagList';
-import { convertGoogleDriveUrl, getProxyUrl, isAnimatedImage, isGoogleSitesUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, getProxyUrl, shouldUseUnoptimizedImage } from '@/lib/utils/googleDriveImage';
 import { extractColorHex, extractColorName } from '@/lib/utils/colorHexUtils';
 import { SpotifyEmbed } from '@/components/oc/SpotifyEmbed';
 import { formatHeightWithMetric, formatWeightWithMetric } from '@/lib/utils/unitConversion';
@@ -31,6 +31,7 @@ import { getAbsoluteUrl } from '@/lib/seo/metadata-helpers';
 import { logger } from '@/lib/logger';
 import { formatSupabaseErrorForLog } from '@/lib/utils/supabase-error';
 import { generateProfilePageSchema } from '@/lib/seo/structured-data';
+import { driveFileViewUrl } from '@/lib/gallery/constants';
 
 export async function generateMetadata({
   params,
@@ -201,6 +202,44 @@ export default async function OCDetailPage({
   
   // Type assertion: queryOCWithFallback returns OC type but TypeScript infers a narrower type
   const typedOc: OC = oc as OC;
+
+  // Pull this OC's gallery items based on the *tagging* relationship table.
+  // This ensures artworks tagged to the OC in Admin → Gallery show up on the OC page.
+  try {
+    const { data: linkRows } = await supabase
+      .from('gallery_item_ocs')
+      .select('gallery_item_id')
+      .eq('oc_id', typedOc.id);
+
+    const galleryItemIds = (linkRows ?? [])
+      .map((r: any) => r.gallery_item_id)
+      .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0);
+
+    if (galleryItemIds.length > 0) {
+      const { data: galleryRows } = await supabase
+        .from('gallery_items')
+        .select('drive_file_id')
+        .in('id', galleryItemIds)
+        .eq('published', true)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: false })
+        .limit(24);
+
+      const taggedGalleryUrls = (galleryRows ?? [])
+        .map((r: any) => (r.drive_file_id ? driveFileViewUrl(String(r.drive_file_id)) : null))
+        .filter((v: string | null): v is string => Boolean(v));
+
+      const existingGalleryUrls =
+        Array.isArray(typedOc.gallery) ? typedOc.gallery.filter((u): u is string => typeof u === 'string' && u.trim().length > 0) : [];
+
+      typedOc.gallery = Array.from(new Set([...taggedGalleryUrls, ...existingGalleryUrls]));
+    }
+  } catch (err) {
+    logger.warn('OCDetailPage', 'Failed to load tagged gallery items', {
+      oc_id: typedOc.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
   
   const config = await getSiteConfig();
   const baseUrl = config.siteUrl || process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
@@ -393,7 +432,11 @@ export default async function OCDetailPage({
                         fill
                         sizes="(max-width: 768px) 48px, 56px"
                         className="object-contain rounded-lg bg-gray-800/70 p-1.5 border-2 border-gray-600/50 shadow-lg group-hover:border-purple-500/50 transition-all duration-300"
-                        unoptimized={typedOc.world.icon_url?.includes('drive.google.com') || isGoogleSitesUrl(typedOc.world.icon_url) || isAnimatedImage(typedOc.world.icon_url)}
+                        unoptimized={shouldUseUnoptimizedImage(
+                          typedOc.world.icon_url?.includes('drive.google.com')
+                            ? getProxyUrl(typedOc.world.icon_url)
+                            : convertGoogleDriveUrl(typedOc.world.icon_url)
+                        )}
                       />
                     </div>
                   </div>

@@ -5,7 +5,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { World } from '@/types/oc';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
-import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl, isAnimatedImage } from '@/lib/utils/googleDriveImage';
+import {
+  convertGoogleDriveUrl,
+  getProxyUrl,
+  IMAGE_PLACEHOLDER_URL,
+  shouldUseUnoptimizedImage,
+} from '@/lib/utils/googleDriveImage';
 
 interface SimpleWorldCardProps {
   world: World;
@@ -21,7 +26,7 @@ export function SimpleWorldCard({ world }: SimpleWorldCardProps) {
 
   const imageUrl = world.header_image_url?.includes('drive.google.com')
     ? getProxyUrl(world.header_image_url)
-    : (convertGoogleDriveUrl(world.header_image_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png');
+    : (convertGoogleDriveUrl(world.header_image_url) || IMAGE_PLACEHOLDER_URL);
 
   return (
     <Link 
@@ -49,7 +54,7 @@ export function SimpleWorldCard({ world }: SimpleWorldCardProps) {
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className="object-cover"
-            unoptimized={world.header_image_url?.includes('drive.google.com') || isGoogleSitesUrl(world.header_image_url) || isAnimatedImage(world.header_image_url)}
+            unoptimized={shouldUseUnoptimizedImage(imageUrl)}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
         </div>

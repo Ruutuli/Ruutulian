@@ -5,9 +5,9 @@ import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import {
   createGalleryDriveClient,
-  listImageFilesInFolderWithClient,
+  listImageFilesInFolderTreeWithClient,
 } from '@/lib/google-drive/galleryDrive';
-import { DEFAULT_GALLERY_DRIVE_FOLDER_IDS } from '@/lib/gallery/constants';
+import { DEFAULT_GALLERY_DRIVE_FOLDER_IDS, GALLERY_FACETS_REVALIDATE_TAG } from '@/lib/gallery/constants';
 import { revalidateTag } from 'next/cache';
 
 export const runtime = 'nodejs';
@@ -39,6 +39,17 @@ export async function POST() {
         ? rawFolderIds.map((id) => id.trim())
         : [...DEFAULT_GALLERY_DRIVE_FOLDER_IDS];
 
+    logger.info('GallerySync', 'starting', {
+      folderCount: folderIds.length,
+      folderIds,
+      source:
+        Array.isArray(rawFolderIds) &&
+        rawFolderIds.length > 0 &&
+        rawFolderIds.every((id) => typeof id === 'string' && id.trim())
+          ? 'site_settings'
+          : 'defaults',
+    });
+
     const drive = await createGalleryDriveClient();
     const now = new Date().toISOString();
     let synced = 0;
@@ -47,24 +58,38 @@ export async function POST() {
     for (const folderId of folderIds) {
       const trimmed = folderId.trim();
       try {
-        const files = await listImageFilesInFolderWithClient(drive, trimmed);
-        for (const file of files) {
-          const { error: rpcError } = await supabase.rpc('upsert_gallery_item_from_sync', {
-            p_drive_file_id: file.id,
-            p_name: file.name ?? '',
-            p_mime_type: file.mimeType,
-            p_folder_id: trimmed,
-            p_last_synced_at: now,
-          });
+        const files = await listImageFilesInFolderTreeWithClient(drive, trimmed);
+        logger.info('GallerySync', 'Drive tree listed for root', {
+          rootFolderId: trimmed,
+          fileCount: files.length,
+        });
 
-          if (rpcError) {
-            logger.error('GallerySync', 'RPC upsert failed', {
-              fileId: file.id,
-              message: rpcError.message,
-            });
-            errors.push(`${file.id}: ${rpcError.message}`);
-          } else {
-            synced += 1;
+        const RPC_BATCH = 20;
+        for (let i = 0; i < files.length; i += RPC_BATCH) {
+          const chunk = files.slice(i, i + RPC_BATCH);
+          const results = await Promise.all(
+            chunk.map((file) =>
+              supabase.rpc('upsert_gallery_item_from_sync', {
+                p_drive_file_id: file.id,
+                p_name: file.name ?? '',
+                p_mime_type: file.mimeType,
+                p_folder_id: trimmed,
+                p_last_synced_at: now,
+              })
+            )
+          );
+          for (let j = 0; j < chunk.length; j++) {
+            const { error: rpcError } = results[j]!;
+            const file = chunk[j]!;
+            if (rpcError) {
+              logger.error('GallerySync', 'RPC upsert failed', {
+                fileId: file.id,
+                message: rpcError.message,
+              });
+              errors.push(`${file.id}: ${rpcError.message}`);
+            } else {
+              synced += 1;
+            }
           }
         }
       } catch (e) {
@@ -76,9 +101,18 @@ export async function POST() {
 
     try {
       revalidateTag('site-config');
+      revalidateTag(GALLERY_FACETS_REVALIDATE_TAG);
     } catch {
       /* ignore */
     }
+
+    logger.info('GallerySync', 'finished', {
+      synced,
+      errorCount: errors.length,
+      folders: folderIds.length,
+      errorsPreview: errors.length ? errors.slice(0, 20) : undefined,
+      moreErrors: errors.length > 20 ? errors.length - 20 : 0,
+    });
 
     return NextResponse.json({
       success: errors.length === 0,

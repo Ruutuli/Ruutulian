@@ -8,8 +8,7 @@ import { getRatingColorClasses } from '@/lib/utils/fanficRating';
 import {
   convertGoogleDriveUrl,
   getProxyUrl,
-  isAnimatedImage,
-  isGoogleSitesUrl,
+  shouldUseUnoptimizedImage,
 } from '@/lib/utils/googleDriveImage';
 
 interface FanficCardProps {
@@ -22,6 +21,12 @@ export function FanficCard({ fanfic }: FanficCardProps) {
   const handleClick = () => {
     setIsLoading(true);
   };
+
+  const fanficImageSrc = fanfic.image_url
+    ? fanfic.image_url.includes('drive.google.com')
+      ? getProxyUrl(fanfic.image_url)
+      : convertGoogleDriveUrl(fanfic.image_url)
+    : null;
 
   return (
     <Link
@@ -44,20 +49,12 @@ export function FanficCard({ fanfic }: FanficCardProps) {
           <div className="w-full h-[100px] overflow-hidden">
             <div className="relative w-full h-full">
               <Image
-                src={
-                  fanfic.image_url.includes('drive.google.com')
-                    ? getProxyUrl(fanfic.image_url)
-                    : convertGoogleDriveUrl(fanfic.image_url)
-                }
+                src={fanficImageSrc!}
                 alt={fanfic.title}
                 fill
                 sizes="100vw"
                 className="object-cover object-center"
-                unoptimized={
-                  fanfic.image_url.includes('drive.google.com') ||
-                  isGoogleSitesUrl(fanfic.image_url) ||
-                  isAnimatedImage(fanfic.image_url)
-                }
+                unoptimized={shouldUseUnoptimizedImage(fanficImageSrc)}
               />
             </div>
           </div>

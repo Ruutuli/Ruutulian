@@ -3,7 +3,7 @@ import type { TimelineEvent as TimelineEventType, EventDateData } from '@/types/
 import { Markdown } from '@/lib/utils/markdown';
 import { getCategoryColorClasses, getCategoryCardAccentClasses, getFallbackCardAccentClasses } from '@/lib/utils/categoryColors';
 import { calculateAge } from '@/lib/utils/ageCalculation';
-import { convertGoogleDriveUrl, getProxyUrl, isGoogleSitesUrl, isAnimatedImage } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, getProxyUrl, shouldUseUnoptimizedImage } from '@/lib/utils/googleDriveImage';
 
 interface TimelineEventProps {
   event: TimelineEventType;
@@ -135,12 +135,20 @@ export function TimelineEvent({ event, isLast }: TimelineEventProps) {
           {event.image_url && event.image_url.trim() && (
             <div className="relative w-full aspect-video max-h-64 rounded-lg overflow-hidden mb-4 bg-gray-800/50">
               <Image
-                src={event.image_url.includes('drive.google.com') ? getProxyUrl(event.image_url) : convertGoogleDriveUrl(event.image_url)}
+                src={
+                  event.image_url.includes('drive.google.com')
+                    ? getProxyUrl(event.image_url)
+                    : convertGoogleDriveUrl(event.image_url)
+                }
                 alt=""
                 fill
                 sizes="(max-width: 768px) 100vw, 672px"
                 className="object-cover"
-                unoptimized={event.image_url.includes('drive.google.com') || isGoogleSitesUrl(event.image_url) || isAnimatedImage(event.image_url)}
+                unoptimized={shouldUseUnoptimizedImage(
+                  event.image_url.includes('drive.google.com')
+                    ? getProxyUrl(event.image_url)
+                    : convertGoogleDriveUrl(event.image_url)
+                )}
               />
             </div>
           )}

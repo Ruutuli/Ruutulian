@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { fetchDriveFileMediaBuffer } from '@/lib/google-drive/galleryDrive';
 import { getGoogleDriveFileId, getGoogleDriveImageUrls, sanitizeGoogleDriveFileId } from '@/lib/utils/googleDriveImage';
 import { logger } from '@/lib/logger';
+
+/** Not `immutable` so clients can recover if an older proxy build cached a bad body as an image. */
+const PROXY_CACHE_CONTROL = 'public, max-age=604800';
 
 /**
  * API route to proxy Google Drive images
@@ -100,8 +104,59 @@ export async function GET(request: NextRequest) {
       return 'image/webp';
     }
 
+    // AVIF / HEIF: .... "ftyp" + brand (avif, avis, heic, heix, mif1)
+    if (bytes.length >= 12) {
+      const ftyp =
+        bytes[4] === 0x66 &&
+        bytes[5] === 0x74 &&
+        bytes[6] === 0x79 &&
+        bytes[7] === 0x70;
+      if (ftyp) {
+        const b = (i: number) => bytes[i] ?? 0;
+        const brand = String.fromCharCode(b(8), b(9), b(10), b(11));
+        if (brand === 'avif' || brand === 'avis') return 'image/avif';
+        if (brand === 'heic' || brand === 'heix' || brand === 'mif1' || brand === 'msf1') {
+          return 'image/heic';
+        }
+      }
+    }
+
     return null;
   };
+
+  const driveApiMedia = await fetchDriveFileMediaBuffer(driveFileId, MAX_IMAGE_BYTES);
+  if (driveApiMedia) {
+    const { buffer, contentTypeHeader } = driveApiMedia;
+    const bodyAb = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+    const detected = detectImageContentType(bodyAb);
+    const headerBase = contentTypeHeader?.split(';')[0]?.trim() || '';
+
+    let contentType: string | null = detected;
+    if (!contentType && headerBase.startsWith('image/')) {
+      contentType = headerBase;
+    }
+
+    if (!contentType) {
+      const snippet = buffer.subarray(0, Math.min(buffer.length, 2048)).toString('utf-8');
+      const looksLikeHtml =
+        /^\s*</.test(snippet) && /<(html|head|body|!doctype)\b/i.test(snippet);
+      if (!looksLikeHtml && buffer.length > 100) {
+        contentType = null;
+      }
+    }
+
+    if (contentType) {
+      return new NextResponse(buffer, {
+        status: 200,
+        headers: {
+          'Content-Type': contentType,
+          'Cache-Control': PROXY_CACHE_CONTROL,
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET',
+        },
+      });
+    }
+  }
 
   // Helper function to fetch a single URL with timeout. Only one buffer in memory at a time.
   const fetchImageUrl = async (
@@ -188,26 +243,45 @@ export async function GET(request: NextRequest) {
       }
 
       const detected = detectImageContentType(buffer);
+      // Magic bytes must win: Drive/CDN often sends Content-Type: image/jpeg for PNG/WebP,
+      // which makes browsers decode garbage (green/purple corrupt frames).
       if (detected) {
         return {
           success: true,
           status,
           responseContentType,
           data: buffer,
-          contentType: responseContentType.startsWith('image/') ? responseContentType : detected,
+          contentType: detected,
         };
       }
 
-      // Likely HTML/error body with 200 OK
+      const baseResponseCt = responseContentType.split(';')[0]?.trim() || '';
+
       let snippet = '';
       try {
-        const bytes = new Uint8Array(buffer);
-        snippet = new TextDecoder('utf-8').decode(bytes.slice(0, 2048));
+        const b = new Uint8Array(buffer);
+        snippet = new TextDecoder('utf-8').decode(b.slice(0, 2048));
       } catch {
         // ignore
       }
 
-      const isAccessPage = /accounts\.google\.com|servicelogin|sign in|request access|access denied/i.test(snippet);
+      const isAccessPage = /accounts\.google\.com|servicelogin|sign in|request access|access denied/i.test(
+        snippet
+      );
+      const looksLikeHtmlDoc =
+        /^\s*</.test(snippet) && /<(html|head|body|!doctype)\b/i.test(snippet);
+
+      if (baseResponseCt.startsWith('image/') && !isAccessPage && !looksLikeHtmlDoc) {
+        return {
+          success: true,
+          status,
+          responseContentType,
+          data: buffer,
+          contentType: baseResponseCt,
+        };
+      }
+
+      // Likely HTML/error body with 200 OK
       return {
         success: false,
         status,
@@ -233,7 +307,7 @@ export async function GET(request: NextRequest) {
         status: 200,
         headers: {
           'Content-Type': result.contentType,
-          'Cache-Control': 'public, max-age=31536000, immutable',
+          'Cache-Control': PROXY_CACHE_CONTROL,
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET',
         },

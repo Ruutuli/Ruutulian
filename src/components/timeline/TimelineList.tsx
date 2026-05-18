@@ -90,14 +90,7 @@ export function TimelineList({ timelines }: TimelineListProps) {
                     fill
                     sizes="(max-width: 768px) 80px, 96px"
                     className="object-cover"
-                    unoptimized={
-                      !!(
-                        world?.icon_url &&
-                        (world.icon_url.includes('drive.google.com') ||
-                          googleDrive.isGoogleSitesUrl(world.icon_url) ||
-                          googleDrive.isAnimatedImage(world.icon_url))
-                      )
-                    }
+                    unoptimized={googleDrive.shouldUseUnoptimizedImage(worldIconSrc)}
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-gray-500">

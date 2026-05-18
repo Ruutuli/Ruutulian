@@ -6,8 +6,7 @@ import Image from 'next/image';
 import {
   convertGoogleDriveUrl,
   getProxyUrl,
-  isAnimatedImage,
-  isGoogleSitesUrl,
+  shouldUseUnoptimizedImage,
 } from '@/lib/utils/googleDriveImage';
 
 interface Chapter {
@@ -256,11 +255,11 @@ export function ChapterList({ chapters, fanficSlug }: ChapterListProps) {
                       fill
                       sizes="(max-width: 768px) 100vw, 50vw"
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      unoptimized={
-                        chapter.image_url.includes('drive.google.com') ||
-                        isGoogleSitesUrl(chapter.image_url) ||
-                        isAnimatedImage(chapter.image_url)
-                      }
+                      unoptimized={shouldUseUnoptimizedImage(
+                        chapter.image_url.includes('drive.google.com')
+                          ? getProxyUrl(chapter.image_url)
+                          : convertGoogleDriveUrl(chapter.image_url)
+                      )}
                     />
                   </div>
                 </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { logger } from '@/lib/logger';
+import { parseGalleryDriveFolderIds } from '@/lib/gallery/constants';
 
 interface SiteSettings {
   websiteName: string;
@@ -104,10 +105,7 @@ export function SiteSettingsForm() {
 
     try {
       // Prepare data for submission, converting empty strings to null for optional fields
-      const galleryDriveFolderIds = settings.galleryDriveFolderIdsText
-        .split(/[\n,]+/)
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const galleryDriveFolderIds = parseGalleryDriveFolderIds(settings.galleryDriveFolderIdsText);
 
       const { galleryDriveFolderIdsText: _omit, ...settingsRest } = settings;
 
@@ -313,10 +311,13 @@ export function SiteSettingsForm() {
                 value={settings.galleryDriveFolderIdsText}
                 onChange={(e) => setSettings({ ...settings, galleryDriveFolderIdsText: e.target.value })}
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm"
-                placeholder={'One folder ID per line (sync pulls images from these folders).'}
+                placeholder={
+                  'One per line: folder ID or full link (e.g. …/folders/1zS9… ). Subfolders are included.'
+                }
               />
               <p className="text-xs text-gray-500 mt-1">
-                Sync uses a Google service account; share each folder with that account (Viewer).
+                Sync uses a Google service account; share each folder with that account (Viewer). Paste a Drive URL or
+                just the ID from the address bar.
               </p>
             </div>
           </div>

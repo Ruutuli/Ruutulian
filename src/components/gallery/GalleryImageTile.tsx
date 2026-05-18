@@ -30,9 +30,9 @@ export function GalleryImageTile({ fileId, title, tags, characterNames }: Galler
             className="w-full h-full object-contain transition-transform group-hover:scale-[1.02]"
           />
         </div>
-        {title ? (
-          <div className="p-2 text-xs text-gray-300 truncate border-t border-gray-800">{title}</div>
-        ) : null}
+        <div className="p-2 text-xs text-gray-300 truncate border-t border-gray-800">
+          {title && title.trim() ? title : fileId}
+        </div>
       </button>
 
       <dialog
@@ -46,6 +46,9 @@ export function GalleryImageTile({ fileId, title, tags, characterNames }: Galler
           <div className="flex justify-between items-start gap-2 mb-3">
             <div>
               <h3 className="text-lg font-semibold text-gray-100">{title || 'Artwork'}</h3>
+              <p className="text-xs text-gray-500 mt-1 font-mono truncate" title={title || fileId}>
+                File: {title && title.trim() ? title : fileId}
+              </p>
               {tags.length > 0 && (
                 <p className="text-sm text-gray-400 mt-1">{tags.join(' · ')}</p>
               )}

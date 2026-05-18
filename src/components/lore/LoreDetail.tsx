@@ -7,7 +7,7 @@ import { Markdown } from '@/lib/utils/markdown';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
 import { getWorldLoreFieldDefinitions, getFieldValue } from '@/lib/fields/worldFields';
 import { TagList } from '@/components/wiki/TagList';
-import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl, isAnimatedImage } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, getProxyUrl, shouldUseUnoptimizedImage } from '@/lib/utils/googleDriveImage';
 import { formatLastUpdated } from '@/lib/utils/dateFormat';
 
 interface LoreDetailProps {
@@ -18,20 +18,24 @@ export function LoreDetail({ lore }: LoreDetailProps) {
   const themeStyles = applyWorldThemeStyles(lore.world);
   const fieldDefinitions = getWorldLoreFieldDefinitions(lore);
 
+  const bannerSrc = lore.banner_image_url
+    ? lore.banner_image_url.includes('drive.google.com')
+      ? getProxyUrl(lore.banner_image_url)
+      : convertGoogleDriveUrl(lore.banner_image_url)
+    : null;
+
   return (
     <div className="space-y-6">
       {/* Banner Image */}
       {lore.banner_image_url && (
         <div className="relative w-full h-64 md:h-80 lg:h-96 overflow-hidden rounded-lg">
           <Image
-            src={lore.banner_image_url.includes('drive.google.com')
-              ? getProxyUrl(lore.banner_image_url)
-              : convertGoogleDriveUrl(lore.banner_image_url)}
+            src={bannerSrc!}
             alt={`${lore.name} banner`}
             fill
             sizes="100vw"
             className="object-cover"
-            unoptimized={lore.banner_image_url.includes('drive.google.com') || isGoogleSitesUrl(lore.banner_image_url) || isAnimatedImage(lore.banner_image_url)}
+            unoptimized={shouldUseUnoptimizedImage(bannerSrc)}
           />
         </div>
       )}

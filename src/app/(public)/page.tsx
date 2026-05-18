@@ -258,6 +258,13 @@ export default async function HomePage() {
             View Timelines
           </Link>
           <Link
+            href="/gallery"
+            prefetch={true}
+            className="px-5 py-2.5 md:px-6 md:py-3 bg-indigo-700 text-white rounded-lg hover:bg-indigo-800 transition-all hover:scale-105 shadow-lg text-sm md:text-base"
+          >
+            View Gallery
+          </Link>
+          <Link
             href="/fanfics"
             prefetch={true}
             className="px-5 py-2.5 md:px-6 md:py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-all hover:scale-105 shadow-lg text-sm md:text-base"

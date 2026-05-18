@@ -10,7 +10,7 @@ import { Markdown } from '@/lib/utils/markdown';
 import { formatLastUpdated } from '@/lib/utils/dateFormat';
 import { compareEventDates } from '@/lib/utils/dateSorting';
 import { parseEraConfig } from '@/lib/utils/ageCalculation';
-import { convertGoogleDriveUrl, getProxyUrl, isGoogleSitesUrl, isAnimatedImage } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, getProxyUrl, shouldUseUnoptimizedImage } from '@/lib/utils/googleDriveImage';
 import type { World, TimelineEvent as TimelineEventType, StoryAlias } from '@/types/oc';
 import { generateDetailPageMetadata } from '@/lib/seo/page-metadata';
 
@@ -232,7 +232,11 @@ export default async function TimelinePage({
                     fill
                     sizes="32px"
                     className="object-cover"
-                    unoptimized={timeline.world.icon_url?.includes('drive.google.com') || isGoogleSitesUrl(timeline.world.icon_url) || isAnimatedImage(timeline.world.icon_url)}
+                    unoptimized={shouldUseUnoptimizedImage(
+                      timeline.world.icon_url.includes('drive.google.com')
+                        ? getProxyUrl(timeline.world.icon_url)
+                        : convertGoogleDriveUrl(timeline.world.icon_url)
+                    )}
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-purple-400">

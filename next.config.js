@@ -20,6 +20,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'drive.usercontent.google.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'upload.wikimedia.org',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.pinimg.com',
+      },
     ],
     // Increase timeout for external image fetching
     minimumCacheTTL: 60,

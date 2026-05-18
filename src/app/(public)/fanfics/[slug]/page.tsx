@@ -17,8 +17,7 @@ import { getAbsoluteUrl } from '@/lib/seo/metadata-helpers';
 import {
   convertGoogleDriveUrl,
   getProxyUrl,
-  isAnimatedImage,
-  isGoogleSitesUrl,
+  shouldUseUnoptimizedImage,
 } from '@/lib/utils/googleDriveImage';
 
 // Types for Supabase query responses
@@ -261,11 +260,11 @@ export default async function FanficDetailPage({
                 sizes="100vw"
                 priority
                 className="object-cover object-center"
-                unoptimized={
-                  fanfic.image_url.includes('drive.google.com') ||
-                  isGoogleSitesUrl(fanfic.image_url) ||
-                  isAnimatedImage(fanfic.image_url)
-                }
+                unoptimized={shouldUseUnoptimizedImage(
+                  fanfic.image_url.includes('drive.google.com')
+                    ? getProxyUrl(fanfic.image_url)
+                    : convertGoogleDriveUrl(fanfic.image_url)
+                )}
               />
             </div>
           </div>

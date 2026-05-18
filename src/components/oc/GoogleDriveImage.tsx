@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useMemo, useEffect, memo } from 'react';
-import { getProxyUrl } from '@/lib/utils/googleDriveImage';
+import { getProxyUrl, IMAGE_PLACEHOLDER_URL } from '@/lib/utils/googleDriveImage';
 import { logger } from '@/lib/logger';
 
 interface GoogleDriveImageProps {
@@ -19,7 +19,7 @@ function GoogleDriveImageComponent({
   alt, 
   className = '', 
   style,
-  fallbackSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png',
+  fallbackSrc = IMAGE_PLACEHOLDER_URL,
   priority = false,
 }: GoogleDriveImageProps) {
   // Calculate proxy URL immediately, not in useEffect - memoize to prevent recalculation

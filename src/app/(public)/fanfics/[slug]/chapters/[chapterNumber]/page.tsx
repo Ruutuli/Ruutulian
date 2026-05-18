@@ -12,8 +12,7 @@ import type { Fanfic, FanficChapter } from '@/types/oc';
 import {
   convertGoogleDriveUrl,
   getProxyUrl,
-  isAnimatedImage,
-  isGoogleSitesUrl,
+  shouldUseUnoptimizedImage,
 } from '@/lib/utils/googleDriveImage';
 
 export async function generateMetadata({
@@ -249,11 +248,11 @@ export default async function ChapterPage({
                   fill
                   sizes="100vw"
                   className="object-cover object-center"
-                  unoptimized={
-                    chapter.image_url.includes('drive.google.com') ||
-                    isGoogleSitesUrl(chapter.image_url) ||
-                    isAnimatedImage(chapter.image_url)
-                  }
+                  unoptimized={shouldUseUnoptimizedImage(
+                    chapter.image_url.includes('drive.google.com')
+                      ? getProxyUrl(chapter.image_url)
+                      : convertGoogleDriveUrl(chapter.image_url)
+                  )}
                 />
               </div>
             </div>

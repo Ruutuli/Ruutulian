@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { WorldLore } from '@/types/oc';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
-import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl, isAnimatedImage } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, getProxyUrl, shouldUseUnoptimizedImage } from '@/lib/utils/googleDriveImage';
 import { Markdown } from '@/lib/utils/markdown';
 
 interface LoreCardProps {
@@ -19,6 +19,12 @@ export function LoreCard({ lore }: LoreCardProps) {
   const handleClick = () => {
     setIsLoading(true);
   };
+
+  const bannerSrc = lore.banner_image_url
+    ? lore.banner_image_url.includes('drive.google.com')
+      ? getProxyUrl(lore.banner_image_url)
+      : convertGoogleDriveUrl(lore.banner_image_url)
+    : null;
 
   return (
     <Link
@@ -42,14 +48,12 @@ export function LoreCard({ lore }: LoreCardProps) {
         <div className="relative h-48 w-full overflow-hidden flex-shrink-0">
           {lore.banner_image_url ? (
             <Image
-              src={lore.banner_image_url.includes('drive.google.com') 
-                ? getProxyUrl(lore.banner_image_url)
-                : convertGoogleDriveUrl(lore.banner_image_url)}
+              src={bannerSrc!}
               alt={lore.name}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
               className="object-cover object-top"
-              unoptimized={lore.banner_image_url.includes('drive.google.com') || isGoogleSitesUrl(lore.banner_image_url) || isAnimatedImage(lore.banner_image_url)}
+              unoptimized={shouldUseUnoptimizedImage(bannerSrc)}
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">

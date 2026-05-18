@@ -125,6 +125,64 @@ export function isAnimatedImage(url: string | null | undefined): boolean {
   return lowerUrl.includes('.gif') || lowerUrl.endsWith('.gif');
 }
 
+/** Default placeholder when no image URL is set (Wikimedia, public domain). */
+export const IMAGE_PLACEHOLDER_URL =
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png';
+
+const IMAGE_EXTENSION = /\.(jpe?g|png|gif|webp|svg|avif|bmp|ico)(\?|#|$)/i;
+
+/**
+ * Returns true when a URL likely points at an image (direct file, Google Drive file link, etc.).
+ */
+export function isImageUrl(url: string | null | undefined): boolean {
+  if (!url?.trim()) return false;
+  const trimmed = url.trim();
+
+  if (/drive\.google\.com\/(document|spreadsheets|presentation|drive\/folders)/i.test(trimmed)) {
+    return false;
+  }
+  if (/drive\.google\.com\/(file\/d\/|open\?id=|uc\?)/i.test(trimmed)) return true;
+  if (/lh3\.googleusercontent\.com\//i.test(trimmed)) return true;
+  if (/drive\.usercontent\.google\.com\//i.test(trimmed)) return true;
+  if (/i\.pinimg\.com\//i.test(trimmed)) return true;
+  if (IMAGE_EXTENSION.test(trimmed)) return true;
+
+  try {
+    const { pathname, search } = new URL(trimmed);
+    if (IMAGE_EXTENSION.test(pathname)) return true;
+    if (/[?&]id=[a-zA-Z0-9_-]+/i.test(search) && /thumbnail|export=view/i.test(trimmed)) {
+      return true;
+    }
+  } catch {
+    // not a valid absolute URL
+  }
+
+  return false;
+}
+
+/**
+ * When true, bypasses `/_next/image` so the browser loads `src` directly.
+ * User-provided images come from many CDNs (Wikimedia, Pinterest, Fandom, etc.);
+ * only same-origin static assets use the Next.js image optimizer.
+ */
+export function shouldUseUnoptimizedImage(src: string | null | undefined): boolean {
+  if (!src || !src.trim()) return true;
+  if (isGoogleSitesUrl(src) || isAnimatedImage(src)) return true;
+  if (src.startsWith('/api/images/proxy')) return true;
+
+  // Same-origin paths (e.g. /images/logo.png) — allow optimization
+  if (src.startsWith('/') && !src.startsWith('//')) {
+    return false;
+  }
+
+  // All external URLs — load directly to avoid remotePatterns / optimizer 400s
+  if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('//')) {
+    return true;
+  }
+
+  return true;
+}
+
 /**
  * Converts a Google Drive URL to use our proxy API to bypass CORS
  * Returns the original URL if it's not a Google Drive URL

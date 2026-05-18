@@ -3,7 +3,11 @@ import Link from 'next/link';
 import type { OC } from '@/types/oc';
 import { Infobox } from '@/components/wiki/Infobox';
 import { InfoRow } from '@/components/wiki/InfoRow';
-import { convertGoogleDriveUrl, isGoogleSitesUrl, isAnimatedImage } from '@/lib/utils/googleDriveImage';
+import {
+  convertGoogleDriveUrl,
+  IMAGE_PLACEHOLDER_URL,
+  shouldUseUnoptimizedImage,
+} from '@/lib/utils/googleDriveImage';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
 import { formatDateOfBirth } from '@/lib/utils/dateFormat';
 
@@ -24,14 +28,16 @@ export async function OCInfobox({ oc }: OCInfoboxProps) {
           />
         ) : (
           <Image
-            src={convertGoogleDriveUrl(oc.image_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png'}
+            src={convertGoogleDriveUrl(oc.image_url) || IMAGE_PLACEHOLDER_URL}
             alt={oc.name}
             fill
             sizes="(max-width: 768px) 100vw, 384px"
             priority
             className="wiki-image"
             style={{ objectPosition: 'center 10%' }}
-            unoptimized={isGoogleSitesUrl(oc.image_url) || isAnimatedImage(oc.image_url)}
+            unoptimized={shouldUseUnoptimizedImage(
+              convertGoogleDriveUrl(oc.image_url) || IMAGE_PLACEHOLDER_URL
+            )}
           />
         )}
       </div>

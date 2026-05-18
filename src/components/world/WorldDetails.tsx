@@ -1,7 +1,12 @@
 import type { World } from '@/types/oc';
 import { Markdown } from '@/lib/utils/markdown';
 import Image from 'next/image';
-import { convertGoogleDriveUrl, isGoogleSitesUrl, getProxyUrl, isAnimatedImage } from '@/lib/utils/googleDriveImage';
+import {
+  convertGoogleDriveUrl,
+  getProxyUrl,
+  IMAGE_PLACEHOLDER_URL,
+  shouldUseUnoptimizedImage,
+} from '@/lib/utils/googleDriveImage';
 import { SpotifyEmbed } from '@/components/oc/SpotifyEmbed';
 
 interface WorldDetailsProps {
@@ -39,12 +44,16 @@ function SectionWithImage({
               <Image
                 src={imageUrl?.includes('drive.google.com')
                   ? getProxyUrl(imageUrl)
-                  : (convertGoogleDriveUrl(imageUrl) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png')}
+                  : (convertGoogleDriveUrl(imageUrl) || IMAGE_PLACEHOLDER_URL)}
                 alt={title}
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, 320px"
-                unoptimized={imageUrl?.includes('drive.google.com') || isGoogleSitesUrl(imageUrl) || isAnimatedImage(imageUrl)}
+                unoptimized={shouldUseUnoptimizedImage(
+                  imageUrl?.includes('drive.google.com')
+                    ? getProxyUrl(imageUrl)
+                    : (convertGoogleDriveUrl(imageUrl) || IMAGE_PLACEHOLDER_URL)
+                )}
               />
             </div>
           </div>
@@ -227,12 +236,16 @@ export function WorldDetails({ world }: WorldDetailsProps) {
                         <Image
                           src={race.picture_url.includes('drive.google.com')
                             ? getProxyUrl(race.picture_url)
-                            : (convertGoogleDriveUrl(race.picture_url) || 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png')}
+                            : (convertGoogleDriveUrl(race.picture_url) || IMAGE_PLACEHOLDER_URL)}
                           alt={race.name}
                           fill
                           className="object-cover object-top"
                           sizes="(max-width: 768px) 100vw, 256px"
-                          unoptimized={race.picture_url.includes('drive.google.com') || isGoogleSitesUrl(race.picture_url) || isAnimatedImage(race.picture_url)}
+                          unoptimized={shouldUseUnoptimizedImage(
+                            race.picture_url.includes('drive.google.com')
+                              ? getProxyUrl(race.picture_url)
+                              : (convertGoogleDriveUrl(race.picture_url) || IMAGE_PLACEHOLDER_URL)
+                          )}
                         />
                       </div>
                     )}

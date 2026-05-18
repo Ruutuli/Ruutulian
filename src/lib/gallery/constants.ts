@@ -31,8 +31,11 @@ export function driveFileViewUrl(fileId: string): string {
 /** Public gallery: images per page (URL ?page=). */
 export const GALLERY_PUBLIC_PAGE_SIZE = 48;
 
-/** Admin gallery: items per page (API offset/limit). */
-export const GALLERY_ADMIN_PAGE_SIZE = 36;
+/** Admin gallery: default items per page (API offset/limit). */
+export const GALLERY_ADMIN_PAGE_SIZE = 48;
+
+/** Admin gallery: allowed page sizes (max 100 on API). */
+export const GALLERY_ADMIN_PAGE_SIZES = [24, 48, 96] as const;
 
 /** next/cache tag — call revalidateTag when gallery metadata or items change. */
 export const GALLERY_FACETS_REVALIDATE_TAG = 'gallery-facets';

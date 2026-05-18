@@ -4,13 +4,10 @@ import { handleError } from '@/lib/api/route-helpers';
 import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { GALLERY_ADMIN_PAGE_SIZE } from '@/lib/gallery/constants';
+import { resolveGallerySearchIds } from '@/lib/gallery/admin-search';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-function escapeIlike(term: string): string {
-  return term.replace(/[%_\\]/g, '\\$&');
-}
 
 export async function GET(request: Request) {
   try {
@@ -88,17 +85,38 @@ export async function GET(request: Request) {
       query = query.eq('published', false);
     }
 
-    if (galleryItemIdsForOc) {
-      query = query.in('id', galleryItemIdsForOc);
-    }
+    let idFilter: string[] | null = null;
 
     if (searchRaw) {
-      const term = escapeIlike(searchRaw);
-      const orParts = [`name.ilike.%${term}%`, `drive_file_id.ilike.%${term}%`];
-      if (!searchRaw.includes(' ')) {
-        orParts.push(`tags.cs.{${term}}`);
+      idFilter = await resolveGallerySearchIds(supabase, searchRaw);
+    }
+
+    if (galleryItemIdsForOc) {
+      if (idFilter) {
+        const ocSet = new Set(galleryItemIdsForOc);
+        idFilter = idFilter.filter((id) => ocSet.has(id));
+      } else {
+        idFilter = galleryItemIdsForOc;
       }
-      query = query.or(orParts.join(','));
+    }
+
+    if (idFilter) {
+      if (idFilter.length === 0) {
+        const [[allRes, publishedRes]] = await Promise.all([statsPromise]);
+        return NextResponse.json({
+          success: true,
+          data: [],
+          total: 0,
+          limit,
+          offset,
+          stats: {
+            total: allRes.count ?? 0,
+            published: publishedRes.count ?? 0,
+            unpublished: Math.max(0, (allRes.count ?? 0) - (publishedRes.count ?? 0)),
+          },
+        });
+      }
+      query = query.in('id', idFilter);
     }
 
     switch (sort) {

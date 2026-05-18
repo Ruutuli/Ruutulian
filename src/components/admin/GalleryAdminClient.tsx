@@ -250,7 +250,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
           type="search"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Search by filename, Drive ID, or exact tag…"
+          placeholder="Search filename, tags, or character (fuzzy, e.g. naho → ItsNahochan)…"
           className="w-full px-4 py-2.5 bg-gray-900/90 border border-gray-600/70 rounded-md text-gray-100 placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           aria-label="Search gallery items"
         />

@@ -1,8 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { logger } from '@/lib/logger';
-import { parseGalleryDriveFolderIds } from '@/lib/gallery/constants';
+import {
+  DEFAULT_GALLERY_DRIVE_FOLDER_IDS,
+  parseGalleryDriveFolderIds,
+} from '@/lib/gallery/constants';
 
 interface SiteSettings {
   websiteName: string;
@@ -85,9 +88,11 @@ export function SiteSettingsForm() {
           authorName: result.data.author_name || '',
           shortName: result.data.short_name || '',
           galleryEnabled: Boolean(result.data.gallery_enabled),
-          galleryDriveFolderIdsText: Array.isArray(result.data.gallery_drive_folder_ids)
-            ? (result.data.gallery_drive_folder_ids as string[]).join('\n')
-            : '',
+          galleryDriveFolderIdsText:
+            Array.isArray(result.data.gallery_drive_folder_ids) &&
+            result.data.gallery_drive_folder_ids.length > 0
+              ? (result.data.gallery_drive_folder_ids as string[]).join('\n')
+              : DEFAULT_GALLERY_DRIVE_FOLDER_IDS.join('\n'),
         });
       }
     } catch (error) {
@@ -106,6 +111,14 @@ export function SiteSettingsForm() {
     try {
       // Prepare data for submission, converting empty strings to null for optional fields
       const galleryDriveFolderIds = parseGalleryDriveFolderIds(settings.galleryDriveFolderIdsText);
+      if (galleryDriveFolderIds.length === 0) {
+        setMessage({
+          type: 'error',
+          text: 'Add at least one Google Drive folder ID or link (one per line).',
+        });
+        setIsSaving(false);
+        return;
+      }
 
       const { galleryDriveFolderIdsText: _omit, ...settingsRest } = settings;
 
@@ -135,7 +148,15 @@ export function SiteSettingsForm() {
       const result = await response.json();
 
       if (result.success) {
-        setMessage({ type: 'success', text: 'Settings saved successfully!' });
+        const folderCount = galleryDriveFolderIds.length;
+        setMessage({
+          type: 'success',
+          text: `Settings saved successfully! Gallery sync will use ${folderCount} folder${folderCount === 1 ? '' : 's'}.`,
+        });
+        setSettings((prev) => ({
+          ...prev,
+          galleryDriveFolderIdsText: galleryDriveFolderIds.join('\n'),
+        }));
         // Clear message after 3 seconds
         scheduleTimeout(() => setMessage(null), 3000);
         // Dispatch custom event to refresh site name in navigation after a delay
@@ -156,6 +177,11 @@ export function SiteSettingsForm() {
       setIsSaving(false);
     }
   }
+
+  const parsedGalleryFolderIds = useMemo(
+    () => parseGalleryDriveFolderIds(settings.galleryDriveFolderIdsText),
+    [settings.galleryDriveFolderIdsText]
+  );
 
   if (isLoading) {
     return (
@@ -303,23 +329,30 @@ export function SiteSettingsForm() {
             </div>
             <div>
               <label htmlFor="galleryDriveFolders" className="block text-sm font-medium text-gray-300 mb-2">
-                Google Drive folder IDs
+                Google Drive folders
               </label>
               <textarea
                 id="galleryDriveFolders"
-                rows={3}
+                rows={4}
                 value={settings.galleryDriveFolderIdsText}
                 onChange={(e) => setSettings({ ...settings, galleryDriveFolderIdsText: e.target.value })}
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm"
-                placeholder={
-                  'One per line: folder ID or full link (e.g. …/folders/1zS9… ). Subfolders are included.'
-                }
+                placeholder={`https://drive.google.com/drive/folders/${DEFAULT_GALLERY_DRIVE_FOLDER_IDS[0]}\nhttps://drive.google.com/drive/folders/${DEFAULT_GALLERY_DRIVE_FOLDER_IDS[1]}`}
               />
               <p className="text-xs text-gray-500 mt-1">
-                Sync uses a Google service account; share each folder with that account (Viewer). Paste a Drive URL or
-                just the ID from the address bar.
+                One folder per line (or comma-separated). Paste the full share link or just the folder ID. Subfolders
+                are included. Share each folder with your Google service account (Viewer).
               </p>
-            </div>
+              {parsedGalleryFolderIds.length > 0 ? (
+                <p className="text-xs text-purple-300/90 mt-2">
+                  {parsedGalleryFolderIds.length} folder
+                  {parsedGalleryFolderIds.length === 1 ? '' : 's'} recognized:{' '}
+                  {parsedGalleryFolderIds.join(', ')}
+                </p>
+              ) : (
+                <p className="text-xs text-amber-400/90 mt-2">No folder IDs recognized yet — add one per line.</p>
+              )}
+            </motion.div>
           </div>
 
         </div>

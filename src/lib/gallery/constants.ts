@@ -1,5 +1,8 @@
 /** Default Google Drive folder IDs for site gallery sync (overridable in Site Settings). */
-export const DEFAULT_GALLERY_DRIVE_FOLDER_IDS: string[] = ['1G726cwwPCK2OtbpG_m0R9id5XvV_XL-G'];
+export const DEFAULT_GALLERY_DRIVE_FOLDER_IDS: string[] = [
+  '1cNbJyTekBz-72AuUFIK6nq38cWfj212F',
+  '0B91YVOBsNxk_VnNteHpZWWE5TGM',
+];
 
 /** Extract folder IDs from lines: raw id, or Drive URLs containing /folders/{id} or ?id=. */
 export function parseGalleryDriveFolderIds(text: string): string[] {
@@ -8,18 +11,30 @@ export function parseGalleryDriveFolderIds(text: string): string[] {
     .map((s) => s.trim())
     .filter(Boolean);
   const ids: string[] = [];
+  const seen = new Set<string>();
   for (const line of lines) {
     const fromPath = line.match(/\/folders\/([a-zA-Z0-9_-]+)/);
     if (fromPath) {
-      ids.push(fromPath[1]);
+      const id = fromPath[1];
+      if (!seen.has(id)) {
+        seen.add(id);
+        ids.push(id);
+      }
       continue;
     }
     const fromQuery = line.match(/[?&]id=([a-zA-Z0-9_-]+)/);
     if (fromQuery) {
-      ids.push(fromQuery[1]);
+      const id = fromQuery[1];
+      if (!seen.has(id)) {
+        seen.add(id);
+        ids.push(id);
+      }
       continue;
     }
-    ids.push(line);
+    if (!seen.has(line)) {
+      seen.add(line);
+      ids.push(line);
+    }
   }
   return ids;
 }

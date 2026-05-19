@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
-import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
+import { convertGoogleDriveUrl, getGoogleDriveFileId } from '@/lib/utils/googleDriveImage';
 import {
   driveFileViewUrl,
   GALLERY_ADMIN_PAGE_SIZE,
@@ -14,11 +14,12 @@ export interface GalleryOcOption {
   id: string;
   name: string;
   slug: string;
+  image_url?: string | null;
 }
 
 interface GalleryItemOcRow {
   oc_id: string;
-  oc: { id: string; name: string; slug: string } | null;
+  oc: { id: string; name: string; slug: string; image_url?: string | null } | null;
 }
 
 export interface GalleryAdminItem {
@@ -40,7 +41,7 @@ interface GalleryStats {
 }
 
 type PublishedFilter = 'all' | 'published' | 'unpublished';
-type SortOption = 'sort_order' | 'name' | 'created' | 'updated';
+type SortOption = 'sort_order' | 'name' | 'created' | 'updated' | 'live_first' | 'draft_first';
 
 interface GalleryAdminClientProps {
   ocs: GalleryOcOption[];
@@ -55,6 +56,78 @@ function parseTags(input: string): string[] {
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+function normalizeTextForOcMatch(raw: string): string {
+  return raw
+    .replace(/\.[a-z0-9]+$/i, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+    .trim();
+}
+
+function levenshteinDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  const v0 = new Array(b.length + 1).fill(0);
+  const v1 = new Array(b.length + 1).fill(0);
+
+  for (let i = 0; i <= b.length; i++) v0[i] = i;
+
+  for (let i = 0; i < a.length; i++) {
+    v1[0] = i + 1;
+    for (let j = 0; j < b.length; j++) {
+      const cost = a[i] === b[j] ? 0 : 1;
+      v1[j + 1] = Math.min(v1[j] + 1, v0[j + 1] + 1, v0[j] + cost);
+    }
+    for (let j = 0; j <= b.length; j++) v0[j] = v1[j];
+  }
+  return v1[b.length];
+}
+
+function scoreOcNameMatch(query: string, ocName: string): number {
+  const q = normalizeTextForOcMatch(query);
+  const cand = normalizeTextForOcMatch(ocName);
+  if (!q || !cand) return 0;
+  if (q === cand) return 1;
+  if (cand.includes(q) || q.includes(cand)) return 0.95;
+  const qWords = q.split(' ').filter(Boolean);
+  const cWords = cand.split(' ').filter(Boolean);
+  if (qWords.length > 0 && qWords.every((w) => cand.includes(w))) return 0.9;
+  if (cWords.length > 0 && cWords.every((w) => q.includes(w))) return 0.85;
+  const dist = levenshteinDistance(q, cand);
+  const maxLen = Math.max(q.length, cand.length) || 1;
+  return 1 - dist / maxLen;
+}
+
+/** Best OC match from gallery item filenames (e.g. "Alcyone Lorelei.png"). */
+function suggestOcFromFilenames(
+  items: GalleryAdminItem[],
+  ocOptions: GalleryOcOption[]
+): GalleryOcOption | null {
+  const names = items
+    .map((i) => i.name?.trim())
+    .filter((n): n is string => Boolean(n));
+  if (names.length === 0 || ocOptions.length === 0) return null;
+
+  let best: { oc: GalleryOcOption; score: number } | null = null;
+
+  for (const oc of ocOptions) {
+    let bestForOc = 0;
+    for (const filename of names) {
+      bestForOc = Math.max(bestForOc, scoreOcNameMatch(filename, oc.name));
+    }
+    if (!best || bestForOc > best.score) {
+      best = { oc, score: bestForOc };
+    }
+  }
+
+  if (!best || best.score < 0.75) return null;
+  return best.oc;
 }
 
 function buildItemsUrl(params: {
@@ -96,6 +169,9 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
   const [bulkOcIds, setBulkOcIds] = useState<string[]>([]);
   const [bulkOcSearch, setBulkOcSearch] = useState('');
   const [bulkApplying, setBulkApplying] = useState(false);
+  const [dismissedFilenameSuggestionKey, setDismissedFilenameSuggestionKey] = useState<
+    string | null
+  >(null);
 
   const pageRef = useRef(page);
   pageRef.current = page;
@@ -112,7 +188,8 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
 
   useEffect(() => {
     const t = window.setTimeout(() => {
-      setSearch(searchInput);
+      const next = searchInput.trim();
+      setSearch(next.length >= 2 ? next : '');
       setPage(1);
     }, 300);
     return () => window.clearTimeout(t);
@@ -199,11 +276,33 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
     [ocOptions, bulkOcIds]
   );
 
+  const bulkSelectedItems = useMemo(
+    () => items.filter((i) => selectedIds.has(i.id)),
+    [items, selectedIds]
+  );
+
+  const filenameSuggestedOc = useMemo(
+    () => suggestOcFromFilenames(bulkSelectedItems, ocOptions),
+    [bulkSelectedItems, ocOptions]
+  );
+
+  const filenameSuggestionKey = useMemo(() => {
+    if (!filenameSuggestedOc) return null;
+    return `${filenameSuggestedOc.id}:${[...selectedIds].sort().join(',')}`;
+  }, [filenameSuggestedOc, selectedIds]);
+
+  const showFilenameSuggestion =
+    Boolean(filenameSuggestedOc) &&
+    Boolean(filenameSuggestionKey) &&
+    !bulkOcIds.includes(filenameSuggestedOc!.id) &&
+    dismissedFilenameSuggestionKey !== filenameSuggestionKey;
+
   function exitSelectionMode() {
     setSelectionMode(false);
     setSelectedIds(new Set());
     setBulkOcIds([]);
     setBulkOcSearch('');
+    setDismissedFilenameSuggestionKey(null);
   }
 
   function toggleItemSelection(itemId: string) {
@@ -328,8 +427,10 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
   }
 
   return (
-    <div className={showBulkBar ? 'lg:flex lg:gap-6 lg:items-start pr-[min(20rem,42vw)] lg:pr-0' : ''}>
-      <div className={`space-y-6 min-w-0 ${showBulkBar ? 'lg:flex-1' : 'w-full'}`}>
+    <>
+      <div
+        className={`space-y-6 min-w-0 transition-[margin] duration-200 ${showBulkBar ? 'mr-80' : ''}`}
+      >
       <section className="rounded-lg border border-gray-700/80 bg-gray-800/30 p-4 sm:p-5 space-y-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <p className="text-gray-400 text-sm max-w-2xl leading-relaxed">
@@ -350,8 +451,8 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
 
         <div className="grid grid-cols-3 gap-3">
           <StatPill label="Total" value={stats.total} />
-          <StatPill label="Published" value={stats.published} accent="green" />
-          <StatPill label="Unpublished" value={stats.unpublished} accent="amber" />
+          <StatPill label="Live" value={stats.published} accent="green" />
+          <StatPill label="Draft" value={stats.unpublished} accent="amber" />
         </div>
       </section>
 
@@ -372,7 +473,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
           type="search"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Search filename, tags, or character (fuzzy, e.g. naho → ItsNahochan)…"
+          placeholder="Search (2+ chars): filename, tags, or character (naho → ItsNahochan)…"
           className="w-full px-4 py-2.5 bg-gray-900/90 border border-gray-600/70 rounded-md text-gray-100 placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           aria-label="Search gallery items"
         />
@@ -386,9 +487,9 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
               setPage(1);
             }}
             options={[
-              { value: 'all', label: 'All statuses' },
-              { value: 'published', label: 'Published only' },
-              { value: 'unpublished', label: 'Unpublished only' },
+              { value: 'all', label: 'All (live & draft)' },
+              { value: 'published', label: 'Live only' },
+              { value: 'unpublished', label: 'Draft only' },
             ]}
           />
           <FilterSelect
@@ -415,6 +516,8 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
               { value: 'name', label: 'Name' },
               { value: 'created', label: 'Newest' },
               { value: 'updated', label: 'Recently updated' },
+              { value: 'live_first', label: 'Live first' },
+              { value: 'draft_first', label: 'Draft first' },
             ]}
           />
           <FilterSelect
@@ -565,13 +668,23 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
             );
           }}
           onClearOcSelection={() => setBulkOcIds([])}
+          onClose={() => setSelectedIds(new Set())}
           applying={bulkApplying}
           onAdd={() => void applyBulkOcTag('add')}
           onRemove={() => void applyBulkOcTag('remove')}
-          onReplace={() => void applyBulkOcTag('replace')}
+          suggestedOc={showFilenameSuggestion ? filenameSuggestedOc : null}
+          onAcceptSuggestion={() => {
+            if (!filenameSuggestedOc) return;
+            setBulkOcIds((prev) =>
+              prev.includes(filenameSuggestedOc.id) ? prev : [...prev, filenameSuggestedOc.id]
+            );
+          }}
+          onDismissSuggestion={() => {
+            if (filenameSuggestionKey) setDismissedFilenameSuggestionKey(filenameSuggestionKey);
+          }}
         />
       ) : null}
-    </div>
+    </>
   );
 }
 
@@ -731,10 +844,13 @@ function GalleryBulkOcTagBar({
   bulkOcIds,
   onToggleOc,
   onClearOcSelection,
+  onClose,
   applying,
   onAdd,
   onRemove,
-  onReplace,
+  suggestedOc,
+  onAcceptSuggestion,
+  onDismissSuggestion,
 }: {
   selectedCount: number;
   ocOptions: GalleryOcOption[];
@@ -744,27 +860,76 @@ function GalleryBulkOcTagBar({
   bulkOcIds: string[];
   onToggleOc: (ocId: string) => void;
   onClearOcSelection: () => void;
+  onClose: () => void;
   applying: boolean;
   onAdd: () => void;
   onRemove: () => void;
-  onReplace: () => void;
+  suggestedOc: GalleryOcOption | null;
+  onAcceptSuggestion: () => void;
+  onDismissSuggestion: () => void;
 }) {
   const canApply = bulkOcIds.length > 0 && !applying;
   const hasSearch = bulkOcSearch.trim().length > 0;
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
     <aside
-      className="fixed right-0 top-16 bottom-0 z-30 w-[min(20rem,42vw)] lg:static lg:top-auto lg:bottom-auto lg:w-80 lg:max-h-[calc(100vh-6rem)] flex flex-col shrink-0 border-l-2 lg:border-2 border-purple-500/70 bg-gray-950 shadow-[-8px_0_32px_rgba(0,0,0,0.45)] lg:rounded-lg lg:shadow-xl overflow-hidden"
+      className="fixed top-0 right-0 z-50 flex h-dvh max-h-dvh w-80 max-w-[100vw] flex-col overflow-hidden border-l border-gray-700 bg-gray-900 shadow-2xl"
       aria-label="Bulk character tagging"
     >
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-700 px-4 py-3">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold text-gray-100">Tag images</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {selectedCount} selected — scroll the gallery to add more
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="shrink-0 p-1.5 rounded-md text-gray-400 hover:text-gray-200 hover:bg-gray-800"
+          aria-label="Close"
+        >
+          <span className="text-xl leading-none" aria-hidden>
+            ×
+          </span>
+        </button>
+      </div>
       <div className="px-4 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
-        <p className="text-sm font-medium text-gray-100">
-          Tag <span className="text-purple-200 font-semibold">{selectedCount}</span> image
-          {selectedCount === 1 ? '' : 's'}
-        </p>
         <p className="text-xs text-gray-400 leading-relaxed">
           Search, pick character(s), then apply. Changing the search clears your character pick.
         </p>
+        {suggestedOc ? (
+          <div className="rounded-md border border-purple-500/50 bg-purple-950/40 p-3 space-y-2">
+            <p className="text-xs text-purple-200 leading-relaxed">
+              Suggested from filename{selectedCount === 1 ? '' : 's'}:{' '}
+              <span className="font-medium text-purple-100">{suggestedOc.name}</span>
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onAcceptSuggestion}
+                className="flex-1 px-3 py-1.5 text-xs rounded-md bg-purple-600 hover:bg-purple-500 text-white font-medium"
+              >
+                Use suggestion
+              </button>
+              <button
+                type="button"
+                onClick={onDismissSuggestion}
+                className="px-3 py-1.5 text-xs rounded-md border border-gray-600 text-gray-300 hover:bg-gray-800"
+              >
+                Dismiss
+              </button>
+            </motion.div>
+          </div>
+        ) : null}
         <input
           type="search"
           value={bulkOcSearch}
@@ -800,7 +965,7 @@ function GalleryBulkOcTagBar({
             </button>
           </div>
         ) : null}
-        <div className="min-h-[8rem] max-h-64 lg:max-h-[min(24rem,calc(100vh-22rem))] overflow-y-auto rounded-md border border-gray-500 bg-gray-900 p-2 space-y-0.5">
+        <div className="min-h-[8rem] overflow-y-auto rounded-md border border-gray-500 bg-gray-900/80 p-2 space-y-0.5">
           {ocOptions.length === 0 ? (
             <p className="text-sm text-gray-400 px-2 py-2">
               {hasSearch ? 'No characters match.' : 'Type to search for a character.'}
@@ -1008,10 +1173,9 @@ function GalleryAdminEditDrawer({
     (item.gallery_item_ocs ?? []).map((r) => r.oc_id)
   );
   const [ocSearch, setOcSearch] = useState('');
-  const [profileImageOcId, setProfileImageOcId] = useState('');
-  const [profileOcSearch, setProfileOcSearch] = useState('');
+  const [ocImageUrlOverrides, setOcImageUrlOverrides] = useState<Record<string, string | null>>({});
   const [saving, setSaving] = useState(false);
-  const [settingMainImage, setSettingMainImage] = useState(false);
+  const [settingMainImageFor, setSettingMainImageFor] = useState<string | null>(null);
   const [localMessage, setLocalMessage] = useState<string | null>(null);
   const [imageLightbox, setImageLightbox] = useState(false);
 
@@ -1023,8 +1187,7 @@ function GalleryAdminEditDrawer({
     setSortOrder(String(item.sort_order ?? 0));
     setSelectedOcIds((item.gallery_item_ocs ?? []).map((r) => r.oc_id));
     setOcSearch('');
-    setProfileOcSearch('');
-    setProfileImageOcId((item.gallery_item_ocs ?? [])[0]?.oc_id ?? '');
+    setOcImageUrlOverrides({});
     setLocalMessage(null);
     setImageLightbox(false);
   }, [item]);
@@ -1042,14 +1205,30 @@ function GalleryAdminEditDrawer({
     );
   }, [ocOptions, ocSearch]);
 
-  const filteredProfileOcOptions = useMemo(() => {
-    const q = profileOcSearch.trim().toLowerCase();
-    const sorted = [...ocOptions].sort((a, b) => a.name.localeCompare(b.name));
-    if (!q) return sorted;
-    return sorted.filter(
-      (oc) => oc.name.toLowerCase().includes(q) || oc.slug.toLowerCase().includes(q)
-    );
-  }, [ocOptions, profileOcSearch]);
+  const linkedProfileOcs = useMemo(() => {
+    return selectedOcIds
+      .map((id) => ocOptions.find((o) => o.id === id))
+      .filter((oc): oc is GalleryOcOption => Boolean(oc));
+  }, [selectedOcIds, ocOptions]);
+
+  const getOcImageUrl = useCallback(
+    (ocId: string): string | null | undefined => {
+      if (ocId in ocImageUrlOverrides) return ocImageUrlOverrides[ocId];
+      const fromItem = (item.gallery_item_ocs ?? []).find((r) => r.oc_id === ocId)?.oc?.image_url;
+      if (fromItem !== undefined) return fromItem;
+      return ocOptions.find((o) => o.id === ocId)?.image_url;
+    },
+    [ocImageUrlOverrides, item.gallery_item_ocs, ocOptions]
+  );
+
+  const isMainProfileImage = useCallback(
+    (ocId: string) => {
+      const imageUrl = getOcImageUrl(ocId);
+      if (!imageUrl) return false;
+      return getGoogleDriveFileId(imageUrl) === item.drive_file_id;
+    },
+    [getOcImageUrl, item.drive_file_id]
+  );
 
   const isDirty = useMemo(() => {
     if (published !== item.published) return true;
@@ -1102,37 +1281,35 @@ function GalleryAdminEditDrawer({
     );
   }
 
-  async function setAsMainImage() {
-    if (!profileImageOcId) return;
-    const ocName = ocOptions.find((o) => o.id === profileImageOcId)?.name ?? 'this character';
-    if (
-      !window.confirm(
-        `Set this image as ${ocName}'s primary profile image? This replaces their current primary image on profiles and cards.`
-      )
-    ) {
-      return;
-    }
+  async function setProfileImageToggle(ocId: string, enabled: boolean) {
+    if (!enabled || isMainProfileImage(ocId)) return;
 
-    setSettingMainImage(true);
+    const ocName = ocOptions.find((o) => o.id === ocId)?.name ?? 'character';
+    setSettingMainImageFor(ocId);
     setLocalMessage(null);
     try {
       const res = await fetch(`/api/admin/gallery/items/${item.id}/set-main-image`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ocId: profileImageOcId }),
+        body: JSON.stringify({ ocId }),
       });
       const json = await res.json();
       if (!json.success) {
         setLocalMessage(json.error || 'Failed to set profile image');
         return;
       }
+      const newUrl =
+        typeof json.data?.image_url === 'string'
+          ? json.data.image_url
+          : driveFileViewUrl(item.drive_file_id);
+      setOcImageUrlOverrides((prev) => ({ ...prev, [ocId]: newUrl }));
       await onSaved();
       setLocalMessage(`Profile image updated for ${json.data?.ocName ?? ocName}`);
       window.setTimeout(() => setLocalMessage(null), 3000);
     } catch {
       setLocalMessage('Failed to set profile image');
     } finally {
-      setSettingMainImage(false);
+      setSettingMainImageFor(null);
     }
   }
 
@@ -1294,58 +1471,55 @@ function GalleryAdminEditDrawer({
               <GalleryEditSection
                 step={3}
                 title="Replace main profile image"
-                description="Use this file as a character's primary image on their profile, cards, and infobox. Separate from their gallery list."
+                description="Use this file as a linked character's primary image on their profile, cards, and infobox. Separate from their gallery list."
                 accent="purple"
               >
-                <input
-                  type="search"
-                  value={profileOcSearch}
-                  onChange={(e) => setProfileOcSearch(e.target.value)}
-                  placeholder="Search character to update…"
-                  className="w-full px-3 py-2 text-sm bg-gray-950 border border-gray-600 rounded-md text-gray-100"
-                />
-                <div className="max-h-40 overflow-y-auto rounded-md border border-gray-600 bg-gray-950/80 p-2 space-y-0.5">
-                  {filteredProfileOcOptions.length === 0 ? (
-                    <p className="text-sm text-gray-500 px-2 py-3">No characters match.</p>
-                  ) : (
-                    filteredProfileOcOptions.map((oc) => (
-                      <label
-                        key={oc.id}
-                        className={`flex items-center gap-2.5 text-sm py-1.5 px-2 rounded-md cursor-pointer hover:bg-gray-800/80 ${
-                          profileImageOcId === oc.id
-                            ? 'text-purple-100 bg-purple-900/30'
-                            : 'text-gray-300'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name={`profile-image-${item.id}`}
-                          checked={profileImageOcId === oc.id}
-                          onChange={() => setProfileImageOcId(oc.id)}
-                          className="border-gray-600 bg-gray-700 text-purple-500 shrink-0"
-                        />
-                        <span className="truncate">{oc.name}</span>
-                      </label>
-                    ))
-                  )}
-                </div>
-                <button
-                  type="button"
-                  disabled={!profileImageOcId || settingMainImage}
-                  onClick={() => void setAsMainImage()}
-                  className="w-full py-2.5 text-sm rounded-md border border-purple-500/70 bg-purple-700/50 text-purple-50 hover:bg-purple-700/70 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                >
-                  {settingMainImage
-                    ? 'Updating profile image…'
-                    : profileImageOcId
-                      ? `Replace ${
-                          ocOptions.find((o) => o.id === profileImageOcId)?.name ?? 'character'
-                        }'s main image`
-                      : 'Select a character above'}
-                </button>
-                <p className="text-xs text-gray-500">
-                  Applies immediately. Does not require saving the options above.
-                </p>
+                {linkedProfileOcs.length === 0 ? (
+                  <p className="text-sm text-gray-500 rounded-md border border-gray-700/80 bg-gray-950/60 px-4 py-3">
+                    Link this image to a character in step 1 first.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {linkedProfileOcs.map((oc) => {
+                      const isMain = isMainProfileImage(oc.id);
+                      const busy = settingMainImageFor === oc.id;
+                      const label =
+                        linkedProfileOcs.length === 1
+                          ? 'Replace main profile image?'
+                          : `Replace ${oc.name}'s main profile image?`;
+                      return (
+                        <div
+                          key={oc.id}
+                          className="flex items-center justify-between gap-4 rounded-md border border-gray-700/80 bg-gray-950/60 px-4 py-3"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-100">{label}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {busy
+                                ? 'Updating…'
+                                : isMain
+                                  ? `Currently ${oc.name}'s profile image`
+                                  : linkedProfileOcs.length === 1
+                                    ? 'Off — keeps their current profile image'
+                                    : `Off — keeps ${oc.name}'s current profile image`}
+                            </p>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                            <input
+                              type="checkbox"
+                              checked={isMain}
+                              disabled={busy || isMain}
+                              onChange={(e) => void setProfileImageToggle(oc.id, e.target.checked)}
+                              className="sr-only peer"
+                            />
+                            <span className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-purple-600 peer-disabled:opacity-50 peer-focus-visible:ring-2 peer-focus-visible:ring-purple-500/50 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
+                          </label>
+                        </div>
+                      );
+                    })}
+                    <p className="text-xs text-gray-500">Turn on to apply immediately.</p>
+                  </div>
+                )}
               </GalleryEditSection>
 
               <details className="rounded-lg border border-gray-700/60 bg-gray-800/20 px-4 py-3 group">

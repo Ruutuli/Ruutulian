@@ -4,7 +4,7 @@ import { handleError } from '@/lib/api/route-helpers';
 import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { GALLERY_ADMIN_PAGE_SIZE } from '@/lib/gallery/constants';
-import { resolveGallerySearchIds } from '@/lib/gallery/admin-search';
+import { buildGallerySearchOrFilter, GALLERY_SEARCH_MIN_LEN } from '@/lib/gallery/admin-search';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -71,7 +71,7 @@ export async function GET(request: Request) {
         *,
         gallery_item_ocs (
           oc_id,
-          oc:ocs (id, name, slug)
+          oc:ocs (id, name, slug, image_url)
         )
       `,
         { count: 'exact' }
@@ -85,23 +85,15 @@ export async function GET(request: Request) {
       query = query.eq('published', false);
     }
 
-    let idFilter: string[] | null = null;
-
-    if (searchRaw) {
-      idFilter = await resolveGallerySearchIds(supabase, searchRaw);
-    }
-
-    if (galleryItemIdsForOc) {
-      if (idFilter) {
-        const ocSet = new Set(galleryItemIdsForOc);
-        idFilter = idFilter.filter((id) => ocSet.has(id));
-      } else {
-        idFilter = galleryItemIdsForOc;
+    if (searchRaw.length >= GALLERY_SEARCH_MIN_LEN) {
+      const searchOr = await buildGallerySearchOrFilter(supabase, searchRaw);
+      if (searchOr) {
+        query = query.or(searchOr);
       }
     }
 
-    if (idFilter) {
-      if (idFilter.length === 0) {
+    if (galleryItemIdsForOc) {
+      if (galleryItemIdsForOc.length === 0) {
         const [[allRes, publishedRes]] = await Promise.all([statsPromise]);
         return NextResponse.json({
           success: true,
@@ -116,7 +108,7 @@ export async function GET(request: Request) {
           },
         });
       }
-      query = query.in('id', idFilter);
+      query = query.in('id', galleryItemIdsForOc);
     }
 
     switch (sort) {
@@ -128,6 +120,18 @@ export async function GET(request: Request) {
         break;
       case 'updated':
         query = query.order('updated_at', { ascending: false });
+        break;
+      case 'live_first':
+        query = query
+          .order('published', { ascending: false })
+          .order('sort_order', { ascending: true })
+          .order('created_at', { ascending: false });
+        break;
+      case 'draft_first':
+        query = query
+          .order('published', { ascending: true })
+          .order('sort_order', { ascending: true })
+          .order('created_at', { ascending: false });
         break;
       case 'sort_order':
       default:

@@ -206,6 +206,7 @@ export default async function TimelinePage({
     <div>
       <PageHeader
         title={timeline.name}
+        editHref={`/admin/timelines/${timeline.id}`}
         breadcrumbs={[
           { label: 'Home', href: '/' },
           timeline.world

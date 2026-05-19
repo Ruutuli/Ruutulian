@@ -167,6 +167,7 @@ export default async function ChapterPage({
     <div>
       <PageHeader
         title={`${fanfic.title} - Chapter ${chapterNum}`}
+        editHref={`/admin/fanfics/${fanfic.id}/chapters`}
         breadcrumbs={[
           { label: 'Home', href: '/' },
           { label: 'Fanfics', href: '/fanfics' },

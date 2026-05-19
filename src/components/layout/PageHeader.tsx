@@ -1,11 +1,13 @@
 import Link from 'next/link';
+import { PublicEditLink } from './PublicEditLink';
 
 interface PageHeaderProps {
   title: string;
   breadcrumbs?: Array<{ label: string; href?: string }>;
+  editHref?: string;
 }
 
-export function PageHeader({ title, breadcrumbs }: PageHeaderProps) {
+export async function PageHeader({ title, breadcrumbs, editHref }: PageHeaderProps) {
   return (
     <div className="mb-8">
       {breadcrumbs && breadcrumbs.length > 0 && (
@@ -28,7 +30,10 @@ export function PageHeader({ title, breadcrumbs }: PageHeaderProps) {
           </div>
         </nav>
       )}
-      <h1 className="text-4xl font-bold text-gray-100">{title}</h1>
+      <div className="flex items-start justify-between gap-4">
+        <h1 className="text-4xl font-bold text-gray-100">{title}</h1>
+        {editHref && <PublicEditLink href={editHref} />}
+      </div>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { createClient, queryOCWithFallback, buildOCSelectQueryFallback } from '@/lib/supabase/server';
-import { PageHeader } from '@/components/layout/PageHeader';
+import { PublicEditLink } from '@/components/layout/PublicEditLink';
 import { OCInfobox } from '@/components/oc/OCInfobox';
 import { OCPageLayout } from '@/components/oc/OCPageLayout';
 import { TableOfContents } from '@/components/oc/TableOfContents';
@@ -418,6 +418,9 @@ export default async function OCDetailPage({
           <div id="oc-content" className="flex-1 space-y-4 md:space-y-6" suppressHydrationWarning>
             {/* Header - smaller, next to sidebar */}
             <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-gray-800/80 via-gray-800/60 to-gray-900/80 p-3 md:p-4 lg:p-5 border border-gray-700/50 shadow-lg backdrop-blur-sm" suppressHydrationWarning>
+              <div className="absolute top-3 right-3 z-10">
+                <PublicEditLink href={`/admin/ocs/${typedOc.id}`} />
+              </div>
               <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-blue-500/5 pointer-events-none" suppressHydrationWarning></div>
               <div className="relative flex items-start gap-4" suppressHydrationWarning>
                 {typedOc.world?.icon_url && (

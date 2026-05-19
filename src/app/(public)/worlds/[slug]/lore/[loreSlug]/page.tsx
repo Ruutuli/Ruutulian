@@ -140,6 +140,7 @@ export default async function LoreEntryPage({
     <div>
       <PageHeader
         title={lore.name}
+        editHref={`/admin/world-lore/${lore.id}`}
         breadcrumbs={[
           { label: 'Home', href: '/' },
           { label: 'Worlds', href: '/worlds' },

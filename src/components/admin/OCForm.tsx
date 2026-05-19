@@ -1128,7 +1128,13 @@ const ocSchema = z.object({
   sex: z.string().optional(),
   gender: z.string().optional(),
   pronouns: z.string().optional(),
-  age: z.number().int().positive().optional().or(z.literal('')),
+  age: z.preprocess(
+    (val) =>
+      val === '' || val === null || val === undefined || (typeof val === 'number' && Number.isNaN(val))
+        ? ''
+        : val,
+    z.union([z.literal(''), z.number().int().positive()])
+  ),
   date_of_birth: z.string().optional(),
   occupation: z.string().optional(),
   affiliations: z.string().optional(),

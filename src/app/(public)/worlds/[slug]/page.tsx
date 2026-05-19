@@ -417,6 +417,7 @@ export default async function WorldDetailPage({
     <div>
       <PageHeader
         title={world.name}
+        editHref={`/admin/worlds/${world.id}`}
         breadcrumbs={[
           { label: 'Home', href: '/' },
           { label: 'Worlds', href: '/worlds' },

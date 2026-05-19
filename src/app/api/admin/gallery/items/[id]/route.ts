@@ -85,7 +85,7 @@ export async function PATCH(
         *,
         gallery_item_ocs (
           oc_id,
-          oc:ocs (id, name, slug)
+          oc:ocs (id, name, slug, image_url)
         )
       `
       )

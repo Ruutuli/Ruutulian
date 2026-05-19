@@ -237,6 +237,7 @@ export default async function FanficDetailPage({
     <div>
       <PageHeader
         title={fanfic.title}
+        editHref={`/admin/fanfics/${fanfic.id}`}
         breadcrumbs={[
           { label: 'Home', href: '/' },
           { label: 'Fanfics', href: '/fanfics' },

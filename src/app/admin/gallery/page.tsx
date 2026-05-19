@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export default async function AdminGalleryPage() {
   await requireAuth();
   const supabase = createAdminClient();
-  const { data: ocs } = await supabase.from('ocs').select('id, name, slug').order('name');
+  const { data: ocs } = await supabase.from('ocs').select('id, name, slug, image_url').order('name');
 
   return (
     <div className="space-y-8">

@@ -3,8 +3,8 @@ import { checkAuth } from '@/lib/auth/require-auth';
 import { handleError } from '@/lib/api/route-helpers';
 import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
-import { driveFileViewUrl, GALLERY_FACETS_REVALIDATE_TAG } from '@/lib/gallery/constants';
-import { revalidateTag } from 'next/cache';
+import { driveFileViewUrl } from '@/lib/gallery/constants';
+import { revalidateGalleryCaches, revalidateOcPages } from '@/lib/gallery/revalidate';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -81,12 +81,8 @@ export async function POST(
       }
     }
 
-    try {
-      revalidateTag('site-config');
-      revalidateTag(GALLERY_FACETS_REVALIDATE_TAG);
-    } catch {
-      /* ignore */
-    }
+    revalidateGalleryCaches();
+    await revalidateOcPages(supabase, [ocId]);
 
     return NextResponse.json({
       success: true,

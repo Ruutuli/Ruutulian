@@ -1,6 +1,26 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { cache } from 'react';
 import { getSession } from './session-store';
+
+/**
+ * Returns true when a valid admin session cookie is present (public pages).
+ */
+export const checkAdminAuth = cache(async (): Promise<boolean> => {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get('admin-session');
+
+  if (!sessionCookie?.value) {
+    return false;
+  }
+
+  try {
+    const session = await getSession(sessionCookie.value);
+    return session !== null;
+  } catch {
+    return false;
+  }
+});
 
 /**
  * Requires authentication for admin access.

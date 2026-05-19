@@ -22,6 +22,7 @@ export function AdminNav({ userEmail }: AdminNavProps) {
     { href: '/admin/writing-prompt-responses', label: 'Responses' },
     { href: '/admin/fields', label: 'Fields' },
     { href: '/admin/stats', label: 'Stats' },
+    { href: '/admin/analytics', label: 'Analytics' },
     { href: '/admin/gallery', label: 'Gallery' },
     { href: '/admin/settings', label: 'Settings' },
   ];

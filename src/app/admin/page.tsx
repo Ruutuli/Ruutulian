@@ -359,6 +359,14 @@ export default async function AdminDashboard() {
             actionLabel="View Stats →"
           />
           <FeatureTile
+            title="Page Analytics"
+            description="View counts, traffic by page type, and recent visit history"
+            href="/admin/analytics"
+            icon="fas fa-chart-line"
+            color="purple"
+            actionLabel="View Analytics →"
+          />
+          <FeatureTile
             title="Manage Templates & Fields"
             description="Manage character template fields and world custom fields"
             href="/admin/templates"

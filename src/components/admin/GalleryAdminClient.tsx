@@ -15,6 +15,38 @@ export interface GalleryOcOption {
   name: string;
   slug: string;
   image_url?: string | null;
+  /** World / series name — used to disambiguate duplicate character names. */
+  series?: string | null;
+}
+
+function buildDuplicateOcNameSet(ocOptions: GalleryOcOption[]): Set<string> {
+  const counts = new Map<string, number>();
+  for (const oc of ocOptions) {
+    const key = oc.name.trim().toLowerCase();
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const duplicates = new Set<string>();
+  for (const [key, count] of counts) {
+    if (count > 1) duplicates.add(key);
+  }
+  return duplicates;
+}
+
+export function formatGalleryOcLabel(
+  oc: GalleryOcOption,
+  duplicateNames: Set<string>
+): string {
+  const key = oc.name.trim().toLowerCase();
+  const series = oc.series?.trim();
+  if (duplicateNames.has(key) && series) {
+    return `${oc.name} (${series})`;
+  }
+  return oc.name;
+}
+
+function ocMatchesSearch(oc: GalleryOcOption, q: string): boolean {
+  const hay = `${oc.name} ${oc.slug} ${oc.series ?? ''}`.toLowerCase();
+  return hay.includes(q);
 }
 
 interface GalleryItemOcRow {
@@ -250,6 +282,11 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
   filtersRef.current = { search, publishedFilter, ocId, sort, pageSize };
 
   const ocOptions = useMemo(() => [...ocs].sort((a, b) => a.name.localeCompare(b.name)), [ocs]);
+  const duplicateOcNames = useMemo(() => buildDuplicateOcNameSet(ocOptions), [ocOptions]);
+  const formatOcLabel = useCallback(
+    (oc: GalleryOcOption) => formatGalleryOcLabel(oc, duplicateOcNames),
+    [duplicateOcNames]
+  );
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const selectedItem = useMemo(() => {
     if (!selectedId) return null;
@@ -361,11 +398,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
   const filteredBulkOcOptions = useMemo(() => {
     const q = bulkOcSearch.trim().toLowerCase();
     const selected = ocOptions.filter((oc) => bulkOcIds.includes(oc.id));
-    const matches = q
-      ? ocOptions.filter(
-          (oc) => oc.name.toLowerCase().includes(q) || oc.slug.toLowerCase().includes(q)
-        )
-      : ocOptions;
+    const matches = q ? ocOptions.filter((oc) => ocMatchesSearch(oc, q)) : ocOptions;
     const seen = new Set<string>();
     const merged: GalleryOcOption[] = [];
     for (const oc of [...selected, ...matches]) {
@@ -442,7 +475,10 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
     const modeLabel =
       mode === 'add' ? 'add' : mode === 'remove' ? 'remove' : 'replace with only';
     const ocNames = bulkOcIds
-      .map((id) => ocOptions.find((o) => o.id === id)?.name)
+      .map((id) => {
+        const oc = ocOptions.find((o) => o.id === id);
+        return oc ? formatOcLabel(oc) : null;
+      })
       .filter(Boolean)
       .join(', ');
 
@@ -660,7 +696,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
             }}
             options={[
               { value: '', label: 'Any character' },
-              ...ocOptions.map((oc) => ({ value: oc.id, label: oc.name })),
+              ...ocOptions.map((oc) => ({ value: oc.id, label: formatOcLabel(oc) })),
             ]}
           />
           <FilterSelect
@@ -820,6 +856,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
         <GalleryAdminEditDrawer
           item={selectedItem}
           ocOptions={ocOptions}
+          formatOcLabel={formatOcLabel}
           onClose={() => {
             setSelectedId(null);
             setPinnedEditItem(null);
@@ -841,6 +878,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
         <GalleryBulkOcTagBar
           selectedCount={selectedIds.size}
           ocOptions={filteredBulkOcOptions}
+          formatOcLabel={formatOcLabel}
           selectedOcs={bulkSelectedOcs}
           bulkOcSearch={bulkOcSearch}
           onBulkOcSearchChange={handleBulkOcSearchChange}
@@ -1023,6 +1061,7 @@ function GalleryAdminPaginationBar({
 function GalleryBulkOcTagBar({
   selectedCount,
   ocOptions,
+  formatOcLabel,
   selectedOcs,
   bulkOcSearch,
   onBulkOcSearchChange,
@@ -1041,6 +1080,7 @@ function GalleryBulkOcTagBar({
 }: {
   selectedCount: number;
   ocOptions: GalleryOcOption[];
+  formatOcLabel: (oc: GalleryOcOption) => string;
   selectedOcs: GalleryOcOption[];
   bulkOcSearch: string;
   onBulkOcSearchChange: (value: string) => void;
@@ -1099,7 +1139,7 @@ function GalleryBulkOcTagBar({
           <div className="shrink-0 rounded-md border border-purple-500/50 bg-purple-950/40 p-3 space-y-2">
             <p className="text-xs text-purple-200 leading-relaxed">
               Suggested from filename{selectedCount === 1 ? '' : 's'}:{' '}
-              <span className="font-medium text-purple-100">{suggestedOc.name}</span>
+              <span className="font-medium text-purple-100">{formatOcLabel(suggestedOc)}</span>
             </p>
             <div className="flex gap-2">
               <button
@@ -1134,12 +1174,12 @@ function GalleryBulkOcTagBar({
                 key={oc.id}
                 className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-purple-900/60 text-purple-100 ring-1 ring-purple-500/40"
               >
-                {oc.name}
+                {formatOcLabel(oc)}
                 <button
                   type="button"
                   onClick={() => onToggleOc(oc.id)}
                   className="text-purple-300 hover:text-white leading-none"
-                  aria-label={`Remove ${oc.name}`}
+                  aria-label={`Remove ${formatOcLabel(oc)}`}
                 >
                   ×
                 </button>
@@ -1181,7 +1221,7 @@ function GalleryBulkOcTagBar({
                   onClick={(e) => e.stopPropagation()}
                   className="rounded border-gray-500 bg-gray-800 text-purple-500 shrink-0"
                 />
-                <span className="truncate">{oc.name}</span>
+                <span className="truncate">{formatOcLabel(oc)}</span>
               </label>
             ))
           )}
@@ -1388,6 +1428,7 @@ function GalleryEditSection({
 function GalleryAdminEditDrawer({
   item,
   ocOptions,
+  formatOcLabel,
   onClose,
   onSaved,
   onRemove,
@@ -1395,6 +1436,7 @@ function GalleryAdminEditDrawer({
 }: {
   item: GalleryAdminItem;
   ocOptions: GalleryOcOption[];
+  formatOcLabel: (oc: GalleryOcOption) => string;
   onClose: () => void;
   onSaved: (updated?: GalleryAdminItem) => Promise<void>;
   onRemove: () => void;
@@ -1458,9 +1500,7 @@ function GalleryAdminEditDrawer({
   const filteredOcOptions = useMemo(() => {
     const q = ocSearch.trim().toLowerCase();
     if (!q) return ocOptions;
-    return ocOptions.filter(
-      (oc) => oc.name.toLowerCase().includes(q) || oc.slug.toLowerCase().includes(q)
-    );
+    return ocOptions.filter((oc) => ocMatchesSearch(oc, q));
   }, [ocOptions, ocSearch]);
 
   const linkedProfileOcs = useMemo(() => {
@@ -1564,7 +1604,8 @@ function GalleryAdminEditDrawer({
   async function setProfileImageToggle(ocId: string, enabled: boolean) {
     if (!enabled || isMainProfileImage(ocId)) return;
 
-    const ocName = ocOptions.find((o) => o.id === ocId)?.name ?? 'character';
+    const oc = ocOptions.find((o) => o.id === ocId);
+    const ocName = oc ? formatOcLabel(oc) : 'character';
     setSettingMainImageFor(ocId);
     setLocalMessage(null);
     try {
@@ -1710,7 +1751,9 @@ function GalleryAdminEditDrawer({
                   <div className="rounded-md border border-purple-500/50 bg-purple-950/40 p-3 space-y-2">
                     <p className="text-xs text-purple-200 leading-relaxed">
                       Suggested from filename:{' '}
-                      <span className="font-medium text-purple-100">{filenameSuggestedOc.name}</span>
+                      <span className="font-medium text-purple-100">
+                        {formatOcLabel(filenameSuggestedOc)}
+                      </span>
                     </p>
                     <div className="flex gap-2">
                       <button
@@ -1766,7 +1809,7 @@ function GalleryAdminEditDrawer({
                             onChange={() => toggleOc(oc.id)}
                             className="rounded border-gray-600 bg-gray-700 text-purple-600 shrink-0 disabled:opacity-50"
                           />
-                          <span className="truncate">{oc.name}</span>
+                          <span className="truncate">{formatOcLabel(oc)}</span>
                         </label>
                       );
                     })
@@ -1838,7 +1881,7 @@ function GalleryAdminEditDrawer({
                       const label =
                         linkedProfileOcs.length === 1
                           ? 'Replace main profile image?'
-                          : `Replace ${oc.name}'s main profile image?`;
+                          : `Replace ${formatOcLabel(oc)}'s main profile image?`;
                       return (
                         <div
                           key={oc.id}
@@ -1850,10 +1893,10 @@ function GalleryAdminEditDrawer({
                               {busy
                                 ? 'Updating…'
                                 : isMain
-                                  ? `Currently ${oc.name}'s profile image`
+                                  ? `Currently ${formatOcLabel(oc)}'s profile image`
                                   : linkedProfileOcs.length === 1
                                     ? 'Off — keeps their current profile image'
-                                    : `Off — keeps ${oc.name}'s current profile image`}
+                                    : `Off — keeps ${formatOcLabel(oc)}'s current profile image`}
                             </p>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer shrink-0">

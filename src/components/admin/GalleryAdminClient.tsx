@@ -265,7 +265,10 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
       const count = json.data?.itemCount ?? selectedIds.size;
       setMessage({
         type: 'success',
-        text: `Updated character links on ${count} image(s) (${modeLabel}: ${ocNames}).`,
+        text:
+          mode === 'remove'
+            ? `Updated character links on ${count} image(s) (${modeLabel}: ${ocNames}).`
+            : `Updated character links on ${count} image(s) (${modeLabel}: ${ocNames}). Images were published for the public site.`,
       });
       setSelectedIds(new Set());
       await reloadCurrentPage();
@@ -730,6 +733,9 @@ function GalleryBulkOcTagBar({
         <p className="text-sm font-medium text-gray-100">
           Tag <span className="text-purple-200 font-semibold">{selectedCount}</span> selected image
           {selectedCount === 1 ? '' : 's'} with character(s):
+        </p>
+        <p className="text-xs text-gray-400 leading-relaxed">
+          Add or Replace also publishes images so they appear on each character&apos;s page and the public gallery.
         </p>
         <input
           type="search"

@@ -3,8 +3,11 @@ import { checkAuth } from '@/lib/auth/require-auth';
 import { handleError } from '@/lib/api/route-helpers';
 import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
-import { GALLERY_FACETS_REVALIDATE_TAG } from '@/lib/gallery/constants';
-import { revalidateTag } from 'next/cache';
+import {
+  publishGalleryItems,
+  revalidateGalleryCaches,
+  revalidateOcPages,
+} from '@/lib/gallery/revalidate';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -52,6 +55,7 @@ export async function PATCH(
       }
     }
 
+    let linkedOcIds: string[] = [];
     if (Array.isArray(ocIds)) {
       const { error: delError } = await supabase.from('gallery_item_ocs').delete().eq('gallery_item_id', id);
       if (delError) {
@@ -59,9 +63,8 @@ export async function PATCH(
         return NextResponse.json({ success: false, error: delError.message }, { status: 400 });
       }
 
-      const rows = ocIds
-        .filter((oid) => typeof oid === 'string' && oid.length > 0)
-        .map((oc_id) => ({ gallery_item_id: id, oc_id }));
+      linkedOcIds = ocIds.filter((oid) => typeof oid === 'string' && oid.length > 0);
+      const rows = linkedOcIds.map((oc_id) => ({ gallery_item_id: id, oc_id }));
 
       if (rows.length > 0) {
         const { error: insError } = await supabase.from('gallery_item_ocs').insert(rows);
@@ -69,6 +72,9 @@ export async function PATCH(
           logger.error('GalleryItemPatch', 'Insert junction failed', insError);
           return NextResponse.json({ success: false, error: insError.message }, { status: 400 });
         }
+
+        // Linked characters should see this art on their public profile gallery.
+        await publishGalleryItems(supabase, [id]);
       }
     }
 
@@ -91,11 +97,9 @@ export async function PATCH(
       return NextResponse.json({ success: false, error: fetchError.message }, { status: 400 });
     }
 
-    try {
-      revalidateTag('site-config');
-      revalidateTag(GALLERY_FACETS_REVALIDATE_TAG);
-    } catch {
-      /* ignore */
+    revalidateGalleryCaches();
+    if (linkedOcIds.length > 0) {
+      await revalidateOcPages(supabase, linkedOcIds);
     }
 
     return NextResponse.json({ success: true, data: row });

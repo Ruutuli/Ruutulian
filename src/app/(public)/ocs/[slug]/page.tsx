@@ -2410,13 +2410,13 @@ export default async function OCDetailPage({
             )}
 
             {/* Gallery Section */}
-            {oc.gallery && oc.gallery.length > 0 && (
+            {typedOc.gallery && typedOc.gallery.length > 0 && (
               <div className="wiki-card p-4 md:p-6 lg:p-8" suppressHydrationWarning>
                 <h2 id="gallery" className="wiki-section-header scroll-mt-20" suppressHydrationWarning>
                   <i className="fas fa-images text-purple-400" aria-hidden="true" suppressHydrationWarning></i>
                   Gallery
                 </h2>
-                <OCGallery images={oc.gallery} ocName={oc.name} />
+                <OCGallery images={typedOc.gallery} ocName={typedOc.name} />
             </div>
             )}
           </div>

@@ -3,8 +3,11 @@ import { checkAuth } from '@/lib/auth/require-auth';
 import { handleError } from '@/lib/api/route-helpers';
 import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
-import { GALLERY_FACETS_REVALIDATE_TAG } from '@/lib/gallery/constants';
-import { revalidateTag } from 'next/cache';
+import {
+  publishGalleryItems,
+  revalidateGalleryCaches,
+  revalidateOcPages,
+} from '@/lib/gallery/revalidate';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -115,12 +118,13 @@ export async function POST(request: Request) {
       }
     }
 
-    try {
-      revalidateTag('site-config');
-      revalidateTag(GALLERY_FACETS_REVALIDATE_TAG);
-    } catch {
-      /* ignore */
+    // Character pages only show published items (RLS + OC page query).
+    if (mode === 'add' || mode === 'replace') {
+      await publishGalleryItems(supabase, validIds);
     }
+
+    revalidateGalleryCaches();
+    await revalidateOcPages(supabase, ocs);
 
     return NextResponse.json({
       success: true,

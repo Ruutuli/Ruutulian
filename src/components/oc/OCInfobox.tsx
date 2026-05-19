@@ -2,25 +2,22 @@ import Link from 'next/link';
 import type { OC } from '@/types/oc';
 import { Infobox } from '@/components/wiki/Infobox';
 import { InfoRow } from '@/components/wiki/InfoRow';
-import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
+import { OCInfoboxPortrait } from '@/components/oc/OCInfoboxPortrait';
 import { formatDateOfBirth } from '@/lib/utils/dateFormat';
 
 interface OCInfoboxProps {
   oc: OC;
+  profileImageNsfw?: boolean;
 }
 
-export async function OCInfobox({ oc }: OCInfoboxProps) {
+export async function OCInfobox({ oc, profileImageNsfw = false }: OCInfoboxProps) {
   return (
     <Infobox sticky={false} className="w-full lg:w-96">
-      <div className="relative w-full aspect-[4/5] mb-4 rounded-lg overflow-hidden" suppressHydrationWarning>
-        <GoogleDriveImage
-          src={oc.image_url || ''}
-          alt={oc.name}
-          className="wiki-image w-full h-full object-contain"
-          style={{ position: 'absolute', inset: 0, objectPosition: 'center 10%' }}
-          priority
-        />
-      </div>
+      <OCInfoboxPortrait
+        src={oc.image_url || ''}
+        alt={oc.name}
+        nsfw={profileImageNsfw || Boolean(oc.image_is_nsfw)}
+      />
       <dl className="space-y-0" suppressHydrationWarning>
         {/* Basic Information Section */}
         <InfoRow label="Name" value={oc.name} icon="fas fa-user" />

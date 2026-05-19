@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { OC } from '@/types/oc';
-import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
+import { NsfwGoogleDriveImage } from '@/components/oc/NsfwGoogleDriveImage';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
 
 interface CharacterCardProps {
@@ -25,9 +25,11 @@ export function CharacterCard({ oc, className = '' }: CharacterCardProps) {
         {/* Card Image */}
         <div className="relative w-full aspect-[3/4] bg-gray-900 overflow-hidden">
           {oc.image_url ? (
-            <GoogleDriveImage
+            <NsfwGoogleDriveImage
               src={oc.image_url}
               alt={oc.name}
+              nsfw={Boolean(oc.image_is_nsfw)}
+              coverClassName="absolute inset-0 w-full h-full"
               className="object-cover w-full h-full"
               style={{ position: 'absolute', inset: 0 }}
             />

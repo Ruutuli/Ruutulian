@@ -12,6 +12,7 @@ import { generateWebSiteSchema, generateOrganizationSchema, generatePersonSchema
 import { getAbsoluteIconUrl } from '@/lib/seo/metadata-helpers';
 import { getDateInEST, formatDateOfBirth } from '@/lib/utils/dateFormat';
 import { filterOcsBirthdayToday } from '@/lib/utils/birthday-match';
+import { attachImageNsfwFlags } from '@/lib/gallery/nsfw-lookup';
 import { logMemoryUsage } from '@/lib/memory-monitor';
 import type { World, OC } from '@/types/oc';
 
@@ -74,7 +75,9 @@ export default async function HomePage() {
   const randomWorldCount = totalWorlds > 0 ? Math.min(3, totalWorlds) : 0;
   const randomOCCount = totalOCs > 0 ? Math.min(3, totalOCs) : 0;
   const randomWorlds = worldSample ? getRandomItemsPerRequest(worldSample, randomWorldCount) : [];
-  const randomOCs = ocSample ? getRandomItemsPerRequest(ocSample, randomOCCount) : [];
+  const randomOCsRaw = ocSample ? getRandomItemsPerRequest(ocSample, randomOCCount) : [];
+  const randomOCs =
+    randomOCsRaw.length > 0 ? await attachImageNsfwFlags(supabase, randomOCsRaw) : [];
 
   const worldCount = worldCountResult.count ?? 0;
   const ocCount = ocCountResult.count ?? 0;

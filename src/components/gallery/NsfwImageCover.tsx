@@ -27,32 +27,26 @@ export function NsfwImageCover({ nsfw, children, className, resetKey }: NsfwImag
     return <div className={className}>{children}</div>;
   }
 
-  const hidden = !revealed;
-
   return (
     <div className={`relative ${className ?? ''}`}>
-      <div
-        className={
-          hidden
-            ? 'blur-2xl scale-105 select-none pointer-events-none brightness-75'
-            : undefined
-        }
-        aria-hidden={hidden}
-      >
-        {children}
-      </div>
-      {hidden ? (
+      {revealed ? children : <div className="absolute inset-0 bg-gray-950" aria-hidden />}
+      {!revealed ? (
         <button
           type="button"
           onClick={handleReveal}
-          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-gray-950/85 backdrop-blur-sm border-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/80 focus-visible:ring-inset"
-          aria-label="Show NSFW content"
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-gray-950/95 backdrop-blur-sm border-0 cursor-pointer px-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/80 focus-visible:ring-inset"
+          aria-label="Confirm you want to view NSFW content"
         >
           <span className="flex items-center gap-1.5 rounded-full border border-red-500/50 bg-red-950/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-red-200">
             <i className="fas fa-eye-slash text-[10px]" aria-hidden />
             NSFW
           </span>
-          <span className="text-sm text-gray-300 px-4 text-center">Click to show</span>
+          <p className="text-sm text-gray-300 text-center max-w-[16rem] leading-snug">
+            This artwork is marked sensitive. Only continue if you&apos;re okay viewing it.
+          </p>
+          <span className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-500">
+            I&apos;m OK to view this
+          </span>
         </button>
       ) : null}
     </div>

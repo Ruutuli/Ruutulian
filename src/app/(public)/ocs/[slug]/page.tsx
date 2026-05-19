@@ -32,6 +32,7 @@ import { logger } from '@/lib/logger';
 import { formatSupabaseErrorForLog } from '@/lib/utils/supabase-error';
 import { generateProfilePageSchema } from '@/lib/seo/structured-data';
 import { driveFileViewUrl } from '@/lib/gallery/constants';
+import { isGalleryImageNsfw } from '@/lib/gallery/nsfw-lookup';
 
 export async function generateMetadata({
   params,
@@ -202,6 +203,7 @@ export default async function OCDetailPage({
   
   // Type assertion: queryOCWithFallback returns OC type but TypeScript infers a narrower type
   const typedOc: OC = oc as OC;
+  typedOc.image_is_nsfw = await isGalleryImageNsfw(supabase, typedOc.image_url);
 
   // Pull this OC's gallery items based on the *tagging* relationship table.
   // This ensures artworks tagged to the OC in Admin → Gallery show up on the OC page.

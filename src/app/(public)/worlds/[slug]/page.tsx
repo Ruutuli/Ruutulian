@@ -12,6 +12,7 @@ import { TimelineList } from '@/components/timeline/TimelineList';
 import { LoreCard } from '@/components/lore/LoreCard';
 import { WorldRelationships } from '@/components/world/WorldRelationships';
 import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
+import { attachImageNsfwFlags } from '@/lib/gallery/nsfw-lookup';
 import { generateDetailPageMetadata } from '@/lib/seo/page-metadata';
 import { logMemoryUsage } from '@/lib/memory-monitor';
 import { logger } from '@/lib/logger';
@@ -399,7 +400,9 @@ export default async function WorldDetailPage({
     })(),
   ]);
 
-  const ocs = ocsResult.data as unknown as OC[] | null | undefined;
+  const ocsRaw = ocsResult.data as unknown as OC[] | null | undefined;
+  const ocs =
+    ocsRaw && ocsRaw.length > 0 ? await attachImageNsfwFlags(supabase, ocsRaw) : ocsRaw;
   const timelines = timelinesResult.data as unknown as Timeline[] | null | undefined;
   const loreEntries = loreEntriesResult.data as unknown as WorldLore[] | null | undefined;
 

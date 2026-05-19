@@ -9,6 +9,7 @@ import {
   revalidateOcPages,
 } from '@/lib/gallery/revalidate';
 import { assignProfileImagesFromGallery } from '@/lib/gallery/auto-profile-image';
+import { removeGalleryItemsFromSync } from '@/lib/gallery/remove-from-sync';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -142,5 +143,40 @@ export async function PATCH(
   } catch (error) {
     logger.error('GalleryItemPatch', 'Request failed', error);
     return handleError(error, 'Failed to update gallery item');
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await checkAuth();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Missing id' }, { status: 400 });
+    }
+
+    const supabase = createAdminClient();
+    const { removed, linkedOcIds } = await removeGalleryItemsFromSync(supabase, [id]);
+
+    if (removed === 0) {
+      return NextResponse.json({ success: false, error: 'Gallery item not found' }, { status: 404 });
+    }
+
+    revalidateGalleryCaches();
+    if (linkedOcIds.length > 0) {
+      await revalidateOcPages(supabase, linkedOcIds);
+    }
+
+    return NextResponse.json({ success: true, data: { removed } });
+  } catch (error) {
+    logger.error('GalleryItemDelete', 'Request failed', error);
+    const message = error instanceof Error ? error.message : 'Failed to remove gallery item';
+    return NextResponse.json({ success: false, error: message }, { status: 400 });
   }
 }

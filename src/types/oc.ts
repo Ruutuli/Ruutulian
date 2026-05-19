@@ -411,6 +411,8 @@ export interface OC {
   // Media
   gallery?: string[] | null;
   image_url?: string | null;
+  /** True when image_url matches a gallery item marked NSFW (set at fetch time). */
+  image_is_nsfw?: boolean;
   icon_url?: string | null;
   seiyuu?: string | null;
   voice_actor?: string | null;

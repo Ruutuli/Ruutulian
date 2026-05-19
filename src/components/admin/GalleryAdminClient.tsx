@@ -235,9 +235,13 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
   const [bulkOcSearch, setBulkOcSearch] = useState('');
   const [bulkTagPanelOpen, setBulkTagPanelOpen] = useState(false);
   const [bulkApplying, setBulkApplying] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [dismissedFilenameSuggestionKey, setDismissedFilenameSuggestionKey] = useState<
     string | null
   >(null);
+
+  const REMOVE_FROM_GALLERY_CONFIRM =
+    'Remove from gallery? Files stay in Google Drive but will not show here or on the public site. Future syncs will not bring them back.';
 
   const pageRef = useRef(page);
   pageRef.current = page;
@@ -356,11 +360,21 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
 
   const filteredBulkOcOptions = useMemo(() => {
     const q = bulkOcSearch.trim().toLowerCase();
-    if (!q) return [];
-    return ocOptions.filter(
-      (oc) => oc.name.toLowerCase().includes(q) || oc.slug.toLowerCase().includes(q)
-    );
-  }, [ocOptions, bulkOcSearch]);
+    const selected = ocOptions.filter((oc) => bulkOcIds.includes(oc.id));
+    const matches = q
+      ? ocOptions.filter(
+          (oc) => oc.name.toLowerCase().includes(q) || oc.slug.toLowerCase().includes(q)
+        )
+      : ocOptions;
+    const seen = new Set<string>();
+    const merged: GalleryOcOption[] = [];
+    for (const oc of [...selected, ...matches]) {
+      if (seen.has(oc.id)) continue;
+      seen.add(oc.id);
+      merged.push(oc);
+    }
+    return merged;
+  }, [ocOptions, bulkOcSearch, bulkOcIds]);
 
   const bulkSelectedOcs = useMemo(
     () => ocOptions.filter((oc) => bulkOcIds.includes(oc.id)),
@@ -479,6 +493,57 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
     }
   }
 
+  async function removeFromGallery(itemIds: string[], options?: { closeEditor?: boolean }) {
+    if (itemIds.length === 0) return;
+
+    const countLabel = itemIds.length === 1 ? 'this image' : `${itemIds.length} images`;
+    if (!window.confirm(`${REMOVE_FROM_GALLERY_CONFIRM}\n\nRemove ${countLabel}?`)) {
+      return;
+    }
+
+    setRemoving(true);
+    setMessage(null);
+    try {
+      const res = await fetch(
+        itemIds.length === 1
+          ? `/api/admin/gallery/items/${itemIds[0]}`
+          : '/api/admin/gallery/items/bulk-remove',
+        {
+          method: itemIds.length === 1 ? 'DELETE' : 'POST',
+          headers: itemIds.length === 1 ? undefined : { 'Content-Type': 'application/json' },
+          body:
+            itemIds.length === 1 ? undefined : JSON.stringify({ itemIds }),
+        }
+      );
+      const json = await res.json();
+      if (!json.success) {
+        setMessage({ type: 'error', text: json.error || 'Failed to remove from gallery' });
+        return;
+      }
+      const removed = json.data?.removed ?? itemIds.length;
+      setMessage({
+        type: 'success',
+        text:
+          removed === 1
+            ? 'Removed from gallery. It will not reappear on sync.'
+            : `Removed ${removed} image(s) from gallery. They will not reappear on sync.`,
+      });
+      if (options?.closeEditor) {
+        setSelectedId(null);
+        setPinnedEditItem(null);
+      }
+      if (selectionMode) {
+        setSelectedIds(new Set());
+      }
+      await reloadCurrentPage();
+    } catch (e) {
+      logger.error('GalleryAdmin', 'Remove failed', e);
+      setMessage({ type: 'error', text: 'Failed to remove from gallery' });
+    } finally {
+      setRemoving(false);
+    }
+  }
+
   async function runSync() {
     setSyncing(true);
     setMessage(null);
@@ -518,7 +583,6 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
 
   function handleBulkOcSearchChange(value: string) {
     setBulkOcSearch(value);
-    setBulkOcIds([]);
   }
 
   return (
@@ -529,8 +593,9 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
           <p className="text-gray-400 text-sm max-w-2xl leading-relaxed">
             Pull images only from the Drive folders listed in Site Settings (including nested subfolders).
             Sync removes gallery rows from folders no longer in settings or files deleted from Drive.
-            New files stay unpublished until you enable them. Share folders with your Google service account
-            email (Viewer).
+            Use &quot;Remove from gallery&quot; on images you do not want — they stay on Drive but will not
+            sync back in. New files stay unpublished until you enable them. Share folders with your Google
+            service account email (Viewer).
           </p>
           <button
             type="button"
@@ -684,6 +749,16 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
                 Tag selected
               </button>
             ) : null}
+            {selectedIds.size > 0 ? (
+              <button
+                type="button"
+                disabled={removing || bulkApplying}
+                onClick={() => void removeFromGallery([...selectedIds])}
+                className="text-sm px-3 py-1.5 rounded-md border border-red-500/60 bg-red-950/50 text-red-200 hover:bg-red-900/60 disabled:opacity-50"
+              >
+                {removing ? 'Removing…' : 'Remove from gallery'}
+              </button>
+            ) : null}
             <span className="text-sm text-purple-300 ml-auto">{selectedIds.size} selected</span>
           </div>
         ) : null}
@@ -764,6 +839,8 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
             }
             await reloadCurrentPage();
           }}
+          onRemove={() => void removeFromGallery([selectedItem.id], { closeEditor: true })}
+          removing={removing}
         />
       ) : null}
       </div>
@@ -785,7 +862,9 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
           onClose={() => setBulkTagPanelOpen(false)}
           applying={bulkApplying}
           onAdd={() => void applyBulkOcTag('add')}
-          onRemove={() => void applyBulkOcTag('remove')}
+          onRemoveOcLinks={() => void applyBulkOcTag('remove')}
+          onRemoveFromGallery={() => void removeFromGallery([...selectedIds])}
+          removingFromGallery={removing}
           suggestedOc={showFilenameSuggestion ? filenameSuggestedOc : null}
           onAcceptSuggestion={() => {
             if (!filenameSuggestedOc) return;
@@ -961,7 +1040,9 @@ function GalleryBulkOcTagBar({
   onClose,
   applying,
   onAdd,
-  onRemove,
+  onRemoveOcLinks,
+  onRemoveFromGallery,
+  removingFromGallery,
   suggestedOc,
   onAcceptSuggestion,
   onDismissSuggestion,
@@ -977,7 +1058,9 @@ function GalleryBulkOcTagBar({
   onClose: () => void;
   applying: boolean;
   onAdd: () => void;
-  onRemove: () => void;
+  onRemoveOcLinks: () => void;
+  onRemoveFromGallery: () => void;
+  removingFromGallery: boolean;
   suggestedOc: GalleryOcOption | null;
   onAcceptSuggestion: () => void;
   onDismissSuggestion: () => void;
@@ -1018,7 +1101,7 @@ function GalleryBulkOcTagBar({
       </div>
       <div className="flex flex-1 min-h-0 flex-col gap-3 overflow-hidden px-4 py-4">
         <p className="shrink-0 text-xs text-gray-400 leading-relaxed">
-          Search, pick character(s), then apply. Changing the search clears your character pick.
+          Pick one or more characters, then apply. Search narrows the list; your picks stay selected.
         </p>
         {suggestedOc ? (
           <div className="shrink-0 rounded-md border border-purple-500/50 bg-purple-950/40 p-3 space-y-2">
@@ -1079,10 +1162,14 @@ function GalleryBulkOcTagBar({
             </button>
           </div>
         ) : null}
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-md border border-gray-500 bg-gray-900/80 p-2 space-y-0.5">
+        <div
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-md border border-gray-500 bg-gray-900/80 p-2 space-y-0.5"
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           {ocOptions.length === 0 ? (
             <p className="text-sm text-gray-400 px-2 py-2">
-              {hasSearch ? 'No characters match.' : 'Type to search for a character.'}
+              {hasSearch ? 'No characters match.' : 'No characters found.'}
             </p>
           ) : (
             ocOptions.map((oc) => (
@@ -1120,11 +1207,23 @@ function GalleryBulkOcTagBar({
         <button
           type="button"
           disabled={!canApply}
-          onClick={onRemove}
+          onClick={onRemoveOcLinks}
           className="w-full px-4 py-2 text-sm rounded-md border border-red-500/60 bg-red-950/80 text-red-100 hover:bg-red-900/70 hover:border-red-400/70 disabled:opacity-50 font-medium"
         >
-          Remove from selected
+          Remove character links
         </button>
+        <button
+          type="button"
+          disabled={removingFromGallery || applying}
+          onClick={onRemoveFromGallery}
+          className="w-full px-4 py-2 text-sm rounded-md border border-red-700/70 bg-red-950 text-red-200 hover:bg-red-900 disabled:opacity-50 font-medium"
+        >
+          {removingFromGallery ? 'Removing…' : 'Remove from gallery'}
+        </button>
+        <p className="text-[11px] text-gray-500 leading-relaxed">
+          Removes selected images from admin and public gallery. Files stay on Drive; sync will not
+          bring them back.
+        </p>
       </div>
     </aside>
   );
@@ -1274,11 +1373,15 @@ function GalleryAdminEditDrawer({
   ocOptions,
   onClose,
   onSaved,
+  onRemove,
+  removing,
 }: {
   item: GalleryAdminItem;
   ocOptions: GalleryOcOption[];
   onClose: () => void;
   onSaved: (updated?: GalleryAdminItem) => Promise<void>;
+  onRemove: () => void;
+  removing: boolean;
 }) {
   const [published, setPublished] = useState(item.published);
   const [isNsfw, setIsNsfw] = useState(Boolean(item.is_nsfw));
@@ -1291,7 +1394,6 @@ function GalleryAdminEditDrawer({
   const [dismissedFilenameSuggestion, setDismissedFilenameSuggestion] = useState(false);
   const [ocImageUrlOverrides, setOcImageUrlOverrides] = useState<Record<string, string | null>>({});
   const [saving, setSaving] = useState(false);
-  const [ocLinksSaving, setOcLinksSaving] = useState(false);
   const [settingMainImageFor, setSettingMainImageFor] = useState<string | null>(null);
   const [localMessage, setLocalMessage] = useState<string | null>(null);
   const [imageLightbox, setImageLightbox] = useState(false);
@@ -1434,37 +1536,12 @@ function GalleryAdminEditDrawer({
     window.setTimeout(() => setLocalMessage(null), 4000);
   }
 
-  async function persistOcLinks(nextIds: string[]) {
-    setOcLinksSaving(true);
-    setLocalMessage(null);
-    try {
-      const res = await fetch(`/api/admin/gallery/items/${item.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ocIds: nextIds }),
-      });
-      const json = await res.json();
-      if (!json.success) {
-        setLocalMessage(json.error || 'Failed to update character links');
-        return;
-      }
-      if (json.data?.published === true) setPublished(true);
-      applyAutoProfileImageResults(json.profileImagesSet as AutoProfileImageResult[] | undefined);
-      if (json.data) await onSaved(json.data as GalleryAdminItem);
-    } catch {
-      setLocalMessage('Failed to update character links');
-    } finally {
-      setOcLinksSaving(false);
-    }
-  }
-
   function toggleOc(ocId: string) {
     const next = selectedOcIds.includes(ocId)
       ? selectedOcIds.filter((id) => id !== ocId)
       : [...selectedOcIds, ocId];
     setSelectedOcIds(next);
     if (next.length > selectedOcIds.length) setPublished(true);
-    void persistOcLinks(next);
   }
 
   async function setProfileImageToggle(ocId: string, enabled: boolean) {
@@ -1532,7 +1609,11 @@ function GalleryAdminEditDrawer({
         aria-label="Close editor"
         onClick={onClose}
       />
-      <aside className="fixed top-0 right-0 z-50 h-dvh max-h-dvh w-full max-w-lg sm:max-w-2xl lg:max-w-3xl bg-gray-900 border-l border-gray-700 shadow-2xl flex flex-col overflow-hidden">
+      <aside
+        className="fixed top-0 right-0 z-50 h-dvh max-h-dvh w-full max-w-lg sm:max-w-2xl lg:max-w-3xl bg-gray-900 border-l border-gray-700 shadow-2xl flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-700 shrink-0">
           <div className="min-w-0">
             <h2 className="text-base font-semibold text-gray-100">Edit gallery item</h2>
@@ -1611,9 +1692,7 @@ function GalleryAdminEditDrawer({
                             : [...selectedOcIds, filenameSuggestedOc.id];
                           setSelectedOcIds(next);
                           setPublished(true);
-                          void persistOcLinks(next);
                         }}
-                        disabled={ocLinksSaving}
                         className="flex-1 px-3 py-1.5 text-xs rounded-md bg-purple-600 hover:bg-purple-500 text-white font-medium"
                       >
                         Use suggestion
@@ -1635,7 +1714,11 @@ function GalleryAdminEditDrawer({
                   placeholder="Search characters…"
                   className="w-full px-3 py-2 text-sm bg-gray-950 border border-gray-600 rounded-md text-gray-100"
                 />
-                <div className="max-h-56 sm:max-h-64 overflow-y-auto rounded-md border border-gray-600 bg-gray-950/80 p-2 space-y-0.5">
+                <div
+                  className="max-h-56 sm:max-h-64 overflow-y-auto rounded-md border border-gray-600 bg-gray-950/80 p-2 space-y-0.5"
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
                   {filteredOcOptions.length === 0 ? (
                     <p className="text-sm text-gray-500 px-2 py-3">No characters match.</p>
                   ) : (
@@ -1651,7 +1734,6 @@ function GalleryAdminEditDrawer({
                           <input
                             type="checkbox"
                             checked={isLinked}
-                            disabled={ocLinksSaving}
                             onChange={() => toggleOc(oc.id)}
                             className="rounded border-gray-600 bg-gray-700 text-purple-600 shrink-0 disabled:opacity-50"
                           />
@@ -1832,6 +1914,18 @@ function GalleryAdminEditDrawer({
           >
             {saving ? 'Saving…' : isDirty ? 'Save gallery settings' : 'No changes to save'}
           </button>
+          <button
+            type="button"
+            disabled={removing || saving}
+            onClick={onRemove}
+            className="w-full mt-2 py-2.5 text-sm rounded-md border border-red-700/70 bg-red-950/80 text-red-200 hover:bg-red-900/70 disabled:opacity-50 font-medium"
+          >
+            {removing ? 'Removing…' : 'Remove from gallery'}
+          </button>
+          <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
+            Unsyncs this image: removed from admin and public gallery, stays on Drive, will not
+            return on sync.
+          </p>
         </div>
       </aside>
 

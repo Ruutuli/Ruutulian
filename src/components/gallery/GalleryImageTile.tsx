@@ -52,7 +52,7 @@ export function GalleryImageTile({
               : 'absolute inset-0 bg-gray-950'
           }
         >
-          <NsfwImageCover nsfw={isNsfw} className="w-full h-full">
+          <NsfwImageCover nsfw={isNsfw} resetKey={fileId} className="w-full h-full">
             <GoogleDriveImage
               src={src}
               alt={displayTitle}

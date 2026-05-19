@@ -7,6 +7,7 @@ import { generatePageMetadata } from '@/lib/config/metadata-helpers';
 import { getSiteConfig } from '@/lib/config/site-config';
 import { logMemoryUsage } from '@/lib/memory-monitor';
 import type { OC } from '@/types/oc';
+import { attachImageNsfwFlags } from '@/lib/gallery/nsfw-lookup';
 
 export async function generateMetadata() {
   const config = await getSiteConfig();
@@ -125,7 +126,7 @@ export default async function OCsPage({ searchParams }: OCsPageProps) {
   // With tagId the main query uses character_tags!inner so ocs is already tag-filtered; fallback has no tags so we keep ocs as-is
   let filteredByTag: OC[] = ocs || [];
 
-  let filteredOCs: OC[] = filteredByTag;
+  let filteredOCs: OC[] = await attachImageNsfwFlags(supabase, filteredByTag);
   if (search) {
     const searchLower = search.toLowerCase();
     filteredOCs = filteredByTag.filter(

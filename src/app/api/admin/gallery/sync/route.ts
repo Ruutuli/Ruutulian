@@ -50,12 +50,41 @@ export async function POST() {
           : 'defaults',
     });
 
+    const { data: exclusionRows, error: exclusionError } = await supabase
+      .from('gallery_sync_exclusions')
+      .select('drive_file_id');
+
+    if (exclusionError) {
+      logger.error('GallerySync', 'Failed to load sync exclusions', exclusionError);
+      return NextResponse.json({ success: false, error: exclusionError.message }, { status: 400 });
+    }
+
+    const excludedDriveIds = new Set(
+      (exclusionRows ?? [])
+        .map((r) => r.drive_file_id as string)
+        .filter((id) => typeof id === 'string' && id.length > 0)
+    );
+
+    const errors: string[] = [];
+
+    if (excludedDriveIds.size > 0) {
+      const { error: purgeExcludedError } = await supabase
+        .from('gallery_items')
+        .delete()
+        .in('drive_file_id', [...excludedDriveIds]);
+
+      if (purgeExcludedError) {
+        logger.error('GallerySync', 'Failed to purge excluded gallery items', purgeExcludedError);
+        errors.push(`cleanup (excluded): ${purgeExcludedError.message}`);
+      }
+    }
+
     const drive = await createGalleryDriveClient();
     const syncStartedAt = new Date().toISOString();
     let synced = 0;
-    const errors: string[] = [];
     const seenDriveFileIds = new Set<string>();
     let folderListFailures = 0;
+    let skippedExcluded = 0;
 
     for (const folderId of folderIds) {
       const trimmed = folderId.trim();
@@ -68,7 +97,11 @@ export async function POST() {
 
         const RPC_BATCH = 20;
         for (let i = 0; i < files.length; i += RPC_BATCH) {
-          const chunk = files.slice(i, i + RPC_BATCH);
+          const batch = files.slice(i, i + RPC_BATCH);
+          skippedExcluded += batch.filter((f) => excludedDriveIds.has(f.id)).length;
+          const chunk = batch.filter((f) => !excludedDriveIds.has(f.id));
+          if (chunk.length === 0) continue;
+
           const results = await Promise.all(
             chunk.map((file) =>
               supabase.rpc('upsert_gallery_item_from_sync', {
@@ -81,8 +114,8 @@ export async function POST() {
             )
           );
           for (let j = 0; j < chunk.length; j++) {
-            const { error: rpcError } = results[j]!;
             const file = chunk[j]!;
+            const { error: rpcError } = results[j]!;
             if (rpcError) {
               logger.error('GallerySync', 'RPC upsert failed', {
                 fileId: file.id,

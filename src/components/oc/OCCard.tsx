@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { OC } from '@/types/oc';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
-import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
+import { NsfwGoogleDriveImage } from '@/components/oc/NsfwGoogleDriveImage';
 
 interface OCCardProps {
   oc: OC;
@@ -40,9 +40,11 @@ export function OCCard({ oc }: OCCardProps) {
         <div className="relative w-full overflow-hidden bg-gray-900">
           {oc.image_url ? (
             <div className="relative w-full aspect-square flex items-center justify-center">
-              <GoogleDriveImage
+              <NsfwGoogleDriveImage
                 src={oc.image_url}
                 alt={oc.name}
+                nsfw={Boolean(oc.image_is_nsfw)}
+                coverClassName="absolute inset-0 w-full h-full"
                 className="object-contain w-full h-full"
                 style={{ position: 'absolute', inset: 0 }}
               />

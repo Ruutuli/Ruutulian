@@ -10,15 +10,21 @@ import {
   shouldUseUnoptimizedImage,
 } from '@/lib/utils/googleDriveImage';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
+import { NsfwImageCover } from '@/components/gallery/NsfwImageCover';
 import { logger } from '@/lib/logger';
 
+export interface OCGalleryImage {
+  url: string;
+  isNsfw?: boolean;
+}
+
 interface OCGalleryProps {
-  images: string[];
+  images: OCGalleryImage[];
   ocName: string;
 }
 
 export function OCGallery({ images, ocName }: OCGalleryProps) {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<OCGalleryImage | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
   const [mounted, setMounted] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
@@ -46,7 +52,7 @@ export function OCGallery({ images, ocName }: OCGalleryProps) {
     if (images.length > 1) {
       setSelectedImageIndex((prevIndex) => {
         const nextIndex = (prevIndex + 1) % images.length;
-        setSelectedImage(images[nextIndex]);
+        setSelectedImage(images[nextIndex] ?? null);
         setCurrentUrlIndex(0);
         setImageLoading(true);
         setImageError(false);
@@ -59,7 +65,7 @@ export function OCGallery({ images, ocName }: OCGalleryProps) {
     if (images.length > 1) {
       setSelectedImageIndex((prevIndex) => {
         const prev = (prevIndex - 1 + images.length) % images.length;
-        setSelectedImage(images[prev]);
+        setSelectedImage(images[prev] ?? null);
         setCurrentUrlIndex(0);
         setImageLoading(true);
         setImageError(false);
@@ -125,7 +131,8 @@ export function OCGallery({ images, ocName }: OCGalleryProps) {
     return [url];
   };
 
-  const imageUrls = selectedImage ? getImageUrls(selectedImage) : [];
+  const selectedUrl = selectedImage?.url ?? '';
+  const imageUrls = selectedUrl ? getImageUrls(selectedUrl) : [];
   const currentImageUrl = imageUrls[currentUrlIndex] || '';
 
   useEffect(() => {
@@ -143,7 +150,7 @@ export function OCGallery({ images, ocName }: OCGalleryProps) {
       // All URLs failed
       setImageLoading(false);
       setImageError(true);
-      logger.error('Component', 'OCGallery: Failed to load image', { imageUrls, originalUrl: selectedImage });
+      logger.error('Component', 'OCGallery: Failed to load image', { imageUrls, originalUrl: selectedUrl });
     }
   };
 
@@ -205,11 +212,11 @@ export function OCGallery({ images, ocName }: OCGalleryProps) {
             <i className="fas fa-exclamation-triangle text-4xl mb-4 text-yellow-400"></i>
             <p className="text-lg mb-2">Failed to load image</p>
             <p className="text-sm text-gray-400 mb-4">Please check if the image URL is valid</p>
-            {selectedImage && (
+            {selectedUrl && (
               <details className="text-left text-xs text-gray-500 mt-4">
                 <summary className="cursor-pointer mb-2">Debug Info</summary>
                 <div className="bg-black/50 p-3 rounded break-all">
-                  <p className="mb-1"><strong>Original:</strong> {selectedImage}</p>
+                  <p className="mb-1"><strong>Original:</strong> {selectedUrl}</p>
                   <p className="mb-1"><strong>Converted:</strong> {imageUrls[0]}</p>
                   <p><strong>Tried:</strong> {imageUrls.join(', ')}</p>
                 </div>
@@ -217,22 +224,28 @@ export function OCGallery({ images, ocName }: OCGalleryProps) {
             )}
           </div>
         ) : (
-          <img
-            key={currentUrlIndex}
-            src={currentImageUrl}
-            alt={`${ocName} - Full size`}
-            className="object-contain max-w-full max-h-full rounded-lg cursor-pointer"
-            onLoad={() => setImageLoading(false)}
-            onError={handleImageError}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (images.length > 1) {
-                goToNextImage();
-              }
-            }}
-            style={{ display: imageLoading ? 'none' : 'block' }}
-            title={images.length > 1 ? "Click to view next image" : undefined}
-          />
+          <NsfwImageCover
+            nsfw={Boolean(selectedImage?.isNsfw)}
+            resetKey={selectedUrl}
+            className="max-w-full max-h-full flex items-center justify-center"
+          >
+            <img
+              key={currentUrlIndex}
+              src={currentImageUrl}
+              alt={`${ocName} - Full size`}
+              className="object-contain max-w-full max-h-full rounded-lg cursor-pointer"
+              onLoad={() => setImageLoading(false)}
+              onError={handleImageError}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (images.length > 1) {
+                  goToNextImage();
+                }
+              }}
+              style={{ display: imageLoading ? 'none' : 'block' }}
+              title={images.length > 1 ? 'Click to view next image' : undefined}
+            />
+          </NsfwImageCover>
         )}
       </div>
     </div>
@@ -241,33 +254,40 @@ export function OCGallery({ images, ocName }: OCGalleryProps) {
   return (
     <>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {images.map((imageUrl, index) => (
+        {images.map((entry, index) => (
           <button
             key={index}
             onClick={() => {
-              setSelectedImage(imageUrl);
+              setSelectedImage(entry);
               setSelectedImageIndex(index);
             }}
             className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-700/50 hover:border-purple-500/50 transition-all duration-300 hover:scale-105 group"
           >
-            {imageUrl.includes('drive.google.com') ? (
-              <GoogleDriveImage
-                src={imageUrl}
-                alt={`${ocName} - Image ${index + 1}`}
-                className="object-cover w-full h-full"
-                style={{ position: 'absolute', inset: 0 }}
-              />
-            ) : (
-              <Image
-                src={convertGoogleDriveUrl(imageUrl)}
-                alt={`${ocName} - Image ${index + 1}`}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                unoptimized={shouldUseUnoptimizedImage(convertGoogleDriveUrl(imageUrl))}
-              />
-            )}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
+            <NsfwImageCover nsfw={Boolean(entry.isNsfw)} className="absolute inset-0">
+              {entry.url.includes('drive.google.com') ? (
+                <GoogleDriveImage
+                  src={entry.url}
+                  alt={`${ocName} - Image ${index + 1}`}
+                  className="object-cover w-full h-full"
+                  style={{ position: 'absolute', inset: 0 }}
+                />
+              ) : (
+                <Image
+                  src={convertGoogleDriveUrl(entry.url)}
+                  alt={`${ocName} - Image ${index + 1}`}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  unoptimized={shouldUseUnoptimizedImage(convertGoogleDriveUrl(entry.url))}
+                />
+              )}
+            </NsfwImageCover>
+            {entry.isNsfw ? (
+              <span className="absolute top-1.5 left-1.5 z-[5] text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-950/90 text-red-200 border border-red-700/50 pointer-events-none">
+                NSFW
+              </span>
+            ) : null}
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 pointer-events-none" />
           </button>
         ))}
       </div>

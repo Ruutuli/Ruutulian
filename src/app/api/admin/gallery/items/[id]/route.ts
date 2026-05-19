@@ -29,11 +29,12 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { published, tags, sortOrder, ocIds } = body as {
+    const { published, tags, sortOrder, ocIds, isNsfw } = body as {
       published?: boolean;
       tags?: string[];
       sortOrder?: number;
       ocIds?: string[];
+      isNsfw?: boolean;
     };
 
     const supabase = createAdminClient();
@@ -80,6 +81,9 @@ export async function PATCH(
     }
     if (typeof sortOrder === 'number' && Number.isFinite(sortOrder)) {
       updates.sort_order = Math.round(sortOrder);
+    }
+    if (typeof isNsfw === 'boolean') {
+      updates.is_nsfw = isNsfw;
     }
 
     if (Object.keys(updates).length > 0) {

@@ -3,6 +3,7 @@ export interface GalleryPublicItem {
   fileId: string;
   title: string;
   tags: string[];
+  isNsfw: boolean;
   characterNames: { name: string; slug: string; href: string }[];
 }
 

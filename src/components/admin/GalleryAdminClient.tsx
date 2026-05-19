@@ -29,6 +29,7 @@ export interface GalleryAdminItem {
   mime_type: string | null;
   folder_id: string;
   published: boolean;
+  is_nsfw: boolean;
   tags: string[] | null;
   sort_order: number | null;
   gallery_item_ocs?: GalleryItemOcRow[] | null;
@@ -229,6 +230,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [bulkOcIds, setBulkOcIds] = useState<string[]>([]);
   const [bulkOcSearch, setBulkOcSearch] = useState('');
+  const [bulkTagPanelOpen, setBulkTagPanelOpen] = useState(false);
   const [bulkApplying, setBulkApplying] = useState(false);
   const [dismissedFilenameSuggestionKey, setDismissedFilenameSuggestionKey] = useState<
     string | null
@@ -255,6 +257,12 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
     }, 300);
     return () => window.clearTimeout(t);
   }, [searchInput]);
+
+  useEffect(() => {
+    if (selectionMode && selectedIds.size > 0) {
+      setBulkTagPanelOpen(true);
+    }
+  }, [selectionMode, selectedIds.size]);
 
   const loadItems = useCallback(async (pageToLoad: number) => {
     setLoading(true);
@@ -363,6 +371,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
     setSelectedIds(new Set());
     setBulkOcIds([]);
     setBulkOcSearch('');
+    setBulkTagPanelOpen(false);
     setDismissedFilenameSuggestionKey(null);
   }
 
@@ -439,6 +448,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
             : `Updated character links on ${count} image(s) (${modeLabel}: ${ocNames}). Images were published for the public site.${profileNote}`,
       });
       setSelectedIds(new Set());
+      setBulkTagPanelOpen(true);
       await reloadCurrentPage();
     } catch (e) {
       logger.error('GalleryAdmin', 'Bulk tag failed', e);
@@ -483,7 +493,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
     }
   }
 
-  const showBulkBar = selectionMode && selectedIds.size > 0;
+  const showBulkBar = selectionMode && bulkTagPanelOpen;
 
   function handleBulkOcSearchChange(value: string) {
     setBulkOcSearch(value);
@@ -608,6 +618,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
               else {
                 setSelectedId(null);
                 setSelectionMode(true);
+                setBulkTagPanelOpen(true);
               }
             }}
             className={`text-sm px-3 py-1.5 rounded-md border transition-colors ${
@@ -641,6 +652,15 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
                 className="text-sm text-gray-400 hover:text-gray-200 underline-offset-2 hover:underline"
               >
                 Clear selection
+              </button>
+            ) : null}
+            {selectedIds.size > 0 && !bulkTagPanelOpen ? (
+              <button
+                type="button"
+                onClick={() => setBulkTagPanelOpen(true)}
+                className="text-sm px-3 py-1.5 rounded-md border border-purple-500/60 bg-purple-900/30 text-purple-200 hover:bg-purple-900/50"
+              >
+                Tag selected
               </button>
             ) : null}
             <span className="text-sm text-purple-300 ml-auto">{selectedIds.size} selected</span>
@@ -731,7 +751,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
             );
           }}
           onClearOcSelection={() => setBulkOcIds([])}
-          onClose={() => setSelectedIds(new Set())}
+          onClose={() => setBulkTagPanelOpen(false)}
           applying={bulkApplying}
           onAdd={() => void applyBulkOcTag('add')}
           onRemove={() => void applyBulkOcTag('remove')}
@@ -1042,11 +1062,13 @@ function GalleryBulkOcTagBar({
                     ? 'text-white bg-purple-900/50 ring-1 ring-purple-500/40'
                     : 'text-gray-200'
                 }`}
+                onClick={(e) => e.stopPropagation()}
               >
                 <input
                   type="checkbox"
                   checked={bulkOcIds.includes(oc.id)}
                   onChange={() => onToggleOc(oc.id)}
+                  onClick={(e) => e.stopPropagation()}
                   className="rounded border-gray-500 bg-gray-800 text-purple-500 shrink-0"
                 />
                 <span className="truncate">{oc.name}</span>
@@ -1125,15 +1147,22 @@ function GalleryAdminTile({
             ✓
           </span>
         ) : null}
-        <span
-          className={`absolute top-1.5 right-1.5 text-[10px] font-medium px-1.5 py-0.5 rounded ${
-            item.published
-              ? 'bg-green-900/90 text-green-200 border border-green-700/50'
-              : 'bg-gray-900/90 text-gray-400 border border-gray-600/50'
-          }`}
-        >
-          {item.published ? 'Live' : 'Draft'}
-        </span>
+        <div className="absolute top-1.5 right-1.5 flex flex-col items-end gap-1">
+          {item.is_nsfw ? (
+            <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-950/90 text-red-200 border border-red-700/50">
+              NSFW
+            </span>
+          ) : null}
+          <span
+            className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+              item.published
+                ? 'bg-green-900/90 text-green-200 border border-green-700/50'
+                : 'bg-gray-900/90 text-gray-400 border border-gray-600/50'
+            }`}
+          >
+            {item.published ? 'Live' : 'Draft'}
+          </span>
+        </div>
       </div>
       <div className="p-2 space-y-1">
         <div className="text-xs text-gray-200 font-medium truncate" title={displayName}>
@@ -1221,6 +1250,7 @@ function GalleryAdminEditDrawer({
   onSaved: () => Promise<void>;
 }) {
   const [published, setPublished] = useState(item.published);
+  const [isNsfw, setIsNsfw] = useState(Boolean(item.is_nsfw));
   const [tagsStr, setTagsStr] = useState(tagsToString(item.tags));
   const [sortOrder, setSortOrder] = useState(String(item.sort_order ?? 0));
   const [selectedOcIds, setSelectedOcIds] = useState<string[]>(() =>
@@ -1239,6 +1269,7 @@ function GalleryAdminEditDrawer({
 
   useEffect(() => {
     setPublished(item.published);
+    setIsNsfw(Boolean(item.is_nsfw));
     setTagsStr(tagsToString(item.tags));
     setSortOrder(String(item.sort_order ?? 0));
     setSelectedOcIds((item.gallery_item_ocs ?? []).map((r) => r.oc_id));
@@ -1299,6 +1330,7 @@ function GalleryAdminEditDrawer({
 
   const isDirty = useMemo(() => {
     if (published !== item.published) return true;
+    if (isNsfw !== Boolean(item.is_nsfw)) return true;
     const tagsNormalized = [...parseTags(tagsStr)].sort().join('|');
     const tagsFromItem = [...(item.tags ?? [])].map((t) => t.trim()).filter(Boolean).sort().join('|');
     if (tagsNormalized !== tagsFromItem) return true;
@@ -1309,7 +1341,7 @@ function GalleryAdminEditDrawer({
     const b = initialOcIds.join(',');
     if (a !== b) return true;
     return false;
-  }, [published, item, tagsStr, sortOrder, selectedOcIds, initialOcIds]);
+  }, [published, isNsfw, item, tagsStr, sortOrder, selectedOcIds, initialOcIds]);
 
   async function save() {
     if (!isDirty) return;
@@ -1322,6 +1354,7 @@ function GalleryAdminEditDrawer({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           published,
+          isNsfw,
           tags: parseTags(tagsStr),
           sortOrder: Number.isFinite(so) ? so : 0,
           ocIds: selectedOcIds,
@@ -1614,6 +1647,25 @@ function GalleryAdminEditDrawer({
                     <span className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-green-600 peer-focus-visible:ring-2 peer-focus-visible:ring-green-500/50 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
                   </label>
                 </div>
+                <div className="flex items-center justify-between gap-4 rounded-md border border-red-900/40 bg-red-950/20 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-100">NSFW</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {isNsfw
+                        ? 'Blurred until visitors click to reveal'
+                        : 'Shown normally to visitors'}
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={isNsfw}
+                      onChange={(e) => setIsNsfw(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <span className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-red-600 peer-focus-visible:ring-2 peer-focus-visible:ring-red-500/50 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
+                  </label>
+                </div>
               </GalleryEditSection>
 
               <GalleryEditSection
@@ -1702,7 +1754,7 @@ function GalleryAdminEditDrawer({
 
               {isDirty ? (
                 <p className="text-sm text-amber-300/90 px-1">
-                  Unsaved changes to character links, publish status, tags, or sort order.
+                  Unsaved changes to character links, publish status, NSFW, tags, or sort order.
                 </p>
               ) : null}
               {localMessage ? (
@@ -1725,7 +1777,7 @@ function GalleryAdminEditDrawer({
 
         <div className="shrink-0 z-20 px-4 sm:px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-gray-700 bg-gray-900 shadow-[0_-8px_24px_rgba(0,0,0,0.55)]">
           <p className="text-xs text-gray-500 mb-2">
-            Save applies to character galleries, publish status, tags, and sort order only.
+            Save applies to character galleries, publish status, NSFW, tags, and sort order only.
           </p>
           <button
             type="button"

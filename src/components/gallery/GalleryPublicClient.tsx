@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { GalleryImageTile } from '@/components/gallery/GalleryImageTile';
+import { NsfwImageCover } from '@/components/gallery/NsfwImageCover';
 import { GalleryPagination } from '@/components/gallery/GalleryPagination';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
 import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
@@ -159,12 +160,14 @@ export function GalleryPublicClient({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="w-full flex-1 min-h-0 flex items-center justify-center rounded-xl overflow-hidden bg-gray-950/80 border border-gray-800/80">
-          <GoogleDriveImage
-            src={lightboxSrc}
-            alt={activeItem.title || 'Artwork'}
-            className="max-w-full max-h-[min(72vh,900px)] w-auto h-auto object-contain mx-auto"
-            priority
-          />
+          <NsfwImageCover nsfw={activeItem.isNsfw} resetKey={activeItem.id} className="w-full flex items-center justify-center">
+            <GoogleDriveImage
+              src={lightboxSrc}
+              alt={activeItem.title || 'Artwork'}
+              className="max-w-full max-h-[min(72vh,900px)] w-auto h-auto object-contain mx-auto"
+              priority
+            />
+          </NsfwImageCover>
         </div>
         <div className="w-full max-w-3xl text-center px-2">
           <h3 className="text-lg sm:text-xl font-semibold text-white">
@@ -234,6 +237,7 @@ export function GalleryPublicClient({
             fileId={item.fileId}
             title={item.title}
             tags={item.tags}
+            isNsfw={item.isNsfw}
             characterNames={item.characterNames}
             layout={layout}
             onOpen={() => setLightboxIndex(index)}

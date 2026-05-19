@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
+import { NsfwImageCover } from '@/components/gallery/NsfwImageCover';
 import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
 import { driveFileViewUrl } from '@/lib/gallery/constants';
 import type { GalleryLayoutMode } from '@/components/gallery/gallery-public-types';
@@ -10,6 +11,7 @@ interface GalleryImageTileProps {
   fileId: string;
   title: string;
   tags: string[];
+  isNsfw: boolean;
   characterNames: { name: string; slug: string; href: string }[];
   layout: GalleryLayoutMode;
   onOpen: () => void;
@@ -19,6 +21,7 @@ export function GalleryImageTile({
   fileId,
   title,
   tags,
+  isNsfw,
   characterNames,
   layout,
   onOpen,
@@ -49,16 +52,23 @@ export function GalleryImageTile({
               : 'absolute inset-0 bg-gray-950'
           }
         >
-          <GoogleDriveImage
-            src={src}
-            alt={displayTitle}
-            className={
-              isMasonry
-                ? 'w-full h-auto object-contain'
-                : 'w-full h-full object-contain transition-transform duration-300 group-hover:scale-[1.03]'
-            }
-          />
+          <NsfwImageCover nsfw={isNsfw} className="w-full h-full">
+            <GoogleDriveImage
+              src={src}
+              alt={displayTitle}
+              className={
+                isMasonry
+                  ? 'w-full h-auto object-contain'
+                  : 'w-full h-full object-contain transition-transform duration-300 group-hover:scale-[1.03]'
+              }
+            />
+          </NsfwImageCover>
         </div>
+        {isNsfw ? (
+          <span className="absolute top-2 left-2 z-[5] text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-950/90 text-red-200 border border-red-700/50 pointer-events-none">
+            NSFW
+          </span>
+        ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/20 to-transparent opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-300 pointer-events-none" />
         <div className="absolute inset-x-0 bottom-0 p-3 translate-y-1 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 transition-all duration-300 pointer-events-none">
           <p className="text-sm font-medium text-white truncate drop-shadow-sm">{displayTitle}</p>

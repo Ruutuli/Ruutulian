@@ -205,6 +205,15 @@ export default async function OCDetailPage({
 
   // Pull this OC's gallery items based on the *tagging* relationship table.
   // This ensures artworks tagged to the OC in Admin → Gallery show up on the OC page.
+  const existingGalleryUrls =
+    Array.isArray(typedOc.gallery)
+      ? typedOc.gallery.filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
+      : [];
+  let galleryEntries: { url: string; isNsfw: boolean }[] = existingGalleryUrls.map((url) => ({
+    url,
+    isNsfw: false,
+  }));
+
   try {
     const { data: linkRows } = await supabase
       .from('gallery_item_ocs')
@@ -218,21 +227,27 @@ export default async function OCDetailPage({
     if (galleryItemIds.length > 0) {
       const { data: galleryRows } = await supabase
         .from('gallery_items')
-        .select('drive_file_id')
+        .select('drive_file_id, is_nsfw')
         .in('id', galleryItemIds)
         .eq('published', true)
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false })
         .limit(24);
 
-      const taggedGalleryUrls = (galleryRows ?? [])
-        .map((r: any) => (r.drive_file_id ? driveFileViewUrl(String(r.drive_file_id)) : null))
-        .filter((v: string | null): v is string => Boolean(v));
+      const taggedEntries = (galleryRows ?? [])
+        .map((r: { drive_file_id?: string | null; is_nsfw?: boolean | null }) =>
+          r.drive_file_id
+            ? { url: driveFileViewUrl(String(r.drive_file_id)), isNsfw: Boolean(r.is_nsfw) }
+            : null
+        )
+        .filter((e): e is { url: string; isNsfw: boolean } => Boolean(e));
 
-      const existingGalleryUrls =
-        Array.isArray(typedOc.gallery) ? typedOc.gallery.filter((u): u is string => typeof u === 'string' && u.trim().length > 0) : [];
-
-      typedOc.gallery = Array.from(new Set([...taggedGalleryUrls, ...existingGalleryUrls]));
+      const byUrl = new Map<string, { url: string; isNsfw: boolean }>();
+      for (const entry of [...taggedEntries, ...galleryEntries]) {
+        if (!byUrl.has(entry.url)) byUrl.set(entry.url, entry);
+      }
+      galleryEntries = Array.from(byUrl.values());
+      typedOc.gallery = galleryEntries.map((e) => e.url);
     }
   } catch (err) {
     logger.warn('OCDetailPage', 'Failed to load tagged gallery items', {
@@ -2413,13 +2428,13 @@ export default async function OCDetailPage({
             )}
 
             {/* Gallery Section */}
-            {typedOc.gallery && typedOc.gallery.length > 0 && (
+            {galleryEntries.length > 0 && (
               <div className="wiki-card p-4 md:p-6 lg:p-8" suppressHydrationWarning>
                 <h2 id="gallery" className="wiki-section-header scroll-mt-20" suppressHydrationWarning>
                   <i className="fas fa-images text-purple-400" aria-hidden="true" suppressHydrationWarning></i>
                   Gallery
                 </h2>
-                <OCGallery images={typedOc.gallery} ocName={typedOc.name} />
+                <OCGallery images={galleryEntries} ocName={typedOc.name} />
             </div>
             )}
           </div>

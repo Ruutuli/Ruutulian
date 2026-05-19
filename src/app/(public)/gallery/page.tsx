@@ -25,6 +25,7 @@ interface GalleryPublicRow {
   drive_file_id: string;
   name: string;
   tags: string[] | null;
+  is_nsfw: boolean | null;
   sort_order: number | null;
   gallery_item_ocs: OcJoinRow[] | null;
 }
@@ -78,6 +79,7 @@ function toPublicItems(items: GalleryPublicRow[]): GalleryPublicItem[] {
     fileId: item.drive_file_id,
     title: item.name?.trim() || '',
     tags: [...(item.tags ?? [])].filter(Boolean),
+    isNsfw: Boolean(item.is_nsfw),
     characterNames: (item.gallery_item_ocs ?? [])
       .filter((row) => row.oc?.is_public)
       .map((row) => ({
@@ -252,6 +254,7 @@ async function GalleryEnabledBody({
       drive_file_id,
       name,
       tags,
+      is_nsfw,
       sort_order,
       gallery_item_ocs (
         oc_id,

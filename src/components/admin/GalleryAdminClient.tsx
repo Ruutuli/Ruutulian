@@ -40,7 +40,7 @@ interface GalleryStats {
   unpublished: number;
 }
 
-type PublishedFilter = 'all' | 'published' | 'unpublished';
+type PublishedFilter = 'all' | 'published' | 'unpublished' | 'needs_work';
 type SortOption = 'sort_order' | 'name' | 'created' | 'updated' | 'live_first' | 'draft_first';
 
 interface GalleryAdminClientProps {
@@ -66,6 +66,40 @@ function normalizeTextForOcMatch(raw: string): string {
     .replace(/\s+/g, ' ')
     .toLowerCase()
     .trim();
+}
+
+/** Common art-file suffixes after the character name (e.g. Oniji_Head.png). */
+const FILENAME_ART_SUFFIXES = new Set([
+  'head',
+  'bust',
+  'full',
+  'body',
+  'half',
+  'ref',
+  'reference',
+  'sheet',
+  'portrait',
+  'icon',
+  'chibi',
+  'sd',
+  'profile',
+  'face',
+  'render',
+  'outfit',
+  'alt',
+  'base',
+  'lineart',
+  'flat',
+  'color',
+  'colored',
+  'sketch',
+  'draft',
+]);
+
+function meaningfulFilenameTokens(normalizedFilename: string): string[] {
+  return normalizedFilename
+    .split(' ')
+    .filter((t) => t.length > 0 && !FILENAME_ART_SUFFIXES.has(t));
 }
 
 function levenshteinDistance(a: string, b: string): number {
@@ -95,10 +129,25 @@ function scoreOcNameMatch(query: string, ocName: string): number {
   if (!q || !cand) return 0;
   if (q === cand) return 1;
   if (cand.includes(q) || q.includes(cand)) return 0.95;
+
   const qWords = q.split(' ').filter(Boolean);
   const cWords = cand.split(' ').filter(Boolean);
   if (qWords.length > 0 && qWords.every((w) => cand.includes(w))) return 0.9;
   if (cWords.length > 0 && cWords.every((w) => q.includes(w))) return 0.85;
+
+  const nameTokens = meaningfulFilenameTokens(q);
+  if (nameTokens.length > 0 && nameTokens.every((w) => cand.includes(w))) return 0.92;
+
+  const primaryName = nameTokens[0] ?? qWords[0];
+  const primaryOc = cWords[0];
+  if (primaryName && primaryOc && primaryName.length >= 2) {
+    if (primaryName === primaryOc) return 0.92;
+    if (primaryOc.startsWith(primaryName) || primaryName.startsWith(primaryOc)) {
+      const minLen = Math.min(primaryName.length, primaryOc.length);
+      if (minLen >= 3) return 0.88;
+    }
+  }
+
   const dist = levenshteinDistance(q, cand);
   const maxLen = Math.max(q.length, cand.length) || 1;
   return 1 - dist / maxLen;
@@ -145,6 +194,7 @@ function buildItemsUrl(params: {
   if (params.search.trim()) sp.set('search', params.search.trim());
   if (params.publishedFilter === 'published') sp.set('publishedFilter', 'published');
   if (params.publishedFilter === 'unpublished') sp.set('publishedFilter', 'unpublished');
+  if (params.publishedFilter === 'needs_work') sp.set('publishedFilter', 'needs_work');
   if (params.ocId) sp.set('ocId', params.ocId);
   return `/api/admin/gallery/items?${sp.toString()}`;
 }
@@ -488,6 +538,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
               { value: 'all', label: 'All (live & draft)' },
               { value: 'published', label: 'Live only' },
               { value: 'unpublished', label: 'Draft only' },
+              { value: 'needs_work', label: 'Needs work (draft & untagged)' },
             ]}
           />
           <FilterSelect
@@ -879,7 +930,7 @@ function GalleryBulkOcTagBar({
 
   return (
     <aside
-      className="fixed top-0 right-0 z-50 flex h-dvh max-h-dvh w-80 max-w-[100vw] flex-col overflow-hidden border-l border-gray-700 bg-gray-900 shadow-2xl"
+      className="fixed inset-y-0 right-0 z-50 flex w-80 max-w-[100vw] flex-col overflow-hidden border-l border-gray-700 bg-gray-900 shadow-2xl"
       aria-label="Bulk character tagging"
     >
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-700 px-4 py-3">
@@ -900,12 +951,12 @@ function GalleryBulkOcTagBar({
           </span>
         </button>
       </div>
-      <div className="px-4 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
-        <p className="text-xs text-gray-400 leading-relaxed">
+      <div className="flex flex-1 min-h-0 flex-col gap-3 overflow-hidden px-4 py-4">
+        <p className="shrink-0 text-xs text-gray-400 leading-relaxed">
           Search, pick character(s), then apply. Changing the search clears your character pick.
         </p>
         {suggestedOc ? (
-          <div className="rounded-md border border-purple-500/50 bg-purple-950/40 p-3 space-y-2">
+          <div className="shrink-0 rounded-md border border-purple-500/50 bg-purple-950/40 p-3 space-y-2">
             <p className="text-xs text-purple-200 leading-relaxed">
               Suggested from filename{selectedCount === 1 ? '' : 's'}:{' '}
               <span className="font-medium text-purple-100">{suggestedOc.name}</span>
@@ -933,10 +984,10 @@ function GalleryBulkOcTagBar({
           value={bulkOcSearch}
           onChange={(e) => onBulkOcSearchChange(e.target.value)}
           placeholder="Search characters…"
-          className="w-full px-3 py-2 text-sm bg-gray-900 border border-gray-500 rounded-md text-gray-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="shrink-0 w-full px-3 py-2 text-sm bg-gray-900 border border-gray-500 rounded-md text-gray-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
         />
         {selectedOcs.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <span className="text-xs text-gray-500 w-full">To tag:</span>
             {selectedOcs.map((oc) => (
               <span
@@ -963,7 +1014,7 @@ function GalleryBulkOcTagBar({
             </button>
           </div>
         ) : null}
-        <div className="min-h-[8rem] overflow-y-auto rounded-md border border-gray-500 bg-gray-900/80 p-2 space-y-0.5">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-md border border-gray-500 bg-gray-900/80 p-2 space-y-0.5">
           {ocOptions.length === 0 ? (
             <p className="text-sm text-gray-400 px-2 py-2">
               {hasSearch ? 'No characters match.' : 'Type to search for a character.'}
@@ -990,12 +1041,12 @@ function GalleryBulkOcTagBar({
           )}
         </div>
       </div>
-      <div className="shrink-0 px-4 py-3 border-t border-gray-700 bg-gray-950 space-y-2">
+      <div className="shrink-0 z-20 space-y-2 border-t border-gray-700 bg-gray-950 px-4 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(0,0,0,0.55)]">
         <button
           type="button"
           disabled={!canApply}
           onClick={onAdd}
-          className="w-full px-4 py-2.5 text-sm rounded-md bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-50 font-medium"
+          className="w-full px-4 py-2 text-sm rounded-md bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-50 font-medium"
         >
           {applying ? 'Applying…' : 'Add to selected'}
         </button>
@@ -1003,7 +1054,7 @@ function GalleryBulkOcTagBar({
           type="button"
           disabled={!canApply}
           onClick={onRemove}
-          className="w-full px-4 py-2.5 text-sm rounded-md border border-red-500/60 bg-red-950/80 text-red-100 hover:bg-red-900/70 hover:border-red-400/70 disabled:opacity-50 font-medium"
+          className="w-full px-4 py-2 text-sm rounded-md border border-red-500/60 bg-red-950/80 text-red-100 hover:bg-red-900/70 hover:border-red-400/70 disabled:opacity-50 font-medium"
         >
           Remove from selected
         </button>

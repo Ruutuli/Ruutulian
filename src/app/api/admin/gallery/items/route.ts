@@ -77,12 +77,33 @@ export async function GET(request: Request) {
         { count: 'exact' }
       );
 
+    let taggedGalleryItemIds: string[] | null = null;
+    if (publishedFilter === 'needs_work') {
+      const { data: taggedLinks, error: taggedError } = await supabase
+        .from('gallery_item_ocs')
+        .select('gallery_item_id');
+
+      if (taggedError) {
+        logger.error('GalleryItems', 'Tagged filter lookup failed', taggedError);
+        return NextResponse.json({ success: false, error: taggedError.message }, { status: 400 });
+      }
+
+      taggedGalleryItemIds = [
+        ...new Set((taggedLinks ?? []).map((r) => r.gallery_item_id as string)),
+      ];
+    }
+
     if (publishedOnly) {
       query = query.eq('published', true);
     } else if (publishedFilter === 'published') {
       query = query.eq('published', true);
     } else if (publishedFilter === 'unpublished') {
       query = query.eq('published', false);
+    } else if (publishedFilter === 'needs_work') {
+      query = query.eq('published', false);
+      if (taggedGalleryItemIds && taggedGalleryItemIds.length > 0) {
+        query = query.not('id', 'in', taggedGalleryItemIds);
+      }
     }
 
     if (searchRaw.length >= GALLERY_SEARCH_MIN_LEN) {

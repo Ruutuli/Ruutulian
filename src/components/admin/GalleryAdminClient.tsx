@@ -276,6 +276,8 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
   const [sort, setSort] = useState<SortOption>('sort_order');
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [addLinkInput, setAddLinkInput] = useState('');
+  const [addingByLink, setAddingByLink] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pinnedEditItem, setPinnedEditItem] = useState<GalleryAdminItem | null>(null);
@@ -610,6 +612,60 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
     }
   }
 
+  async function addByLink() {
+    const raw = addLinkInput.trim();
+    if (!raw) return;
+
+    setAddingByLink(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/admin/gallery/items/add-by-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls: raw }),
+      });
+      const json = await res.json();
+      const added = (json.data?.added ?? []) as GalleryAdminItem[];
+      const existing = (json.data?.existing ?? []) as { id: string }[];
+      const failed = (json.data?.failed ?? []) as { input: string; error: string }[];
+
+      if (!json.success && added.length === 0 && existing.length === 0) {
+        const failHint =
+          failed.length > 0 ? failed.map((f) => f.error).join(' ') : json.error || 'Could not add link.';
+        setMessage({ type: 'error', text: failHint });
+        return;
+      }
+
+      const parts: string[] = [];
+      if (added.length > 0) {
+        parts.push(
+          `Added ${added.length} image${added.length === 1 ? '' : 's'} (draft — link characters to publish).`
+        );
+      }
+      if (existing.length > 0) {
+        parts.push(
+          `${existing.length} already in the gallery${added.length > 0 ? '' : ''}.`
+        );
+      }
+      if (failed.length > 0) {
+        parts.push(`${failed.length} link${failed.length === 1 ? '' : 's'} skipped (invalid or failed).`);
+      }
+      setMessage({ type: 'success', text: parts.join(' ') });
+      setAddLinkInput('');
+      await loadItems(pageRef.current);
+      const openId = added[0]?.id ?? existing[0]?.id;
+      if (openId) {
+        setSelectedId(openId);
+        setPinnedEditItem(added[0] ?? null);
+      }
+    } catch (e) {
+      logger.error('GalleryAdmin', 'Add by link failed', e);
+      setMessage({ type: 'error', text: 'Add by link request failed' });
+    } finally {
+      setAddingByLink(false);
+    }
+  }
+
   async function runSync() {
     setSyncing(true);
     setMessage(null);
@@ -672,6 +728,38 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
             {syncing ? 'Syncing…' : 'Sync from Google Drive'}
           </button>
         </div>
+
+        <details className="rounded-md border border-gray-700/80 bg-gray-900/40 px-4 py-3 group">
+          <summary className="text-sm font-medium text-gray-200 cursor-pointer list-none flex items-center justify-between gap-2">
+            <span>Add by Google Drive link</span>
+            <span className="text-gray-500 text-xs group-open:rotate-180 transition-transform" aria-hidden>
+              ▼
+            </span>
+          </summary>
+          <div className="mt-3 space-y-3 pt-3 border-t border-gray-700/60">
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Paste a file&apos;s share link or file ID (one per line). The file must be shared with your
+              Google service account (Viewer), same as folder sync. New items start as drafts.
+            </p>
+            <textarea
+              value={addLinkInput}
+              onChange={(e) => setAddLinkInput(e.target.value)}
+              placeholder={
+                'https://drive.google.com/file/d/…/view\nhttps://drive.google.com/open?id=…'
+              }
+              rows={3}
+              className="w-full px-3 py-2 text-sm bg-gray-950 border border-gray-600 rounded-md text-gray-100 placeholder-gray-600 font-mono resize-y min-h-[4.5rem]"
+            />
+            <button
+              type="button"
+              disabled={addingByLink || !addLinkInput.trim()}
+              onClick={() => void addByLink()}
+              className="px-4 py-2 rounded-md border border-gray-600 bg-gray-800 text-gray-100 hover:bg-gray-700 disabled:opacity-50 text-sm font-medium"
+            >
+              {addingByLink ? 'Adding…' : 'Add to gallery'}
+            </button>
+          </div>
+        </details>
 
         <div className="grid grid-cols-3 gap-3">
           <StatPill label="Total" value={stats.total} />
@@ -738,7 +826,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
             }}
             options={[
               { value: 'sort_order', label: 'Sort order' },
-              { value: 'name', label: 'Name' },
+              { value: 'name', label: 'Character name' },
               { value: 'created', label: 'Newest' },
               { value: 'updated', label: 'Recently updated' },
               { value: 'live_first', label: 'Live first' },

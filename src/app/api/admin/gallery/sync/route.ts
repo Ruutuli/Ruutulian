@@ -7,7 +7,11 @@ import {
   createGalleryDriveClient,
   listImageFilesInFolderTreeWithClient,
 } from '@/lib/google-drive/galleryDrive';
-import { DEFAULT_GALLERY_DRIVE_FOLDER_IDS, GALLERY_FACETS_REVALIDATE_TAG } from '@/lib/gallery/constants';
+import {
+  DEFAULT_GALLERY_DRIVE_FOLDER_IDS,
+  GALLERY_FACETS_REVALIDATE_TAG,
+  GALLERY_MANUAL_LINK_FOLDER_ID,
+} from '@/lib/gallery/constants';
 import { revalidateTag } from 'next/cache';
 
 export const runtime = 'nodejs';
@@ -140,7 +144,8 @@ export async function POST() {
     let removedStale = 0;
 
     if (folderIds.length > 0) {
-      const folderList = `(${folderIds.join(',')})`;
+      const protectedFolderIds = [...folderIds, GALLERY_MANUAL_LINK_FOLDER_ID];
+      const folderList = `(${protectedFolderIds.join(',')})`;
 
       const { data: oldFolderRows, error: oldFolderError } = await supabase
         .from('gallery_items')

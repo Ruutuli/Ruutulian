@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import type { OC } from '@/types/oc';
 import { OCCard } from '@/components/oc/OCCard';
+import { NumberedPagination } from '@/components/ui/NumberedPagination';
 import { GalleryView } from './GalleryView';
 import { ViewToggle } from './ViewToggle';
 
@@ -54,32 +54,13 @@ export function OCListView({ ocs, pagination, searchParams = {} }: OCListViewPro
         <GalleryView ocs={ocs} />
       )}
 
-      {pagination && pagination.totalPages > 1 && (
-        <nav className="flex items-center justify-center gap-4 pt-4" aria-label="Pagination">
-          {pagination.page > 1 ? (
-            <Link
-              href={`/ocs${buildQueryString(searchParams, pagination.page - 1)}`}
-              className="text-purple-400 hover:text-purple-300"
-            >
-              Previous
-            </Link>
-          ) : (
-            <span className="text-gray-500">Previous</span>
-          )}
-          <span className="text-gray-400">
-            Page {pagination.page} of {pagination.totalPages}
-          </span>
-          {pagination.page < pagination.totalPages ? (
-            <Link
-              href={`/ocs${buildQueryString(searchParams, pagination.page + 1)}`}
-              className="text-purple-400 hover:text-purple-300"
-            >
-              Next
-            </Link>
-          ) : (
-            <span className="text-gray-500">Next</span>
-          )}
-        </nav>
+      {pagination && (
+        <NumberedPagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          buildHref={(p) => `/ocs${buildQueryString(searchParams, p)}`}
+          ariaLabel="Character list pagination"
+        />
       )}
     </div>
   );

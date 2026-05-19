@@ -1,3 +1,9 @@
+/**
+ * folder_id for gallery rows added via admin "Add by link" (not from folder sync).
+ * Protected from sync cleanup that removes items outside configured Drive folders.
+ */
+export const GALLERY_MANUAL_LINK_FOLDER_ID = '__manual_link__';
+
 /** Default Google Drive folder IDs for site gallery sync (overridable in Site Settings). */
 export const DEFAULT_GALLERY_DRIVE_FOLDER_IDS: string[] = [
   '1cNbJyTekBz-72AuUFIK6nq38cWfj212F',

@@ -119,7 +119,9 @@ export async function GET(request: Request) {
 
     switch (sort) {
       case 'name':
-        query = query.order('name', { ascending: true }).order('created_at', { ascending: false });
+        query = query
+          .order('oc_sort_name', { ascending: true, nullsFirst: false })
+          .order('created_at', { ascending: false });
         break;
       case 'created':
         query = query.order('created_at', { ascending: false });

@@ -14,6 +14,7 @@ import {
   getProxyUrl,
   shouldUseUnoptimizedImage,
 } from '@/lib/utils/googleDriveImage';
+import { PageViewTracker } from '@/components/analytics/PageViewTracker';
 
 export async function generateMetadata({
   params,
@@ -165,6 +166,12 @@ export default async function ChapterPage({
 
   return (
     <div>
+      <PageViewTracker
+        entityType="fanfic_chapter"
+        slug={fanfic.slug}
+        entityId={fanfic.id}
+        chapterNumber={chapterNum}
+      />
       <PageHeader
         title={`${fanfic.title} - Chapter ${chapterNum}`}
         editHref={`/admin/fanfics/${fanfic.id}/chapters`}

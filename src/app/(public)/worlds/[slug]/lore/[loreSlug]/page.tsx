@@ -5,6 +5,7 @@ import { getSiteConfig } from '@/lib/config/site-config';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { LoreDetail } from '@/components/lore/LoreDetail';
 import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
+import { PageViewTracker } from '@/components/analytics/PageViewTracker';
 
 export const revalidate = 300;
 
@@ -138,6 +139,12 @@ export default async function LoreEntryPage({
 
   return (
     <div>
+      <PageViewTracker
+        entityType="lore"
+        slug={lore.slug}
+        entityId={lore.id}
+        worldSlug={world.slug}
+      />
       <PageHeader
         title={lore.name}
         editHref={`/admin/world-lore/${lore.id}`}

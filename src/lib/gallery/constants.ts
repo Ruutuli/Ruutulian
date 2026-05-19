@@ -52,6 +52,9 @@ export function driveFileViewUrl(fileId: string): string {
 /** Public gallery: images per page (URL ?page=). */
 export const GALLERY_PUBLIC_PAGE_SIZE = 48;
 
+/** OC profile gallery: images per page (URL ?galleryPage=). */
+export const OC_GALLERY_PAGE_SIZE = 24;
+
 /** Admin gallery: default items per page (API offset/limit). */
 export const GALLERY_ADMIN_PAGE_SIZE = 48;
 

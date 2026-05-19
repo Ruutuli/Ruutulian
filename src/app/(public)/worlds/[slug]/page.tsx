@@ -25,6 +25,7 @@ import {
   WORLD_LORE_CARD_COLUMNS_FALLBACK,
 } from '@/lib/supabase/world-public-queries';
 import Link from 'next/link';
+import { PageViewTracker } from '@/components/analytics/PageViewTracker';
 
 export async function generateMetadata({
   params,
@@ -418,6 +419,7 @@ export default async function WorldDetailPage({
 
   return (
     <div>
+      <PageViewTracker entityType="world" slug={world.slug} entityId={world.id} />
       <PageHeader
         title={world.name}
         editHref={`/admin/worlds/${world.id}`}

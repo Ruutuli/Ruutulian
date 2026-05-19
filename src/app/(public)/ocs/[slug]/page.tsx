@@ -31,8 +31,9 @@ import { getAbsoluteUrl } from '@/lib/seo/metadata-helpers';
 import { logger } from '@/lib/logger';
 import { formatSupabaseErrorForLog } from '@/lib/utils/supabase-error';
 import { generateProfilePageSchema } from '@/lib/seo/structured-data';
-import { driveFileViewUrl } from '@/lib/gallery/constants';
+import { driveFileViewUrl, OC_GALLERY_PAGE_SIZE } from '@/lib/gallery/constants';
 import { isGalleryImageNsfw, mergeGalleryEntriesWithNsfw } from '@/lib/gallery/nsfw-lookup';
+import { PageViewTracker } from '@/components/analytics/PageViewTracker';
 
 export async function generateMetadata({
   params,
@@ -118,13 +119,30 @@ export async function generateMetadata({
 
 export const revalidate = 300;
 
+type GalleryEntry = { url: string; isNsfw: boolean };
+
+function mapGalleryRows(
+  rows: { drive_file_id?: string | null; is_nsfw?: boolean | null }[] | null
+): GalleryEntry[] {
+  return (rows ?? [])
+    .map((r) =>
+      r.drive_file_id
+        ? { url: driveFileViewUrl(String(r.drive_file_id)), isNsfw: Boolean(r.is_nsfw) }
+        : null
+    )
+    .filter((e): e is GalleryEntry => Boolean(e));
+}
+
 export default async function OCDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ galleryPage?: string }>;
 }) {
   const supabase = await createClient();
   const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
 
   // Use fallback helper to handle story_aliases relationship errors gracefully
   let { data: oc, error } = await queryOCWithFallback<OC>(
@@ -211,32 +229,62 @@ export default async function OCDetailPage({
     Array.isArray(typedOc.gallery)
       ? typedOc.gallery.filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
       : [];
-  let galleryEntries: { url: string; isNsfw: boolean }[] = existingGalleryUrls.map((url) => ({
-    url,
-    isNsfw: false,
-  }));
+  const legacyGalleryUrls = existingGalleryUrls;
+  const legacyTotal = legacyGalleryUrls.length;
 
-  let taggedEntries: { url: string; isNsfw: boolean }[] = [];
+  let taggedTotal = 0;
+  let galleryEntries: GalleryEntry[] = [];
+  let galleryTotal = 0;
+  let galleryPage = 1;
+
   try {
-    const { data: galleryRows } = await supabase
+    const { count: taggedCount, error: countError } = await supabase
       .from('gallery_items')
-      .select('drive_file_id, is_nsfw, gallery_item_ocs!inner(oc_id)')
+      .select('id, gallery_item_ocs!inner(oc_id)', { count: 'exact', head: true })
       .eq('published', true)
-      .eq('gallery_item_ocs.oc_id', typedOc.id)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: false })
-      .limit(24);
+      .eq('gallery_item_ocs.oc_id', typedOc.id);
 
-    taggedEntries = (galleryRows ?? [])
-      .map((r: { drive_file_id?: string | null; is_nsfw?: boolean | null }) =>
-        r.drive_file_id
-          ? { url: driveFileViewUrl(String(r.drive_file_id)), isNsfw: Boolean(r.is_nsfw) }
-          : null
-      )
-      .filter((e): e is { url: string; isNsfw: boolean } => Boolean(e));
+    if (countError) throw countError;
+    taggedTotal = taggedCount ?? 0;
+    galleryTotal = taggedTotal + legacyTotal;
 
-    if (taggedEntries.length > 0) {
-      galleryEntries = [...taggedEntries, ...galleryEntries];
+    if (galleryTotal > 0) {
+      const perPage = OC_GALLERY_PAGE_SIZE;
+      const requestedPage = Math.max(1, parseInt(resolvedSearchParams.galleryPage ?? '1', 10) || 1);
+      const totalPages = Math.max(1, Math.ceil(galleryTotal / perPage));
+      galleryPage = Math.min(requestedPage, totalPages);
+
+      const start = (galleryPage - 1) * perPage;
+      const end = start + perPage - 1;
+      const pageEntries: GalleryEntry[] = [];
+
+      if (start < taggedTotal) {
+        const taggedEnd = Math.min(end, taggedTotal - 1);
+        const { data: galleryRows, error: rowsError } = await supabase
+          .from('gallery_items')
+          .select('drive_file_id, is_nsfw, gallery_item_ocs!inner(oc_id)')
+          .eq('published', true)
+          .eq('gallery_item_ocs.oc_id', typedOc.id)
+          .order('sort_order', { ascending: true })
+          .order('created_at', { ascending: false })
+          .range(start, taggedEnd);
+
+        if (rowsError) throw rowsError;
+        pageEntries.push(...mapGalleryRows(galleryRows));
+      }
+
+      if (end >= taggedTotal && legacyTotal > 0) {
+        const legacyStart = Math.max(0, start - taggedTotal);
+        const legacyEnd = Math.min(legacyTotal - 1, end - taggedTotal);
+        pageEntries.push(
+          ...legacyGalleryUrls.slice(legacyStart, legacyEnd + 1).map((url) => ({
+            url,
+            isNsfw: false,
+          }))
+        );
+      }
+
+      galleryEntries = pageEntries;
     }
   } catch (err) {
     logger.warn('OCDetailPage', 'Failed to load tagged gallery items', {
@@ -248,7 +296,6 @@ export default async function OCDetailPage({
   if (galleryEntries.length > 0) {
     try {
       galleryEntries = await mergeGalleryEntriesWithNsfw(supabase, galleryEntries);
-      typedOc.gallery = galleryEntries.map((e) => e.url);
     } catch (err) {
       logger.warn('OCDetailPage', 'Failed to resolve gallery NSFW flags', {
         oc_id: typedOc.id,
@@ -317,15 +364,6 @@ export default async function OCDetailPage({
     `)
     .eq('oc_id', typedOc.id)
     .order('created_at', { ascending: false });
-
-  // Increment view count
-  await supabase
-    .from('ocs')
-    .update({ 
-      view_count: (typedOc.view_count || 0) + 1,
-      last_viewed_at: new Date().toISOString()
-    })
-    .eq('id', typedOc.id);
 
   // Helper function to render a field value
   const renderFieldValue = (field: WorldFieldDefinition, value: string | number | string[] | null) => {
@@ -403,6 +441,7 @@ export default async function OCDetailPage({
 
   return (
     <div suppressHydrationWarning>
+      <PageViewTracker entityType="oc" slug={typedOc.slug} entityId={typedOc.id} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(profileSchema) }}
@@ -544,7 +583,11 @@ export default async function OCDetailPage({
             })()}
 
             {/* Table of Contents */}
-            <TableOfContents oc={typedOc} storySnippets={validStorySnippets.length > 0 ? validStorySnippets : undefined} />
+            <TableOfContents
+              oc={typedOc}
+              storySnippets={validStorySnippets.length > 0 ? validStorySnippets : undefined}
+              hasGallery={galleryTotal > 0}
+            />
 
             {/* Overview Section */}
             {((typedOc.aliases || typedOc.affiliations || typedOc.romantic_orientation || typedOc.sexual_orientation || typedOc.story_alias || typedOc.species || typedOc.occupation || typedOc.development_status) || 
@@ -2429,13 +2472,30 @@ export default async function OCDetailPage({
             )}
 
             {/* Gallery Section */}
-            {galleryEntries.length > 0 && (
+            {galleryTotal > 0 && (
               <div className="wiki-card p-4 md:p-6 lg:p-8" suppressHydrationWarning>
-                <h2 id="gallery" className="wiki-section-header scroll-mt-20" suppressHydrationWarning>
-                  <i className="fas fa-images text-purple-400" aria-hidden="true" suppressHydrationWarning></i>
-                  Gallery
-                </h2>
-                <OCGallery images={galleryEntries} ocName={typedOc.name} />
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <h2 id="gallery" className="wiki-section-header scroll-mt-20 mb-0" suppressHydrationWarning>
+                    <i className="fas fa-images text-purple-400" aria-hidden="true" suppressHydrationWarning></i>
+                    Gallery
+                  </h2>
+                  {galleryTotal > OC_GALLERY_PAGE_SIZE ? (
+                    <Link
+                      href={`/gallery?character=${typedOc.slug}`}
+                      className="text-sm text-purple-300 hover:text-purple-200 transition-colors"
+                    >
+                      View in site gallery ({galleryTotal})
+                    </Link>
+                  ) : null}
+                </div>
+                <OCGallery
+                  images={galleryEntries}
+                  ocName={typedOc.name}
+                  page={galleryPage}
+                  perPage={OC_GALLERY_PAGE_SIZE}
+                  total={galleryTotal}
+                  ocSlug={typedOc.slug}
+                />
             </div>
             )}
           </div>

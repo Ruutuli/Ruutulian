@@ -19,6 +19,7 @@ import {
   getProxyUrl,
   shouldUseUnoptimizedImage,
 } from '@/lib/utils/googleDriveImage';
+import { PageViewTracker } from '@/components/analytics/PageViewTracker';
 
 // Types for Supabase query responses
 interface FanficCharacterResponse {
@@ -235,6 +236,7 @@ export default async function FanficDetailPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
       />
     <div>
+      <PageViewTracker entityType="fanfic" slug={fanfic.slug} entityId={fanfic.id} />
       <PageHeader
         title={fanfic.title}
         editHref={`/admin/fanfics/${fanfic.id}`}

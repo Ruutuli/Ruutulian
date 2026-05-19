@@ -8,6 +8,8 @@ import { ArchetypeAnalyzer } from '@/components/analytics/ArchetypeAnalyzer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { generatePageMetadata } from '@/lib/config/metadata-helpers';
 import { getSiteConfig } from '@/lib/config/site-config';
+import { getAnalyticsSummary } from '@/lib/analytics/record-view';
+import { PageViewTracker } from '@/components/analytics/PageViewTracker';
 
 export async function generateMetadata() {
   const config = await getSiteConfig();
@@ -72,6 +74,13 @@ export default async function StatsPage() {
     .eq('is_public', true);
 
   const allOCsForAnalytics = allOCs || [];
+
+  let analyticsSummary = null;
+  try {
+    analyticsSummary = await getAnalyticsSummary(supabase, 30);
+  } catch {
+    // Analytics RPC may not be deployed yet
+  }
 
   const { data: allWorlds } = await supabase
     .from('worlds')
@@ -426,6 +435,7 @@ export default async function StatsPage() {
 
   return (
     <div className="space-y-12">
+      <PageViewTracker entityType="page" path="/stats" />
       <PageHeader 
         title="Statistics & Analytics"
         breadcrumbs={[{ label: 'Home', href: '/' }, { label: 'Statistics' }]}
@@ -824,7 +834,7 @@ export default async function StatsPage() {
       {/* Analytics */}
       {allOCsForAnalytics && allOCsForAnalytics.length > 0 && (
         <StatsSection title="Analytics" icon="fas fa-chart-line" iconColor="text-purple-400">
-          <AnalyticsDashboard ocs={allOCsForAnalytics} />
+          <AnalyticsDashboard ocs={allOCsForAnalytics} analytics={analyticsSummary} />
           <div className="mt-6">
             <ArchetypeAnalyzer ocs={allOCsForAnalytics} />
           </div>

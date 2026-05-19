@@ -11,6 +11,7 @@ import {
 } from '@/lib/utils/googleDriveImage';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
 import { NsfwImageCover } from '@/components/gallery/NsfwImageCover';
+import { OCGalleryPagination } from '@/components/oc/OCGalleryPagination';
 import { logger } from '@/lib/logger';
 
 export interface OCGalleryImage {
@@ -21,9 +22,21 @@ export interface OCGalleryImage {
 interface OCGalleryProps {
   images: OCGalleryImage[];
   ocName: string;
+  /** 1-based page when paginated */
+  page?: number;
+  perPage?: number;
+  total?: number;
+  ocSlug?: string;
 }
 
-export function OCGallery({ images, ocName }: OCGalleryProps) {
+export function OCGallery({ images, ocName, page = 1, perPage, total, ocSlug }: OCGalleryProps) {
+  const galleryTotal = total ?? images.length;
+  const globalOffset = perPage ? (page - 1) * perPage : 0;
+  const showPagination = Boolean(
+    ocSlug && perPage && galleryTotal > (perPage ?? galleryTotal)
+  );
+  const rangeStart = galleryTotal > 0 ? globalOffset + 1 : 0;
+  const rangeEnd = globalOffset + images.length;
   const [selectedImage, setSelectedImage] = useState<OCGalleryImage | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
   const [mounted, setMounted] = useState(false);
@@ -159,9 +172,9 @@ export function OCGallery({ images, ocName }: OCGalleryProps) {
       className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4"
       onClick={() => setSelectedImage(null)}
     >
-      {images.length > 1 && (
+      {(images.length > 1 || galleryTotal > 1) && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 text-white z-10 bg-black/50 rounded-full px-4 py-2 text-sm">
-          {selectedImageIndex + 1} / {images.length}
+          {globalOffset + selectedImageIndex + 1} / {galleryTotal}
         </div>
       )}
       <button
@@ -253,6 +266,11 @@ export function OCGallery({ images, ocName }: OCGalleryProps) {
 
   return (
     <>
+      {showPagination ? (
+        <p className="text-sm text-gray-400 mb-4">
+          Showing {rangeStart}–{rangeEnd} of {galleryTotal}
+        </p>
+      ) : null}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {images.map((entry, index) => (
           <button
@@ -267,14 +285,14 @@ export function OCGallery({ images, ocName }: OCGalleryProps) {
               {entry.url.includes('drive.google.com') ? (
                 <GoogleDriveImage
                   src={entry.url}
-                  alt={`${ocName} - Image ${index + 1}`}
+                  alt={`${ocName} - Image ${globalOffset + index + 1}`}
                   className="object-cover w-full h-full"
                   style={{ position: 'absolute', inset: 0 }}
                 />
               ) : (
                 <Image
                   src={convertGoogleDriveUrl(entry.url)}
-                  alt={`${ocName} - Image ${index + 1}`}
+                  alt={`${ocName} - Image ${globalOffset + index + 1}`}
                   fill
                   className="object-cover"
                   sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
@@ -291,6 +309,10 @@ export function OCGallery({ images, ocName }: OCGalleryProps) {
           </button>
         ))}
       </div>
+
+      {showPagination && perPage && ocSlug ? (
+        <OCGalleryPagination page={page} perPage={perPage} total={galleryTotal} ocSlug={ocSlug} />
+      ) : null}
 
       {/* Lightbox Modal - Rendered as portal to escape container constraints */}
       {mounted && modalContent && typeof document !== 'undefined' && createPortal(modalContent, document.body)}

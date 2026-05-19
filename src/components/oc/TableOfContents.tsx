@@ -6,6 +6,8 @@ import type { OC } from '@/types/oc';
 interface TableOfContentsProps {
   oc: OC;
   storySnippets?: Array<{ id: string; title: string; snippet_text: string }>;
+  /** When set, overrides oc.gallery for the Gallery TOC entry */
+  hasGallery?: boolean;
 }
 
 interface Section {
@@ -15,7 +17,7 @@ interface Section {
   exists: boolean;
 }
 
-export function TableOfContents({ oc, storySnippets }: TableOfContentsProps) {
+export function TableOfContents({ oc, storySnippets, hasGallery }: TableOfContentsProps) {
   const [activeSection, setActiveSection] = useState<string>('');
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
 
@@ -103,7 +105,7 @@ export function TableOfContents({ oc, storySnippets }: TableOfContentsProps) {
       id: 'gallery',
       title: 'Gallery',
       icon: 'fas fa-images',
-      exists: !!(oc.gallery && oc.gallery.length > 0)
+      exists: hasGallery ?? !!(oc.gallery && oc.gallery.length > 0)
     },
     {
       id: 'media',

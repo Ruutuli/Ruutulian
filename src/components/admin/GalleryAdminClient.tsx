@@ -653,6 +653,15 @@ function GalleryAdminEditDrawer({
     );
   }, [ocOptions, ocSearch]);
 
+  const linkedOcsForProfile = useMemo(
+    () =>
+      selectedOcIds
+        .map((id) => ocOptions.find((o) => o.id === id))
+        .filter((oc): oc is GalleryOcOption => Boolean(oc))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [selectedOcIds, ocOptions]
+  );
+
   const isDirty = useMemo(() => {
     if (published !== item.published) return true;
     const tagsNormalized = [...parseTags(tagsStr)].sort().join('|');
@@ -811,6 +820,15 @@ function GalleryAdminEditDrawer({
               <div className="text-sm text-gray-200 font-medium break-words">{item.name}</div>
             ) : null}
             <div className="text-xs text-gray-500 font-mono break-all">{item.drive_file_id}</div>
+            <a
+              href={driveFileViewUrl(item.drive_file_id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 text-sm rounded-md border border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700 hover:border-gray-500 hover:text-white transition-colors"
+            >
+              Open in Google Drive
+              <span aria-hidden="true">↗</span>
+            </a>
 
             <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-200">
               <input
@@ -843,20 +861,19 @@ function GalleryAdminEditDrawer({
               />
             </div>
 
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">
+            <div className="space-y-2">
+              <label className="block text-xs text-gray-400">
                 Characters ({selectedOcIds.length} selected)
               </label>
-              <p className="text-[11px] text-gray-500 mb-2 leading-snug">
-                Check who appears in this piece. Select <span className="text-purple-300/90">Profile</span>{' '}
-                on one linked character, then apply below.
+              <p className="text-[11px] text-gray-500 leading-snug">
+                Check who appears in this piece.
               </p>
               <input
                 type="search"
                 value={ocSearch}
                 onChange={(e) => setOcSearch(e.target.value)}
                 placeholder="Filter characters…"
-                className="w-full mb-2 px-3 py-1.5 text-sm bg-gray-950 border border-gray-600 rounded-md text-gray-100"
+                className="w-full px-3 py-1.5 text-sm bg-gray-950 border border-gray-600 rounded-md text-gray-100"
               />
               <div className="max-h-48 overflow-y-auto border border-gray-600 rounded-md bg-gray-950/80 p-2 space-y-1">
                 {filteredOcOptions.length === 0 ? (
@@ -865,47 +882,61 @@ function GalleryAdminEditDrawer({
                   filteredOcOptions.map((oc) => {
                     const isLinked = selectedOcIds.includes(oc.id);
                     return (
-                      <div
+                      <label
                         key={oc.id}
-                        className={`flex items-center gap-2 text-xs py-0.5 rounded px-1 ${
+                        className={`flex items-center gap-2 text-xs py-0.5 rounded px-1 cursor-pointer ${
                           isLinked ? 'text-gray-200' : 'text-gray-400'
                         }`}
                       >
-                        <label className="flex items-center gap-2 cursor-pointer min-w-0 flex-1">
-                          <input
-                            type="checkbox"
-                            checked={isLinked}
-                            onChange={() => toggleOc(oc.id)}
-                            className="rounded border-gray-600 bg-gray-700 text-purple-600 shrink-0"
-                          />
-                          <span className="truncate">{oc.name}</span>
-                        </label>
-                        {isLinked ? (
-                          <label
-                            className="flex items-center gap-1 shrink-0 cursor-pointer text-[10px] text-purple-300/90"
-                            title="Use as this character's profile image"
-                          >
-                            <input
-                              type="radio"
-                              name={`profile-image-${item.id}`}
-                              checked={profileImageOcId === oc.id}
-                              onChange={() => setProfileImageOcId(oc.id)}
-                              className="border-gray-600 bg-gray-700 text-purple-500"
-                            />
-                            <span className="whitespace-nowrap">Profile</span>
-                          </label>
-                        ) : null}
-                      </div>
+                        <input
+                          type="checkbox"
+                          checked={isLinked}
+                          onChange={() => toggleOc(oc.id)}
+                          className="rounded border-gray-600 bg-gray-700 text-purple-600 shrink-0"
+                        />
+                        <span className="truncate">{oc.name}</span>
+                      </label>
                     );
                   })
                 )}
               </div>
-              {selectedOcIds.length > 0 ? (
+            </div>
+
+            {selectedOcIds.length > 0 ? (
+              <div className="rounded-md border border-purple-700/40 bg-purple-950/20 p-3 space-y-3">
+                <div>
+                  <label className="block text-xs text-purple-200/90 font-medium mb-1">
+                    Profile image
+                  </label>
+                  <p className="text-[11px] text-gray-500 leading-snug">
+                    Replace a linked character&apos;s primary image on profiles and cards.
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <span className="block text-xs text-gray-400">Apply to character</span>
+                  <div className="space-y-1">
+                    {linkedOcsForProfile.map((oc) => (
+                        <label
+                          key={oc.id}
+                          className="flex items-center gap-2 text-xs py-1 px-1 rounded cursor-pointer text-gray-200"
+                        >
+                          <input
+                            type="radio"
+                            name={`profile-image-${item.id}`}
+                            checked={profileImageOcId === oc.id}
+                            onChange={() => setProfileImageOcId(oc.id)}
+                            className="border-gray-600 bg-gray-700 text-purple-500"
+                          />
+                          <span className="truncate">{oc.name}</span>
+                        </label>
+                    ))}
+                  </div>
+                </div>
                 <button
                   type="button"
                   disabled={!profileImageOcId || settingMainImage}
                   onClick={() => void setAsMainImage()}
-                  className="mt-2 w-full py-2 text-sm rounded-md border border-purple-600/60 bg-purple-900/40 text-purple-100 hover:bg-purple-900/60 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="w-full py-2 text-sm rounded-md border border-purple-600/60 bg-purple-900/40 text-purple-100 hover:bg-purple-900/60 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
                   {settingMainImage
                     ? 'Updating…'
@@ -913,8 +944,8 @@ function GalleryAdminEditDrawer({
                         ocOptions.find((o) => o.id === profileImageOcId)?.name ?? 'character'
                       }'s profile image`}
                 </button>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
 
             {isDirty ? (
               <p className="text-xs text-amber-300/90">You have unsaved changes.</p>
@@ -946,14 +977,6 @@ function GalleryAdminEditDrawer({
           >
             {saving ? 'Saving…' : isDirty ? 'Save changes' : 'No changes'}
           </button>
-          <a
-            href={driveFileViewUrl(item.drive_file_id)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block text-center text-xs text-gray-500 hover:text-purple-300"
-          >
-            Open in Google Drive ↗
-          </a>
         </div>
       </aside>
 

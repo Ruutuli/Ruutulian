@@ -3,10 +3,9 @@
 import { useState, useMemo, useEffect, memo, useCallback, useRef } from 'react';
 import Image, { type ImageProps } from 'next/image';
 import {
-  resolveImageSrc,
+  buildImageLoadAttempts,
   IMAGE_PLACEHOLDER_URL,
   shouldUseUnoptimizedImage,
-  getBrowserImageFallbackUrls,
   isTinyPlaceholderImage,
 } from '@/lib/utils/googleDriveImage';
 import { logger } from '@/lib/logger';
@@ -19,18 +18,12 @@ interface GoogleDriveImageProps {
   fallbackSrc?: string;
   /** Hero/above-fold images: use priority. Default false = fetchpriority low to reduce decode pressure. */
   priority?: boolean;
+  /** Called when every URL (including placeholder) failed to load. */
+  onAllFailed?: () => void;
 }
 
-function buildLoadAttempts(src: string, primary: string): string[] {
-  const attempts = [primary];
-  const seen = new Set(attempts);
-  for (const url of getBrowserImageFallbackUrls(src)) {
-    if (!seen.has(url)) {
-      seen.add(url);
-      attempts.push(url);
-    }
-  }
-  return attempts;
+function isProxyImageUrl(url: string): boolean {
+  return url.includes('/api/images/proxy');
 }
 
 function GoogleDriveImageComponent({
@@ -40,12 +33,17 @@ function GoogleDriveImageComponent({
   style,
   fallbackSrc = IMAGE_PLACEHOLDER_URL,
   priority = false,
+  onAllFailed,
 }: GoogleDriveImageProps) {
-  const primaryUrl = useMemo(() => resolveImageSrc(src), [src]);
-  const loadAttempts = useMemo(() => buildLoadAttempts(src, primaryUrl), [src, primaryUrl]);
+  const loadAttempts = useMemo(() => buildImageLoadAttempts(src), [src]);
 
   const [attemptIndex, setAttemptIndex] = useState(0);
   const loadAttemptsRef = useRef(loadAttempts);
+  const onAllFailedRef = useRef(onAllFailed);
+
+  useEffect(() => {
+    onAllFailedRef.current = onAllFailed;
+  }, [onAllFailed]);
 
   useEffect(() => {
     loadAttemptsRef.current = loadAttempts;
@@ -60,6 +58,7 @@ function GoogleDriveImageComponent({
       setAttemptIndex((current) => {
         const attempts = loadAttemptsRef.current;
         const next = current + 1;
+
         if (next < attempts.length) {
           logger.warn('Component', 'GoogleDriveImage: trying alternate image URL', {
             originalUrl: src,
@@ -69,27 +68,50 @@ function GoogleDriveImageComponent({
           });
           return next;
         }
-        logger.warn('Component', 'GoogleDriveImage: all URLs failed, using placeholder', {
-          originalUrl: src,
-          reason,
-          attempts: attempts.length,
-        });
-        return attempts.length;
+
+        if (next === attempts.length) {
+          logger.warn('Component', 'GoogleDriveImage: all URLs failed, using placeholder', {
+            originalUrl: src,
+            reason,
+            attempts: attempts.length,
+          });
+          return next;
+        }
+
+        onAllFailedRef.current?.();
+        return next;
       });
     },
     [src]
   );
 
   const handleError = () => {
+    const attempts = loadAttemptsRef.current;
+    if (attemptIndex >= attempts.length) {
+      onAllFailedRef.current?.();
+      return;
+    }
     tryNextUrl('load-error');
   };
 
   const handleLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const attempts = loadAttemptsRef.current;
+    if (attemptIndex >= attempts.length) return;
+
     const img = e.currentTarget;
-    if (isTinyPlaceholderImage(img.naturalWidth, img.naturalHeight)) {
+    const currentUrl = attempts[attemptIndex] ?? displayUrl;
+
+    if (
+      isTinyPlaceholderImage(img.naturalWidth, img.naturalHeight) &&
+      isProxyImageUrl(currentUrl)
+    ) {
       tryNextUrl('proxy-fallback');
     }
   };
+
+  if (loadAttempts.length === 0) {
+    return null;
+  }
 
   return (
     <img
@@ -113,18 +135,14 @@ type ProxiedNextImageProps = Omit<ImageProps, 'src' | 'onError' | 'onLoad'> & {
   fallbackSrc?: string;
 };
 
-/** next/image wrapper: Google URLs via proxy, onError → placeholder (never green corrupt frames). */
+/** next/image wrapper: tries direct URLs before proxy; onError → inline placeholder. */
 export function ProxiedNextImage({
   src,
   fallbackSrc = IMAGE_PLACEHOLDER_URL,
   unoptimized,
   ...props
 }: ProxiedNextImageProps) {
-  const primaryUrl = useMemo(() => resolveImageSrc(src), [src]);
-  const loadAttempts = useMemo(
-    () => (src ? buildLoadAttempts(src, primaryUrl) : [primaryUrl]),
-    [src, primaryUrl]
-  );
+  const loadAttempts = useMemo(() => (src ? buildImageLoadAttempts(src) : []), [src]);
 
   const [attemptIndex, setAttemptIndex] = useState(0);
   const loadAttemptsRef = useRef(loadAttempts);
@@ -140,7 +158,8 @@ export function ProxiedNextImage({
   const tryNextUrl = useCallback(() => {
     setAttemptIndex((current) => {
       const attempts = loadAttemptsRef.current;
-      return current + 1 < attempts.length ? current + 1 : attempts.length;
+      const next = current + 1;
+      return next <= attempts.length ? next : current;
     });
   }, []);
 
@@ -150,13 +169,22 @@ export function ProxiedNextImage({
 
   const handleLoad = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+      const attempts = loadAttemptsRef.current;
+      if (attemptIndex >= attempts.length) return;
+
       const img = e.currentTarget;
-      if (isTinyPlaceholderImage(img.naturalWidth, img.naturalHeight)) {
+      const currentUrl = attempts[attemptIndex] ?? '';
+      if (
+        isTinyPlaceholderImage(img.naturalWidth, img.naturalHeight) &&
+        isProxyImageUrl(currentUrl)
+      ) {
         tryNextUrl();
       }
     },
-    [tryNextUrl]
+    [tryNextUrl, attemptIndex]
   );
+
+  if (!displaySrc) return null;
 
   return (
     <Image

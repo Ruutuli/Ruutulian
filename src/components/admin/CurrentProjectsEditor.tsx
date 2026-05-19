@@ -61,7 +61,7 @@ export function CurrentProjectsEditor() {
 
   const fetchData = async () => {
     try {
-      const response = await fetch('/api/admin/current-projects');
+      const response = await fetch('/api/admin/current-projects', { credentials: 'include' });
       if (!response.ok) {
         const contentType = response.headers.get('content-type');
         let errorMessage = `Failed to fetch (${response.status} ${response.statusText})`;
@@ -101,7 +101,8 @@ export function CurrentProjectsEditor() {
 
     try {
       const response = await fetch('/api/admin/current-projects', {
-        method: 'PUT',
+        method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           description: data.description,

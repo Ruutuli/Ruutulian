@@ -194,9 +194,17 @@ export function isAnimatedImage(url: string | null | undefined): boolean {
   return lowerUrl.includes('.gif') || lowerUrl.endsWith('.gif');
 }
 
-/** Default placeholder when no image URL is set (Wikimedia, public domain). */
-export const IMAGE_PLACEHOLDER_URL =
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/960px-Placeholder_view_vector.svg.png';
+/** Inline SVG fallback — always loads (no external CDN / hotlink restrictions). */
+export const IMAGE_PLACEHOLDER_URL = `data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="240" viewBox="0 0 480 240" role="img" aria-label="Image unavailable">' +
+    '<rect width="480" height="240" fill="#111827"/>' +
+    '<g fill="none" stroke="#4b5563" stroke-width="2">' +
+    '<path d="M120 170 L200 110 L260 150 L320 90 L360 170 Z"/>' +
+    '<circle cx="300" cy="80" r="24"/>' +
+    '</g>' +
+    '<text x="240" y="210" text-anchor="middle" fill="#6b7280" font-family="system-ui,sans-serif" font-size="13">Image unavailable</text>' +
+    '</svg>'
+)}`;
 
 const IMAGE_EXTENSION = /\.(jpe?g|png|gif|webp|svg|avif|bmp|ico)(\?|#|$)/i;
 
@@ -295,34 +303,54 @@ export function isTinyPlaceholderImage(naturalWidth: number, naturalHeight: numb
  * Skips duplicates and the proxy path itself.
  */
 export function getBrowserImageFallbackUrls(url: string | null | undefined): string[] {
+  return buildImageLoadAttempts(url).filter((u) => !u.startsWith('/api/images/proxy'));
+}
+
+/**
+ * URLs to try when displaying a user-provided image.
+ * Google Drive: direct thumbnail/view URLs first (works in img tags for link-shared files),
+ * then the server proxy. Non-Google: original URL as-is.
+ */
+export function buildImageLoadAttempts(url: string | null | undefined): string[] {
   if (!url?.trim()) return [];
   const trimmed = decodeUrlEntities(url.trim());
-  const fileId = getGoogleDriveFileId(trimmed);
-  if (!fileId) return [];
+  if (trimmed === IMAGE_PLACEHOLDER_URL || trimmed.startsWith('data:image/')) return [];
+
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const candidate of getGoogleDriveImageUrls(trimmed)) {
-    if (seen.has(candidate) || candidate.startsWith('/api/images/proxy')) continue;
-    seen.add(candidate);
-    out.push(candidate);
+  const add = (candidate: string | null | undefined) => {
+    const c = candidate?.trim();
+    if (!c || c === IMAGE_PLACEHOLDER_URL || seen.has(c)) return;
+    seen.add(c);
+    out.push(c);
+  };
+
+  if (isGoogleHostedImageUrl(trimmed)) {
+    for (const direct of getGoogleDriveImageUrls(trimmed)) {
+      if (!direct.startsWith('/api/images/proxy')) add(direct);
+    }
+    add(convertGoogleDriveUrl(trimmed));
+    add(trimmed);
+    const proxied = getProxyUrl(trimmed);
+    if (proxied.startsWith('/api/images/proxy')) add(proxied);
+  } else {
+    add(trimmed);
+    const converted = convertGoogleDriveUrl(trimmed);
+    if (converted !== trimmed) add(converted);
   }
+
   return out;
 }
 
 /**
- * Resolves a user image URL for display: Google-hosted → proxy, Drive share links → direct view, else as-is.
+ * Primary display URL — first entry from {@link buildImageLoadAttempts}.
  */
 export function resolveImageSrc(url: string | null | undefined): string {
+  const attempts = buildImageLoadAttempts(url);
+  if (attempts.length > 0) return attempts[0]!;
   if (!url?.trim()) return IMAGE_PLACEHOLDER_URL;
   const trimmed = decodeUrlEntities(url.trim());
-  if (isGoogleHostedImageUrl(trimmed)) {
-    const proxied = getProxyUrl(trimmed);
-    if (proxied.startsWith('/api/images/proxy')) return proxied;
-    // Never load Drive/googleusercontent URLs directly — wrong Content-Type → green corrupt decode
-    return IMAGE_PLACEHOLDER_URL;
-  }
-  const converted = convertGoogleDriveUrl(trimmed);
-  return converted || IMAGE_PLACEHOLDER_URL;
+  return trimmed || IMAGE_PLACEHOLDER_URL;
 }
 
 /**

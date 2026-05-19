@@ -1,5 +1,5 @@
 /** Default Google Drive folder IDs for site gallery sync (overridable in Site Settings). */
-export const DEFAULT_GALLERY_DRIVE_FOLDER_IDS: string[] = ['1zS9w5oYwZU8zRa5mFcYLcXh8PKrdACHL'];
+export const DEFAULT_GALLERY_DRIVE_FOLDER_IDS: string[] = ['1G726cwwPCK2OtbpG_m0R9id5XvV_XL-G'];
 
 /** Extract folder IDs from lines: raw id, or Drive URLs containing /folders/{id} or ?id=. */
 export function parseGalleryDriveFolderIds(text: string): string[] {

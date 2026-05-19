@@ -725,10 +725,10 @@ function GalleryBulkOcTagBar({
   const canApply = bulkOcIds.length > 0 && !applying;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-purple-700/60 bg-gray-900/98 backdrop-blur-sm shadow-[0_-12px_40px_rgba(0,0,0,0.5)]">
+    <div className="fixed bottom-0 left-0 right-0 z-30 border-t-2 border-purple-500/80 bg-gray-950 shadow-[0_-16px_48px_rgba(0,0,0,0.85)] ring-1 ring-inset ring-gray-700/80">
       <div className="max-w-6xl mx-auto px-4 py-4 space-y-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <p className="text-sm text-gray-300">
-          Tag <span className="text-purple-300 font-medium">{selectedCount}</span> selected image
+        <p className="text-sm font-medium text-gray-100">
+          Tag <span className="text-purple-200 font-semibold">{selectedCount}</span> selected image
           {selectedCount === 1 ? '' : 's'} with character(s):
         </p>
         <input
@@ -736,36 +736,36 @@ function GalleryBulkOcTagBar({
           value={bulkOcSearch}
           onChange={(e) => onBulkOcSearchChange(e.target.value)}
           placeholder="Search characters…"
-          className="w-full px-3 py-2 text-sm bg-gray-950 border border-gray-600 rounded-md text-gray-100"
+          className="w-full px-3 py-2 text-sm bg-gray-900 border border-gray-500 rounded-md text-gray-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
         />
-        <div className="max-h-32 overflow-y-auto rounded-md border border-gray-600 bg-gray-950/80 p-2 space-y-0.5">
+        <div className="max-h-32 overflow-y-auto rounded-md border border-gray-500 bg-gray-900 p-2 space-y-0.5">
           {ocOptions.length === 0 ? (
-            <p className="text-sm text-gray-500 px-2 py-2">No characters match.</p>
+            <p className="text-sm text-gray-400 px-2 py-2">No characters match.</p>
           ) : (
             ocOptions.map((oc) => (
               <label
                 key={oc.id}
-                className={`flex items-center gap-2.5 text-sm py-1.5 px-2 rounded-md cursor-pointer hover:bg-gray-800/80 ${
-                  bulkOcIds.includes(oc.id) ? 'text-gray-100 bg-gray-800/40' : 'text-gray-400'
+                className={`flex items-center gap-2.5 text-sm py-1.5 px-2 rounded-md cursor-pointer hover:bg-gray-800 ${
+                  bulkOcIds.includes(oc.id) ? 'text-white bg-purple-900/50 ring-1 ring-purple-500/40' : 'text-gray-200'
                 }`}
               >
                 <input
                   type="checkbox"
                   checked={bulkOcIds.includes(oc.id)}
                   onChange={() => onToggleOc(oc.id)}
-                  className="rounded border-gray-600 bg-gray-700 text-purple-600 shrink-0"
+                  className="rounded border-gray-500 bg-gray-800 text-purple-500 shrink-0"
                 />
                 <span className="truncate">{oc.name}</span>
               </label>
             ))
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 pt-1 border-t border-gray-700">
           <button
             type="button"
             disabled={!canApply}
             onClick={onAdd}
-            className="px-4 py-2 text-sm rounded-md bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 font-medium"
+            className="px-4 py-2 text-sm rounded-md bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-50 font-medium shadow-sm"
           >
             {applying ? 'Applying…' : 'Add to selected'}
           </button>
@@ -773,7 +773,7 @@ function GalleryBulkOcTagBar({
             type="button"
             disabled={!canApply}
             onClick={onRemove}
-            className="px-4 py-2 text-sm rounded-md border border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700 disabled:opacity-50"
+            className="px-4 py-2 text-sm rounded-md border border-gray-500 bg-gray-800 text-gray-100 hover:bg-gray-700 disabled:opacity-50"
           >
             Remove from selected
           </button>
@@ -781,7 +781,7 @@ function GalleryBulkOcTagBar({
             type="button"
             disabled={!canApply}
             onClick={onReplace}
-            className="px-4 py-2 text-sm rounded-md border border-amber-600/70 bg-amber-900/30 text-amber-100 hover:bg-amber-900/50 disabled:opacity-50"
+            className="px-4 py-2 text-sm rounded-md border border-amber-500 bg-amber-950 text-amber-100 hover:bg-amber-900 disabled:opacity-50"
             title="Clears existing character links on each image, then applies only the selected characters"
           >
             Replace links

@@ -7,8 +7,9 @@ import { logger } from '@/lib/logger';
 
 // Ensure runtime is set to nodejs for proper route handler execution
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase
@@ -57,92 +58,96 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PUT(request: Request) {
-  try {
-    const user = await checkAuth();
-    
-    if (!user) {
-      logger.warn('CurrentProjects', 'Unauthorized request');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+async function saveCurrentProjects(request: Request) {
+  const user = await checkAuth();
 
-    const supabase = createAdminClient();
-    const body = await request.json();
-    const { description, project_items } = body;
+  if (!user) {
+    logger.warn('CurrentProjects', 'Unauthorized request');
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-    // Validate required fields
-    const missingFields = [];
-    if (description === undefined) missingFields.push('description');
-    if (project_items === undefined) missingFields.push('project_items');
-    
-    if (missingFields.length > 0) {
-      logger.error('CurrentProjects', 'Missing required fields', missingFields);
-      return errorResponse(`Missing required fields: ${missingFields.join(', ')}`);
-    }
+  const supabase = createAdminClient();
+  const body = await request.json();
+  const { description, project_items } = body;
 
-    // Check if a row exists
-    const { data: existing, error: checkError } = await supabase
+  const missingFields: string[] = [];
+  if (description === undefined) missingFields.push('description');
+  if (project_items === undefined) missingFields.push('project_items');
+
+  if (missingFields.length > 0) {
+    logger.error('CurrentProjects', 'Missing required fields', missingFields);
+    return errorResponse(`Missing required fields: ${missingFields.join(', ')}`);
+  }
+
+  const { data: existing, error: checkError } = await supabase
+    .from('current_projects')
+    .select('id')
+    .single();
+
+  if (checkError && checkError.code !== 'PGRST116') {
+    logger.error('CurrentProjects', 'Error checking existing row', {
+      code: checkError.code,
+      message: checkError.message,
+    });
+  }
+
+  let result;
+  if (existing) {
+    const { data, error } = await supabase
       .from('current_projects')
-      .select('id')
-      .single();
-    
-    if (checkError && checkError.code !== 'PGRST116') {
-      logger.error('CurrentProjects', 'Error checking existing row', {
-        code: checkError.code,
-        message: checkError.message,
-      });
-    }
-
-    let result;
-    if (existing) {
-      // Update existing row
-      const updateData = {
+      .update({
         description,
         project_items,
         updated_at: new Date().toISOString(),
-      };
-      
-      const { data, error } = await supabase
-        .from('current_projects')
-        .update(updateData)
-        .eq('id', existing.id)
-        .select()
-        .single();
+      })
+      .eq('id', existing.id)
+      .select()
+      .single();
 
-      if (error) {
-        logger.error('CurrentProjects', 'Update error', {
-          code: error.code,
-          message: error.message,
-        });
-        return errorResponse(error.message);
-      }
-
-      result = data;
-    } else {
-      // Insert new row
-      const insertData = {
-        description,
-        project_items,
-      };
-      
-      const { data, error } = await supabase
-        .from('current_projects')
-        .insert(insertData)
-        .select()
-        .single();
-
-      if (error) {
-        logger.error('CurrentProjects', 'Insert error', {
-          code: error.code,
-          message: error.message,
-        });
-        return errorResponse(error.message);
-      }
-
-      result = data;
+    if (error) {
+      logger.error('CurrentProjects', 'Update error', {
+        code: error.code,
+        message: error.message,
+      });
+      return errorResponse(error.message);
     }
 
-    return successResponse(result);
+    result = data;
+  } else {
+    const { data, error } = await supabase
+      .from('current_projects')
+      .insert({ description, project_items })
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('CurrentProjects', 'Insert error', {
+        code: error.code,
+        message: error.message,
+      });
+      return errorResponse(error.message);
+    }
+
+    result = data;
+  }
+
+  return NextResponse.json({ success: true, data: result });
+}
+
+export async function PUT(request: Request) {
+  try {
+    return await saveCurrentProjects(request);
+  } catch (error) {
+    logger.error('CurrentProjects', 'Request failed', {
+      errorMessage: error instanceof Error ? error.message : String(error),
+    });
+    return handleError(error, 'Failed to update current projects');
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    return await saveCurrentProjects(request);
   } catch (error) {
     logger.error('CurrentProjects', 'Request failed', {
       errorMessage: error instanceof Error ? error.message : String(error),

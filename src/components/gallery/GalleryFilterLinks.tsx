@@ -209,6 +209,11 @@ export function GalleryFilterLinks({
       .map((s) => s.c);
   }, [characters, normalizedSearch]);
 
+  const listCharacters = useMemo(() => {
+    if (!shouldSuggest || !bestSuggestion) return filteredCharacters;
+    return filteredCharacters.filter((c) => c.slug !== bestSuggestion.slug);
+  }, [filteredCharacters, shouldSuggest, bestSuggestion]);
+
   const tagActiveClass = 'border-purple-500/70 text-purple-100 bg-purple-950/50 shadow-sm shadow-purple-950/40';
 
   return (
@@ -328,7 +333,7 @@ export function GalleryFilterLinks({
                     />
                   </div>
                 ) : null}
-                {filteredCharacters.map((c) => (
+                {listCharacters.map((c) => (
                   <CharacterFilterPill
                     key={c.slug}
                     href={buildHref({ character: c.slug, tag: activeTag })}
@@ -337,7 +342,7 @@ export function GalleryFilterLinks({
                   />
                 ))}
               </div>
-              {normalizedSearch && filteredCharacters.length === 0 ? (
+              {normalizedSearch && listCharacters.length === 0 && !shouldSuggest ? (
                 <p className="text-xs text-gray-500 px-1">No characters match that search.</p>
               ) : null}
             </div>

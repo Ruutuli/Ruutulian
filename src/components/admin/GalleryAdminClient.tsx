@@ -749,16 +749,6 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
                 Tag selected
               </button>
             ) : null}
-            {selectedIds.size > 0 ? (
-              <button
-                type="button"
-                disabled={removing || bulkApplying}
-                onClick={() => void removeFromGallery([...selectedIds])}
-                className="text-sm px-3 py-1.5 rounded-md border border-red-500/60 bg-red-950/50 text-red-200 hover:bg-red-900/60 disabled:opacity-50"
-              >
-                {removing ? 'Removing…' : 'Remove from gallery'}
-              </button>
-            ) : null}
             <span className="text-sm text-purple-300 ml-auto">{selectedIds.size} selected</span>
           </div>
         ) : null}
@@ -810,6 +800,8 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
                     setPinnedEditItem(item);
                   }
                 }}
+                onRemove={() => void removeFromGallery([item.id])}
+                removing={removing}
               />
             ))}
           </div>
@@ -1234,11 +1226,15 @@ function GalleryAdminTile({
   selectionMode,
   selected,
   onSelect,
+  onRemove,
+  removing,
 }: {
   item: GalleryAdminItem;
   selectionMode: boolean;
   selected: boolean;
   onSelect: () => void;
+  onRemove: () => void;
+  removing?: boolean;
 }) {
   const src = convertGoogleDriveUrl(driveFileViewUrl(item.drive_file_id));
   const linkedOcs = (item.gallery_item_ocs ?? [])
@@ -1248,10 +1244,8 @@ function GalleryAdminTile({
   const displayName = item.name || item.drive_file_id;
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`group text-left rounded-lg border overflow-hidden transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
+    <div
+      className={`group text-left rounded-lg border overflow-hidden transition-all ${
         selected
           ? selectionMode
             ? 'border-purple-400 ring-2 ring-purple-400/60 bg-purple-950/20'
@@ -1260,14 +1254,20 @@ function GalleryAdminTile({
       }`}
     >
       <div className="aspect-square bg-gray-950 relative">
-        <GoogleDriveImage
-          src={src}
-          alt={displayName}
-          className="w-full h-full object-cover"
-        />
+        <button
+          type="button"
+          onClick={onSelect}
+          className="absolute inset-0 w-full h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-purple-500"
+        >
+          <GoogleDriveImage
+            src={src}
+            alt={displayName}
+            className="w-full h-full object-cover"
+          />
+        </button>
         {selectionMode ? (
           <span
-            className={`absolute top-1.5 left-1.5 flex h-5 w-5 items-center justify-center rounded border text-[10px] font-bold ${
+            className={`pointer-events-none absolute top-1.5 left-1.5 flex h-5 w-5 items-center justify-center rounded border text-[10px] font-bold ${
               selected
                 ? 'bg-purple-600 border-purple-400 text-white'
                 : 'bg-gray-900/90 border-gray-500 text-transparent'
@@ -1277,7 +1277,7 @@ function GalleryAdminTile({
             ✓
           </span>
         ) : null}
-        <div className="absolute top-1.5 right-1.5 flex flex-col items-end gap-1">
+        <div className="pointer-events-none absolute top-1.5 right-1.5 flex flex-col items-end gap-1">
           {item.is_nsfw ? (
             <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-950/90 text-red-200 border border-red-700/50">
               NSFW
@@ -1293,8 +1293,25 @@ function GalleryAdminTile({
             {item.published ? 'Live' : 'Draft'}
           </span>
         </div>
+        <button
+          type="button"
+          disabled={removing}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          className="absolute bottom-1 left-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-gray-900/95 border border-gray-600/80 text-gray-300 text-sm leading-none shadow-sm hover:bg-red-950 hover:border-red-600/80 hover:text-red-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:opacity-40"
+          aria-label="Remove from gallery"
+          title="Remove from gallery"
+        >
+          ×
+        </button>
       </div>
-      <div className="p-2 space-y-1">
+      <button
+        type="button"
+        onClick={onSelect}
+        className="w-full p-2 space-y-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-purple-500"
+      >
         <div className="text-xs text-gray-200 font-medium truncate" title={displayName}>
           {displayName}
         </div>
@@ -1319,8 +1336,8 @@ function GalleryAdminTile({
             {linkedOcs.length > 2 ? ` +${linkedOcs.length - 2}` : ''}
           </div>
         ) : null}
-      </div>
-    </button>
+      </button>
+    </div>
   );
 }
 
@@ -1634,18 +1651,30 @@ function GalleryAdminEditDrawer({
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
           <div className="flex flex-col lg:flex-row lg:min-h-full">
           <div className="lg:w-[min(42%,22rem)] shrink-0 border-b lg:border-b-0 lg:border-r border-gray-700 bg-gray-950 flex flex-col lg:sticky lg:top-0 lg:self-start">
-            <button
-              type="button"
-              onClick={() => setImageLightbox(true)}
-              className="p-4 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-inset max-h-[min(36vh,280px)] lg:max-h-[min(52vh,420px)]"
-              title="Click to view full image"
-            >
-              <GoogleDriveImage
-                src={src}
-                alt={item.name || item.drive_file_id}
-                className="max-w-full max-h-[min(34vh,260px)] lg:max-h-[min(50vh,400px)] w-auto h-auto object-contain"
-              />
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setImageLightbox(true)}
+                className="w-full p-4 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-inset max-h-[min(36vh,280px)] lg:max-h-[min(52vh,420px)]"
+                title="Click to view full image"
+              >
+                <GoogleDriveImage
+                  src={src}
+                  alt={item.name || item.drive_file_id}
+                  className="max-w-full max-h-[min(34vh,260px)] lg:max-h-[min(50vh,400px)] w-auto h-auto object-contain"
+                />
+              </button>
+              <button
+                type="button"
+                disabled={removing}
+                onClick={onRemove}
+                className="absolute bottom-2 left-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-gray-900/95 border border-gray-600/80 text-gray-300 text-base leading-none shadow-sm hover:bg-red-950 hover:border-red-600/80 hover:text-red-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:opacity-40"
+                aria-label="Remove from gallery"
+                title="Remove from gallery"
+              >
+                ×
+              </button>
+            </div>
             <div className="shrink-0 p-4 space-y-3 border-t border-gray-800">
               {item.name ? (
                 <p className="text-sm text-gray-200 font-medium break-words leading-snug">{item.name}</p>
@@ -1914,18 +1943,6 @@ function GalleryAdminEditDrawer({
           >
             {saving ? 'Saving…' : isDirty ? 'Save gallery settings' : 'No changes to save'}
           </button>
-          <button
-            type="button"
-            disabled={removing || saving}
-            onClick={onRemove}
-            className="w-full mt-2 py-2.5 text-sm rounded-md border border-red-700/70 bg-red-950/80 text-red-200 hover:bg-red-900/70 disabled:opacity-50 font-medium"
-          >
-            {removing ? 'Removing…' : 'Remove from gallery'}
-          </button>
-          <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
-            Unsyncs this image: removed from admin and public gallery, stays on Drive, will not
-            return on sync.
-          </p>
         </div>
       </aside>
 

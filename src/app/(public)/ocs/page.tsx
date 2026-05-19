@@ -21,7 +21,7 @@ export async function generateMetadata() {
 export const revalidate = 60;
 export const dynamic = 'force-dynamic';
 
-const PAGE_SIZE = 24;
+const PAGE_SIZE = 25;
 
 // Slim select for list view: only fields needed by OCCard and filters
 const OC_LIST_SELECT = `

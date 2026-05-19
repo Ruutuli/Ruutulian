@@ -215,7 +215,7 @@ export function OCGallery({ images, ocName, page = 1, perPage, total, ocSlug }: 
         className="relative max-w-[95vw] max-h-[95vh] w-full h-full flex items-center justify-center"
         onClick={(e) => e.stopPropagation()}
       >
-        {imageLoading && !imageError && (
+        {imageLoading && !imageError && !selectedImage?.isNsfw && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
           </div>
@@ -255,7 +255,9 @@ export function OCGallery({ images, ocName, page = 1, perPage, total, ocSlug }: 
                   goToNextImage();
                 }
               }}
-              style={{ display: imageLoading ? 'none' : 'block' }}
+              style={{
+                display: imageLoading && !selectedImage?.isNsfw ? 'none' : 'block',
+              }}
               title={images.length > 1 ? 'Click to view next image' : undefined}
             />
           </NsfwImageCover>

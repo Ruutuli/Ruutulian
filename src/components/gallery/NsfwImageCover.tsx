@@ -29,6 +29,10 @@ export function NsfwImageCover({ nsfw, children, className, resetKey }: NsfwImag
 
   return (
     <div className={`relative min-h-0 min-w-0 overflow-hidden ${className ?? ''}`}>
+      {/* Keep image in layout (invisible) so lightbox/tiles size correctly and loads can finish. */}
+      <div className="invisible pointer-events-none select-none" aria-hidden>
+        {children}
+      </div>
       <button
         type="button"
         onClick={handleReveal}

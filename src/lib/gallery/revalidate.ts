@@ -1,6 +1,7 @@
 import { revalidatePath, revalidateTag } from 'next/cache';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { GALLERY_FACETS_REVALIDATE_TAG } from '@/lib/gallery/constants';
+import { logger } from '@/lib/logger';
 
 /** Invalidate public gallery facets and OC profile pages after admin gallery changes. */
 export function revalidateGalleryCaches() {
@@ -36,9 +37,14 @@ export async function revalidateOcPages(
 export async function publishGalleryItems(
   supabase: SupabaseClient,
   itemIds: string[]
-): Promise<void> {
+): Promise<boolean> {
   const unique = [...new Set(itemIds.filter((id) => typeof id === 'string' && id.length > 0))];
-  if (unique.length === 0) return;
+  if (unique.length === 0) return true;
 
-  await supabase.from('gallery_items').update({ published: true }).in('id', unique);
+  const { error } = await supabase.from('gallery_items').update({ published: true }).in('id', unique);
+  if (error) {
+    logger.error('GalleryPublish', 'Failed to publish gallery items', error);
+    return false;
+  }
+  return true;
 }

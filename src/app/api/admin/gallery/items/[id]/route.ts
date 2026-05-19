@@ -37,24 +37,6 @@ export async function PATCH(
 
     const supabase = createAdminClient();
 
-    const updates: Record<string, unknown> = {};
-    if (typeof published === 'boolean') updates.published = published;
-    if (Array.isArray(tags)) {
-      updates.tags = tags.map((t) => String(t).trim()).filter(Boolean);
-    }
-    if (typeof sortOrder === 'number' && Number.isFinite(sortOrder)) {
-      updates.sort_order = Math.round(sortOrder);
-    }
-
-    if (Object.keys(updates).length > 0) {
-      const { error: updateError } = await supabase.from('gallery_items').update(updates).eq('id', id);
-
-      if (updateError) {
-        logger.error('GalleryItemPatch', 'Update failed', updateError);
-        return NextResponse.json({ success: false, error: updateError.message }, { status: 400 });
-      }
-    }
-
     let linkedOcIds: string[] = [];
     if (Array.isArray(ocIds)) {
       const { error: delError } = await supabase.from('gallery_item_ocs').delete().eq('gallery_item_id', id);
@@ -72,9 +54,40 @@ export async function PATCH(
           logger.error('GalleryItemPatch', 'Insert junction failed', insError);
           return NextResponse.json({ success: false, error: insError.message }, { status: 400 });
         }
+      }
+    }
 
-        // Linked characters should see this art on their public profile gallery.
-        await publishGalleryItems(supabase, [id]);
+    const hasCharacterLinks = linkedOcIds.length > 0;
+
+    const updates: Record<string, unknown> = {};
+    if (typeof published === 'boolean') {
+      updates.published = hasCharacterLinks ? true : published;
+    } else if (hasCharacterLinks) {
+      updates.published = true;
+    }
+    if (Array.isArray(tags)) {
+      updates.tags = tags.map((t) => String(t).trim()).filter(Boolean);
+    }
+    if (typeof sortOrder === 'number' && Number.isFinite(sortOrder)) {
+      updates.sort_order = Math.round(sortOrder);
+    }
+
+    if (Object.keys(updates).length > 0) {
+      const { error: updateError } = await supabase.from('gallery_items').update(updates).eq('id', id);
+
+      if (updateError) {
+        logger.error('GalleryItemPatch', 'Update failed', updateError);
+        return NextResponse.json({ success: false, error: updateError.message }, { status: 400 });
+      }
+    }
+
+    if (hasCharacterLinks) {
+      const publishedOk = await publishGalleryItems(supabase, [id]);
+      if (!publishedOk) {
+        return NextResponse.json(
+          { success: false, error: 'Character links saved but publishing failed' },
+          { status: 500 }
+        );
       }
     }
 

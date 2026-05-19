@@ -120,7 +120,13 @@ export async function POST(request: Request) {
 
     // Character pages only show published items (RLS + OC page query).
     if (mode === 'add' || mode === 'replace') {
-      await publishGalleryItems(supabase, validIds);
+      const publishedOk = await publishGalleryItems(supabase, validIds);
+      if (!publishedOk) {
+        return NextResponse.json(
+          { success: false, error: 'Character links saved but publishing failed' },
+          { status: 500 }
+        );
+      }
     }
 
     revalidateGalleryCaches();

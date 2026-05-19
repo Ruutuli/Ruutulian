@@ -1162,8 +1162,10 @@ function GalleryAdminEditDrawer({
     (item.gallery_item_ocs ?? []).map((r) => r.oc_id)
   );
   const [ocSearch, setOcSearch] = useState('');
+  const [dismissedFilenameSuggestion, setDismissedFilenameSuggestion] = useState(false);
   const [ocImageUrlOverrides, setOcImageUrlOverrides] = useState<Record<string, string | null>>({});
   const [saving, setSaving] = useState(false);
+  const [ocLinksSaving, setOcLinksSaving] = useState(false);
   const [settingMainImageFor, setSettingMainImageFor] = useState<string | null>(null);
   const [localMessage, setLocalMessage] = useState<string | null>(null);
   const [imageLightbox, setImageLightbox] = useState(false);
@@ -1176,10 +1178,21 @@ function GalleryAdminEditDrawer({
     setSortOrder(String(item.sort_order ?? 0));
     setSelectedOcIds((item.gallery_item_ocs ?? []).map((r) => r.oc_id));
     setOcSearch('');
+    setDismissedFilenameSuggestion(false);
     setOcImageUrlOverrides({});
     setLocalMessage(null);
     setImageLightbox(false);
   }, [item]);
+
+  const filenameSuggestedOc = useMemo(
+    () => suggestOcFromFilenames([item], ocOptions),
+    [item, ocOptions]
+  );
+
+  const showFilenameSuggestion =
+    Boolean(filenameSuggestedOc) &&
+    !selectedOcIds.includes(filenameSuggestedOc!.id) &&
+    !dismissedFilenameSuggestion;
 
   const initialOcIds = useMemo(
     () => [...(item.gallery_item_ocs ?? []).map((r) => r.oc_id)].sort(),
@@ -1254,8 +1267,11 @@ function GalleryAdminEditDrawer({
         setLocalMessage(json.error || 'Save failed');
         return;
       }
+      if (json.data?.published === true) setPublished(true);
       await onSaved();
-      setLocalMessage('Saved');
+      const publishedNote =
+        selectedOcIds.length > 0 && !item.published ? ' Published on the public site.' : '';
+      setLocalMessage(`Saved.${publishedNote}`);
       window.setTimeout(() => setLocalMessage(null), 2000);
     } catch {
       setLocalMessage('Save failed');
@@ -1264,10 +1280,36 @@ function GalleryAdminEditDrawer({
     }
   }
 
+  async function persistOcLinks(nextIds: string[]) {
+    setOcLinksSaving(true);
+    setLocalMessage(null);
+    try {
+      const res = await fetch(`/api/admin/gallery/items/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ocIds: nextIds }),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        setLocalMessage(json.error || 'Failed to update character links');
+        return;
+      }
+      if (json.data?.published === true) setPublished(true);
+      await onSaved();
+    } catch {
+      setLocalMessage('Failed to update character links');
+    } finally {
+      setOcLinksSaving(false);
+    }
+  }
+
   function toggleOc(ocId: string) {
-    setSelectedOcIds((prev) =>
-      prev.includes(ocId) ? prev.filter((id) => id !== ocId) : [...prev, ocId]
-    );
+    const next = selectedOcIds.includes(ocId)
+      ? selectedOcIds.filter((id) => id !== ocId)
+      : [...selectedOcIds, ocId];
+    setSelectedOcIds(next);
+    if (next.length > selectedOcIds.length) setPublished(true);
+    void persistOcLinks(next);
   }
 
   async function setProfileImageToggle(ocId: string, enabled: boolean) {
@@ -1292,8 +1334,11 @@ function GalleryAdminEditDrawer({
           ? json.data.image_url
           : driveFileViewUrl(item.drive_file_id);
       setOcImageUrlOverrides((prev) => ({ ...prev, [ocId]: newUrl }));
+      if (json.data?.published !== false) setPublished(true);
       await onSaved();
-      setLocalMessage(`Profile image updated for ${json.data?.ocName ?? ocName}`);
+      setLocalMessage(
+        `Profile image updated for ${json.data?.ocName ?? ocName}. Image published on the public site.`
+      );
       window.setTimeout(() => setLocalMessage(null), 3000);
     } catch {
       setLocalMessage('Failed to set profile image');
@@ -1389,13 +1434,45 @@ function GalleryAdminEditDrawer({
               <GalleryEditSection
                 step={1}
                 title="Character galleries"
-                description="Choose which character pages include this image in their personal gallery. This does not change their profile picture."
+                description="Choose which character pages include this image in their personal gallery. Linking a character publishes this image on the site. This does not change their profile picture."
               >
                 <p className="text-xs text-gray-500">
                   {selectedOcIds.length === 0
                     ? 'Not linked to any character yet.'
                     : `${selectedOcIds.length} character${selectedOcIds.length === 1 ? '' : 's'} selected`}
                 </p>
+                {showFilenameSuggestion && filenameSuggestedOc ? (
+                  <div className="rounded-md border border-purple-500/50 bg-purple-950/40 p-3 space-y-2">
+                    <p className="text-xs text-purple-200 leading-relaxed">
+                      Suggested from filename:{' '}
+                      <span className="font-medium text-purple-100">{filenameSuggestedOc.name}</span>
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = selectedOcIds.includes(filenameSuggestedOc.id)
+                            ? selectedOcIds
+                            : [...selectedOcIds, filenameSuggestedOc.id];
+                          setSelectedOcIds(next);
+                          setPublished(true);
+                          void persistOcLinks(next);
+                        }}
+                        disabled={ocLinksSaving}
+                        className="flex-1 px-3 py-1.5 text-xs rounded-md bg-purple-600 hover:bg-purple-500 text-white font-medium"
+                      >
+                        Use suggestion
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDismissedFilenameSuggestion(true)}
+                        className="px-3 py-1.5 text-xs rounded-md border border-gray-600 text-gray-300 hover:bg-gray-800"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
                 <input
                   type="search"
                   value={ocSearch}
@@ -1419,8 +1496,9 @@ function GalleryAdminEditDrawer({
                           <input
                             type="checkbox"
                             checked={isLinked}
+                            disabled={ocLinksSaving}
                             onChange={() => toggleOc(oc.id)}
-                            className="rounded border-gray-600 bg-gray-700 text-purple-600 shrink-0"
+                            className="rounded border-gray-600 bg-gray-700 text-purple-600 shrink-0 disabled:opacity-50"
                           />
                           <span className="truncate">{oc.name}</span>
                         </label>

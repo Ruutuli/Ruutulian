@@ -4,7 +4,11 @@ import { handleError } from '@/lib/api/route-helpers';
 import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { driveFileViewUrl } from '@/lib/gallery/constants';
-import { revalidateGalleryCaches, revalidateOcPages } from '@/lib/gallery/revalidate';
+import {
+  publishGalleryItems,
+  revalidateGalleryCaches,
+  revalidateOcPages,
+} from '@/lib/gallery/revalidate';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -79,6 +83,11 @@ export async function POST(
       if (linkError) {
         logger.warn('GallerySetMainImage', 'Link insert failed (image still updated)', linkError);
       }
+    }
+
+    const publishedOk = await publishGalleryItems(supabase, [galleryItemId]);
+    if (!publishedOk) {
+      logger.warn('GallerySetMainImage', 'Profile image updated but gallery publish failed');
     }
 
     revalidateGalleryCaches();

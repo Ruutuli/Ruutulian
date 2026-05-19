@@ -2,10 +2,16 @@ import { createClient } from '@supabase/supabase-js';
 import { unstable_cache } from 'next/cache';
 import { GALLERY_FACETS_REVALIDATE_TAG } from '@/lib/gallery/constants';
 
+export type GalleryCharacterFacet = {
+  slug: string;
+  name: string;
+  count: number;
+};
+
 export type GalleryPublicFacets = {
   publishedCount: number;
   tags: string[];
-  characters: { slug: string; name: string }[];
+  characters: GalleryCharacterFacet[];
 };
 
 function createAnonReadClient() {
@@ -36,10 +42,15 @@ function parseFacetsPayload(data: unknown): GalleryPublicFacets {
       const r = c as Record<string, unknown>;
       const slug = typeof r.slug === 'string' ? r.slug : '';
       const name = typeof r.name === 'string' ? r.name : '';
+      const countRaw = r.count;
+      const count =
+        typeof countRaw === 'number' && Number.isFinite(countRaw)
+          ? Math.max(0, Math.floor(countRaw))
+          : 0;
       if (!slug) return null;
-      return { slug, name };
+      return { slug, name, count };
     })
-    .filter((x): x is { slug: string; name: string } => x !== null);
+    .filter((x): x is GalleryCharacterFacet => x !== null);
   return { publishedCount, tags, characters };
 }
 
@@ -54,7 +65,7 @@ async function loadGalleryPublicFacetsFromDb(): Promise<GalleryPublicFacets> {
 
 const getGalleryPublicFacetsCachedInner = unstable_cache(
   loadGalleryPublicFacetsFromDb,
-  ['gallery-public-facets-v1'],
+  ['gallery-public-facets-v2'],
   { tags: [GALLERY_FACETS_REVALIDATE_TAG], revalidate: 600 }
 );
 

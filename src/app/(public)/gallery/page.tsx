@@ -6,7 +6,10 @@ import { GalleryFilterLinks } from '@/components/gallery/GalleryFilterLinks';
 import { GalleryPublicClient } from '@/components/gallery/GalleryPublicClient';
 import type { GalleryPublicItem } from '@/components/gallery/gallery-public-types';
 import { GALLERY_PUBLIC_PAGE_SIZE } from '@/lib/gallery/constants';
-import { getGalleryPublicFacetsCached } from '@/lib/gallery/get-public-facets';
+import {
+  getGalleryPublicFacetsCached,
+  type GalleryCharacterFacet,
+} from '@/lib/gallery/get-public-facets';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 
@@ -48,18 +51,24 @@ function collectTags(items: GalleryFacetRow[]): string[] {
   return Array.from(set).sort((a, b) => a.localeCompare(b));
 }
 
-function collectCharacters(items: GalleryFacetRow[]): { slug: string; name: string }[] {
-  const map = new Map<string, string>();
+function collectCharacters(items: GalleryFacetRow[]): GalleryCharacterFacet[] {
+  const map = new Map<string, { name: string; count: number }>();
   for (const item of items) {
+    const countedSlugs = new Set<string>();
     for (const row of item.gallery_item_ocs ?? []) {
       const oc = row.oc;
-      if (oc?.is_public && oc.slug) {
-        map.set(oc.slug, oc.name);
+      if (!oc?.is_public || !oc.slug || countedSlugs.has(oc.slug)) continue;
+      countedSlugs.add(oc.slug);
+      const existing = map.get(oc.slug);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        map.set(oc.slug, { name: oc.name, count: 1 });
       }
     }
   }
   return Array.from(map.entries())
-    .map(([slug, name]) => ({ slug, name }))
+    .map(([slug, { name, count }]) => ({ slug, name, count }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -145,7 +154,7 @@ async function GalleryEnabledBody({
   const perPage = GALLERY_PUBLIC_PAGE_SIZE;
 
   let tagOptions: string[];
-  let characterOptions: { slug: string; name: string }[];
+  let characterOptions: GalleryCharacterFacet[];
 
   try {
     const facets = await getGalleryPublicFacetsCached();
@@ -326,7 +335,7 @@ function GalleryPageLayout({
   children,
 }: {
   tagOptions: string[];
-  characterOptions: { slug: string; name: string }[];
+  characterOptions: GalleryCharacterFacet[];
   tagFilter: string;
   characterSlug: string;
   children: ReactNode;

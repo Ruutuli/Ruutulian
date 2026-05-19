@@ -7,6 +7,11 @@ import Link from 'next/link';
 interface CharacterOpt {
   slug: string;
   name: string;
+  count: number;
+}
+
+function characterFilterLabel(c: CharacterOpt): string {
+  return `${c.name}(${c.count})`;
 }
 
 interface GalleryFilterLinksProps {
@@ -131,17 +136,10 @@ export function GalleryFilterLinks({
   const filteredCharacters = useMemo(() => {
     const q = normalizedSearch;
     if (!q) {
-      const initialTop = characters.slice(0, 24);
-      if (activeCharacter) {
-        const active = characters.find((c) => c.slug === activeCharacter);
-        if (active && !initialTop.some((c) => c.slug === active.slug)) {
-          return [active, ...initialTop];
-        }
-      }
-      return initialTop;
+      return characters;
     }
 
-    const scored = characters
+    return characters
       .map((c) => {
         const cand = normalizedCharacterName(c);
         if (!cand) return { c, score: 0 };
@@ -152,22 +150,10 @@ export function GalleryFilterLinks({
         const similarity = 1 - dist / maxLen;
         return { c, score: similarity };
       })
-      .sort((a, b) => b.score - a.score || a.c.name.localeCompare(b.c.name));
-
-    const top = scored
       .filter((s) => s.score >= 0.35)
-      .slice(0, 24)
+      .sort((a, b) => b.score - a.score || a.c.name.localeCompare(b.c.name))
       .map((s) => s.c);
-
-    if (activeCharacter) {
-      const active = characters.find((c) => c.slug === activeCharacter);
-      if (active && !top.some((c) => c.slug === active.slug)) {
-        top.unshift(active);
-      }
-    }
-
-    return top;
-  }, [activeCharacter, characters, levenshteinDistance, normalizedCharacterName, normalizedSearch]);
+  }, [characters, levenshteinDistance, normalizedCharacterName, normalizedSearch]);
 
   const tagActiveClass = 'border-purple-500/70 text-purple-100 bg-purple-950/50 shadow-sm shadow-purple-950/40';
   const charActiveClass = 'border-pink-500/70 text-pink-100 bg-pink-950/40 shadow-sm shadow-pink-950/30';
@@ -261,7 +247,7 @@ export function GalleryFilterLinks({
                   className="w-full text-xs pl-7 pr-2 py-2 rounded-lg border border-gray-600/80 bg-gray-900/60 text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500/80 focus:border-pink-500/50"
                 />
               </div>
-              <div className="flex flex-wrap gap-1.5 max-h-52 overflow-y-auto scrollbar-thin pr-1">
+              <div className="flex flex-wrap gap-1.5 max-h-[min(32rem,60vh)] overflow-y-auto scrollbar-thin pr-1">
                 <FilterPill
                   href={buildHref({ character: '', tag: activeTag })}
                   active={!activeCharacter}
@@ -273,9 +259,9 @@ export function GalleryFilterLinks({
                   <Link
                     href={buildHref({ character: bestSuggestion!.slug, tag: activeTag })}
                     className="text-xs px-2.5 py-1 rounded-full border border-dashed border-pink-500/50 text-pink-200 bg-pink-950/20 hover:bg-pink-950/40 transition-colors"
-                    aria-label={`Is this ${bestSuggestion!.name}?`}
+                    aria-label={`Is this ${characterFilterLabel(bestSuggestion!)}?`}
                   >
-                    {bestSuggestion!.name}?
+                    {characterFilterLabel(bestSuggestion!)}?
                   </Link>
                 ) : null}
                 {filteredCharacters.map((c) => (
@@ -285,7 +271,7 @@ export function GalleryFilterLinks({
                     active={activeCharacter === c.slug}
                     activeClass={charActiveClass}
                   >
-                    {c.name}
+                    {characterFilterLabel(c)}
                   </FilterPill>
                 ))}
               </div>

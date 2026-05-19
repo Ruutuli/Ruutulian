@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
 import { convertGoogleDriveUrl } from '@/lib/utils/googleDriveImage';
 import {
@@ -603,6 +603,50 @@ function GalleryAdminTile({
   );
 }
 
+function GalleryEditSection({
+  step,
+  title,
+  description,
+  accent = 'gray',
+  children,
+}: {
+  step: number;
+  title: string;
+  description: string;
+  accent?: 'gray' | 'green' | 'purple';
+  children: ReactNode;
+}) {
+  const accentStyles =
+    accent === 'green'
+      ? 'border-green-700/50 bg-green-950/15'
+      : accent === 'purple'
+        ? 'border-purple-700/50 bg-purple-950/15'
+        : 'border-gray-600/70 bg-gray-800/30';
+  const stepStyles =
+    accent === 'green'
+      ? 'bg-green-900/60 text-green-200'
+      : accent === 'purple'
+        ? 'bg-purple-900/60 text-purple-200'
+        : 'bg-gray-700 text-gray-200';
+
+  return (
+    <section className={`rounded-xl border p-4 sm:p-5 space-y-4 ${accentStyles}`}>
+      <div className="flex gap-3">
+        <span
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${stepStyles}`}
+        >
+          {step}
+        </span>
+        <div className="min-w-0 pt-0.5">
+          <h3 className="text-base font-semibold text-gray-100">{title}</h3>
+          <p className="text-sm text-gray-400 mt-1 leading-relaxed">{description}</p>
+        </div>
+      </div>
+      <div className="space-y-3">{children}</div>
+    </section>
+  );
+}
+
 function GalleryAdminEditDrawer({
   item,
   ocOptions,
@@ -622,6 +666,7 @@ function GalleryAdminEditDrawer({
   );
   const [ocSearch, setOcSearch] = useState('');
   const [profileImageOcId, setProfileImageOcId] = useState('');
+  const [profileOcSearch, setProfileOcSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [settingMainImage, setSettingMainImage] = useState(false);
   const [localMessage, setLocalMessage] = useState<string | null>(null);
@@ -635,6 +680,7 @@ function GalleryAdminEditDrawer({
     setSortOrder(String(item.sort_order ?? 0));
     setSelectedOcIds((item.gallery_item_ocs ?? []).map((r) => r.oc_id));
     setOcSearch('');
+    setProfileOcSearch('');
     setProfileImageOcId((item.gallery_item_ocs ?? [])[0]?.oc_id ?? '');
     setLocalMessage(null);
     setImageLightbox(false);
@@ -653,14 +699,14 @@ function GalleryAdminEditDrawer({
     );
   }, [ocOptions, ocSearch]);
 
-  const linkedOcsForProfile = useMemo(
-    () =>
-      selectedOcIds
-        .map((id) => ocOptions.find((o) => o.id === id))
-        .filter((oc): oc is GalleryOcOption => Boolean(oc))
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    [selectedOcIds, ocOptions]
-  );
+  const filteredProfileOcOptions = useMemo(() => {
+    const q = profileOcSearch.trim().toLowerCase();
+    const sorted = [...ocOptions].sort((a, b) => a.name.localeCompare(b.name));
+    if (!q) return sorted;
+    return sorted.filter(
+      (oc) => oc.name.toLowerCase().includes(q) || oc.slug.toLowerCase().includes(q)
+    );
+  }, [ocOptions, profileOcSearch]);
 
   const isDirty = useMemo(() => {
     if (published !== item.published) return true;
@@ -708,24 +754,13 @@ function GalleryAdminEditDrawer({
   }
 
   function toggleOc(ocId: string) {
-    setSelectedOcIds((prev) => {
-      if (prev.includes(ocId)) {
-        const next = prev.filter((id) => id !== ocId);
-        if (profileImageOcId === ocId) {
-          setProfileImageOcId(next[0] ?? '');
-        }
-        return next;
-      }
-      const next = [...prev, ocId];
-      if (!profileImageOcId || !prev.includes(profileImageOcId)) {
-        setProfileImageOcId(ocId);
-      }
-      return next;
-    });
+    setSelectedOcIds((prev) =>
+      prev.includes(ocId) ? prev.filter((id) => id !== ocId) : [...prev, ocId]
+    );
   }
 
   async function setAsMainImage() {
-    if (!profileImageOcId || !selectedOcIds.includes(profileImageOcId)) return;
+    if (!profileImageOcId) return;
     const ocName = ocOptions.find((o) => o.id === profileImageOcId)?.name ?? 'this character';
     if (
       !window.confirm(
@@ -788,9 +823,14 @@ function GalleryAdminEditDrawer({
         aria-label="Close editor"
         onClick={onClose}
       />
-      <aside className="fixed top-0 right-0 z-50 h-dvh w-full max-w-md bg-gray-900 border-l border-gray-700 shadow-2xl flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-700 shrink-0">
-          <h2 className="text-sm font-semibold text-gray-100 truncate">Edit gallery item</h2>
+      <aside className="fixed top-0 right-0 z-50 h-dvh w-full max-w-lg sm:max-w-2xl lg:max-w-3xl bg-gray-900 border-l border-gray-700 shadow-2xl flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-700 shrink-0">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-gray-100">Edit gallery item</h2>
+            <p className="text-xs text-gray-500 mt-0.5 truncate">
+              {item.name || item.drive_file_id}
+            </p>
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -801,181 +841,234 @@ function GalleryAdminEditDrawer({
           </button>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-          <button
-            type="button"
-            onClick={() => setImageLightbox(true)}
-            className="w-full shrink-0 border-b border-gray-700 bg-gray-950 p-2 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-inset"
-            title="Click to view full image"
-          >
-            <GoogleDriveImage
-              src={src}
-              alt={item.name || item.drive_file_id}
-              className="max-w-full max-h-[min(38vh,320px)] w-auto h-auto object-contain mx-auto"
-            />
-          </button>
-
-          <div className="p-4 space-y-4 pb-6">
-            {item.name ? (
-              <div className="text-sm text-gray-200 font-medium break-words">{item.name}</div>
-            ) : null}
-            <div className="text-xs text-gray-500 font-mono break-all">{item.drive_file_id}</div>
-            <a
-              href={driveFileViewUrl(item.drive_file_id)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 text-sm rounded-md border border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700 hover:border-gray-500 hover:text-white transition-colors"
+        <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+          <div className="lg:w-[min(42%,22rem)] shrink-0 border-b lg:border-b-0 lg:border-r border-gray-700 bg-gray-950 flex flex-col">
+            <button
+              type="button"
+              onClick={() => setImageLightbox(true)}
+              className="flex-1 min-h-[12rem] lg:min-h-0 p-4 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-inset"
+              title="Click to view full image"
             >
-              Open in Google Drive
-              <span aria-hidden="true">↗</span>
-            </a>
-
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-200">
-              <input
-                type="checkbox"
-                checked={published}
-                onChange={(e) => setPublished(e.target.checked)}
-                className="rounded border-gray-600 bg-gray-700 text-purple-600"
+              <GoogleDriveImage
+                src={src}
+                alt={item.name || item.drive_file_id}
+                className="max-w-full max-h-[min(40vh,28rem)] lg:max-h-[calc(100dvh-12rem)] w-auto h-auto object-contain"
               />
-              Published on site
-            </label>
-
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Tags (comma-separated)</label>
-              <input
-                type="text"
-                value={tagsStr}
-                onChange={(e) => setTagsStr(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-gray-950 border border-gray-600 rounded-md text-gray-100"
-                placeholder="sketch, commission, …"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Sort order</label>
-              <input
-                type="number"
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-gray-950 border border-gray-600 rounded-md text-gray-100"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-xs text-gray-400">
-                Characters ({selectedOcIds.length} selected)
-              </label>
-              <p className="text-[11px] text-gray-500 leading-snug">
-                Check who appears in this piece.
+            </button>
+            <div className="shrink-0 p-4 space-y-3 border-t border-gray-800">
+              {item.name ? (
+                <p className="text-sm text-gray-200 font-medium break-words leading-snug">{item.name}</p>
+              ) : null}
+              <p className="text-[11px] text-gray-500 font-mono break-all leading-relaxed">
+                {item.drive_file_id}
               </p>
-              <input
-                type="search"
-                value={ocSearch}
-                onChange={(e) => setOcSearch(e.target.value)}
-                placeholder="Filter characters…"
-                className="w-full px-3 py-1.5 text-sm bg-gray-950 border border-gray-600 rounded-md text-gray-100"
-              />
-              <div className="max-h-48 overflow-y-auto border border-gray-600 rounded-md bg-gray-950/80 p-2 space-y-1">
-                {filteredOcOptions.length === 0 ? (
-                  <p className="text-xs text-gray-500 px-1 py-2">No characters match.</p>
-                ) : (
-                  filteredOcOptions.map((oc) => {
-                    const isLinked = selectedOcIds.includes(oc.id);
-                    return (
-                      <label
-                        key={oc.id}
-                        className={`flex items-center gap-2 text-xs py-0.5 rounded px-1 cursor-pointer ${
-                          isLinked ? 'text-gray-200' : 'text-gray-400'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isLinked}
-                          onChange={() => toggleOc(oc.id)}
-                          className="rounded border-gray-600 bg-gray-700 text-purple-600 shrink-0"
-                        />
-                        <span className="truncate">{oc.name}</span>
-                      </label>
-                    );
-                  })
-                )}
-              </div>
+              <a
+                href={driveFileViewUrl(item.drive_file_id)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 text-sm rounded-md border border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700 hover:border-gray-500 hover:text-white transition-colors"
+              >
+                Open in Google Drive
+                <span aria-hidden="true">↗</span>
+              </a>
             </div>
+          </div>
 
-            {selectedOcIds.length > 0 ? (
-              <div className="rounded-md border border-purple-700/40 bg-purple-950/20 p-3 space-y-3">
-                <div>
-                  <label className="block text-xs text-purple-200/90 font-medium mb-1">
-                    Profile image
-                  </label>
-                  <p className="text-[11px] text-gray-500 leading-snug">
-                    Replace a linked character&apos;s primary image on profiles and cards.
-                  </p>
-                </div>
-                <div className="space-y-1.5">
-                  <span className="block text-xs text-gray-400">Apply to character</span>
-                  <div className="space-y-1">
-                    {linkedOcsForProfile.map((oc) => (
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+            <div className="p-4 sm:p-5 space-y-5 pb-8">
+              <GalleryEditSection
+                step={1}
+                title="Character galleries"
+                description="Choose which character pages include this image in their personal gallery. This does not change their profile picture."
+              >
+                <p className="text-xs text-gray-500">
+                  {selectedOcIds.length === 0
+                    ? 'Not linked to any character yet.'
+                    : `${selectedOcIds.length} character${selectedOcIds.length === 1 ? '' : 's'} selected`}
+                </p>
+                <input
+                  type="search"
+                  value={ocSearch}
+                  onChange={(e) => setOcSearch(e.target.value)}
+                  placeholder="Search characters…"
+                  className="w-full px-3 py-2 text-sm bg-gray-950 border border-gray-600 rounded-md text-gray-100"
+                />
+                <div className="max-h-56 sm:max-h-64 overflow-y-auto rounded-md border border-gray-600 bg-gray-950/80 p-2 space-y-0.5">
+                  {filteredOcOptions.length === 0 ? (
+                    <p className="text-sm text-gray-500 px-2 py-3">No characters match.</p>
+                  ) : (
+                    filteredOcOptions.map((oc) => {
+                      const isLinked = selectedOcIds.includes(oc.id);
+                      return (
                         <label
                           key={oc.id}
-                          className="flex items-center gap-2 text-xs py-1 px-1 rounded cursor-pointer text-gray-200"
+                          className={`flex items-center gap-2.5 text-sm py-1.5 px-2 rounded-md cursor-pointer hover:bg-gray-800/80 ${
+                            isLinked ? 'text-gray-100 bg-gray-800/40' : 'text-gray-400'
+                          }`}
                         >
                           <input
-                            type="radio"
-                            name={`profile-image-${item.id}`}
-                            checked={profileImageOcId === oc.id}
-                            onChange={() => setProfileImageOcId(oc.id)}
-                            className="border-gray-600 bg-gray-700 text-purple-500"
+                            type="checkbox"
+                            checked={isLinked}
+                            onChange={() => toggleOc(oc.id)}
+                            className="rounded border-gray-600 bg-gray-700 text-purple-600 shrink-0"
                           />
                           <span className="truncate">{oc.name}</span>
                         </label>
-                    ))}
+                      );
+                    })
+                  )}
+                </div>
+              </GalleryEditSection>
+
+              <GalleryEditSection
+                step={2}
+                title="Publish on site"
+                description="When published, this image can appear on the public site gallery. Unpublished images stay admin-only."
+                accent="green"
+              >
+                <div className="flex items-center justify-between gap-4 rounded-md border border-gray-700/80 bg-gray-950/60 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-100">
+                      {published ? 'Published' : 'Unpublished'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {published ? 'Visible on the public gallery' : 'Hidden from visitors'}
+                    </p>
                   </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={published}
+                      onChange={(e) => setPublished(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <span className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-green-600 peer-focus-visible:ring-2 peer-focus-visible:ring-green-500/50 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
+                  </label>
+                </div>
+              </GalleryEditSection>
+
+              <GalleryEditSection
+                step={3}
+                title="Replace main profile image"
+                description="Use this file as a character's primary image on their profile, cards, and infobox. Separate from their gallery list."
+                accent="purple"
+              >
+                <input
+                  type="search"
+                  value={profileOcSearch}
+                  onChange={(e) => setProfileOcSearch(e.target.value)}
+                  placeholder="Search character to update…"
+                  className="w-full px-3 py-2 text-sm bg-gray-950 border border-gray-600 rounded-md text-gray-100"
+                />
+                <div className="max-h-40 overflow-y-auto rounded-md border border-gray-600 bg-gray-950/80 p-2 space-y-0.5">
+                  {filteredProfileOcOptions.length === 0 ? (
+                    <p className="text-sm text-gray-500 px-2 py-3">No characters match.</p>
+                  ) : (
+                    filteredProfileOcOptions.map((oc) => (
+                      <label
+                        key={oc.id}
+                        className={`flex items-center gap-2.5 text-sm py-1.5 px-2 rounded-md cursor-pointer hover:bg-gray-800/80 ${
+                          profileImageOcId === oc.id
+                            ? 'text-purple-100 bg-purple-900/30'
+                            : 'text-gray-300'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name={`profile-image-${item.id}`}
+                          checked={profileImageOcId === oc.id}
+                          onChange={() => setProfileImageOcId(oc.id)}
+                          className="border-gray-600 bg-gray-700 text-purple-500 shrink-0"
+                        />
+                        <span className="truncate">{oc.name}</span>
+                      </label>
+                    ))
+                  )}
                 </div>
                 <button
                   type="button"
                   disabled={!profileImageOcId || settingMainImage}
                   onClick={() => void setAsMainImage()}
-                  className="w-full py-2 text-sm rounded-md border border-purple-600/60 bg-purple-900/40 text-purple-100 hover:bg-purple-900/60 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="w-full py-2.5 text-sm rounded-md border border-purple-500/70 bg-purple-700/50 text-purple-50 hover:bg-purple-700/70 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
                   {settingMainImage
-                    ? 'Updating…'
-                    : `Set as ${
-                        ocOptions.find((o) => o.id === profileImageOcId)?.name ?? 'character'
-                      }'s profile image`}
+                    ? 'Updating profile image…'
+                    : profileImageOcId
+                      ? `Replace ${
+                          ocOptions.find((o) => o.id === profileImageOcId)?.name ?? 'character'
+                        }'s main image`
+                      : 'Select a character above'}
                 </button>
-              </div>
-            ) : null}
+                <p className="text-xs text-gray-500">
+                  Applies immediately. Does not require saving the options above.
+                </p>
+              </GalleryEditSection>
 
-            {isDirty ? (
-              <p className="text-xs text-amber-300/90">You have unsaved changes.</p>
-            ) : null}
-            {localMessage ? (
-              <p
-                className={`text-xs ${
-                  localMessage === 'Saved' || localMessage.startsWith('Profile image updated')
-                    ? 'text-green-400'
-                    : 'text-red-400'
-                }`}
-              >
-                {localMessage}
-              </p>
-            ) : null}
+              <details className="rounded-lg border border-gray-700/60 bg-gray-800/20 px-4 py-3 group">
+                <summary className="text-sm font-medium text-gray-300 cursor-pointer list-none flex items-center justify-between gap-2">
+                  <span>Tags & sort order</span>
+                  <span className="text-gray-500 text-xs group-open:rotate-180 transition-transform">
+                    ▼
+                  </span>
+                </summary>
+                <div className="mt-4 space-y-3 pt-1 border-t border-gray-700/50">
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Tags (comma-separated)</label>
+                    <input
+                      type="text"
+                      value={tagsStr}
+                      onChange={(e) => setTagsStr(e.target.value)}
+                      className="w-full px-3 py-2 text-sm bg-gray-950 border border-gray-600 rounded-md text-gray-100"
+                      placeholder="sketch, commission, …"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Sort order</label>
+                    <input
+                      type="number"
+                      value={sortOrder}
+                      onChange={(e) => setSortOrder(e.target.value)}
+                      className="w-full px-3 py-2 text-sm bg-gray-950 border border-gray-600 rounded-md text-gray-100"
+                    />
+                  </div>
+                </div>
+              </details>
+
+              {isDirty ? (
+                <p className="text-sm text-amber-300/90 px-1">
+                  Unsaved changes to character links, publish status, tags, or sort order.
+                </p>
+              ) : null}
+              {localMessage ? (
+                <p
+                  className={`text-sm px-1 ${
+                    localMessage === 'Saved' || localMessage.startsWith('Profile image updated')
+                      ? 'text-green-400'
+                      : 'text-red-400'
+                  }`}
+                >
+                  {localMessage}
+                </p>
+              ) : null}
+            </div>
           </div>
         </div>
 
-        <div className="shrink-0 p-4 border-t border-gray-700 bg-gray-900/95 space-y-2">
+        <div className="shrink-0 px-4 sm:px-5 py-4 border-t border-gray-700 bg-gray-900/95">
+          <p className="text-xs text-gray-500 mb-2">
+            Save applies to character galleries, publish status, tags, and sort order only.
+          </p>
           <button
             type="button"
             disabled={saving || !isDirty}
             onClick={() => void save()}
-            className={`w-full py-2.5 text-sm rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`w-full py-3 text-sm rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
               isDirty
                 ? 'bg-purple-600 hover:bg-purple-700 text-white'
                 : 'bg-gray-800 text-gray-400 border border-gray-700'
             }`}
           >
-            {saving ? 'Saving…' : isDirty ? 'Save changes' : 'No changes'}
+            {saving ? 'Saving…' : isDirty ? 'Save gallery settings' : 'No changes to save'}
           </button>
         </div>
       </aside>

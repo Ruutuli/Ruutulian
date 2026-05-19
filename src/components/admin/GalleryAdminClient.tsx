@@ -428,9 +428,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
 
   return (
     <>
-      <div
-        className={`space-y-6 min-w-0 transition-[margin] duration-200 ${showBulkBar ? 'mr-80' : ''}`}
-      >
+      <div className="space-y-6 min-w-0">
       <section className="rounded-lg border border-gray-700/80 bg-gray-800/30 p-4 sm:p-5 space-y-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <p className="text-gray-400 text-sm max-w-2xl leading-relaxed">
@@ -992,12 +990,12 @@ function GalleryBulkOcTagBar({
           )}
         </div>
       </div>
-      <div className="shrink-0 px-4 py-3 border-t border-gray-700 bg-gray-900/80 space-y-2">
+      <div className="shrink-0 px-4 py-3 border-t border-gray-700 bg-gray-950 space-y-2">
         <button
           type="button"
           disabled={!canApply}
           onClick={onAdd}
-          className="w-full px-4 py-2 text-sm rounded-md bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-50 font-medium"
+          className="w-full px-4 py-2.5 text-sm rounded-md bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-50 font-medium"
         >
           {applying ? 'Applying…' : 'Add to selected'}
         </button>
@@ -1005,7 +1003,7 @@ function GalleryBulkOcTagBar({
           type="button"
           disabled={!canApply}
           onClick={onRemove}
-          className="w-full px-4 py-2 text-sm rounded-md border border-gray-500 bg-gray-800 text-gray-100 hover:bg-gray-700 disabled:opacity-50"
+          className="w-full px-4 py-2.5 text-sm rounded-md border border-red-500/60 bg-red-950/80 text-red-100 hover:bg-red-900/70 hover:border-red-400/70 disabled:opacity-50 font-medium"
         >
           Remove from selected
         </button>

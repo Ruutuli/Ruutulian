@@ -32,7 +32,7 @@ import { logger } from '@/lib/logger';
 import { formatSupabaseErrorForLog } from '@/lib/utils/supabase-error';
 import { generateProfilePageSchema } from '@/lib/seo/structured-data';
 import { driveFileViewUrl } from '@/lib/gallery/constants';
-import { isGalleryImageNsfw } from '@/lib/gallery/nsfw-lookup';
+import { isGalleryImageNsfw, mergeGalleryEntriesWithNsfw } from '@/lib/gallery/nsfw-lookup';
 
 export async function generateMetadata({
   params,
@@ -216,6 +216,7 @@ export default async function OCDetailPage({
     isNsfw: false,
   }));
 
+  let taggedEntries: { url: string; isNsfw: boolean }[] = [];
   try {
     const { data: galleryRows } = await supabase
       .from('gallery_items')
@@ -226,7 +227,7 @@ export default async function OCDetailPage({
       .order('created_at', { ascending: false })
       .limit(24);
 
-    const taggedEntries = (galleryRows ?? [])
+    taggedEntries = (galleryRows ?? [])
       .map((r: { drive_file_id?: string | null; is_nsfw?: boolean | null }) =>
         r.drive_file_id
           ? { url: driveFileViewUrl(String(r.drive_file_id)), isNsfw: Boolean(r.is_nsfw) }
@@ -235,18 +236,25 @@ export default async function OCDetailPage({
       .filter((e): e is { url: string; isNsfw: boolean } => Boolean(e));
 
     if (taggedEntries.length > 0) {
-      const byUrl = new Map<string, { url: string; isNsfw: boolean }>();
-      for (const entry of [...taggedEntries, ...galleryEntries]) {
-        if (!byUrl.has(entry.url)) byUrl.set(entry.url, entry);
-      }
-      galleryEntries = Array.from(byUrl.values());
-      typedOc.gallery = galleryEntries.map((e) => e.url);
+      galleryEntries = [...taggedEntries, ...galleryEntries];
     }
   } catch (err) {
     logger.warn('OCDetailPage', 'Failed to load tagged gallery items', {
       oc_id: typedOc.id,
       error: err instanceof Error ? err.message : String(err),
     });
+  }
+
+  if (galleryEntries.length > 0) {
+    try {
+      galleryEntries = await mergeGalleryEntriesWithNsfw(supabase, galleryEntries);
+      typedOc.gallery = galleryEntries.map((e) => e.url);
+    } catch (err) {
+      logger.warn('OCDetailPage', 'Failed to resolve gallery NSFW flags', {
+        oc_id: typedOc.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
   
   const config = await getSiteConfig();

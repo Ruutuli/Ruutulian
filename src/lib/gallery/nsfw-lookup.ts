@@ -1,6 +1,45 @@
 import { getGoogleDriveFileId } from '@/lib/utils/googleDriveImage';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+export type GalleryUrlEntry = { url: string; isNsfw?: boolean };
+
+/** Merge gallery URLs by Drive file id and apply NSFW flags from gallery_items. */
+export async function mergeGalleryEntriesWithNsfw(
+  supabase: SupabaseClient,
+  entries: GalleryUrlEntry[]
+): Promise<{ url: string; isNsfw: boolean }[]> {
+  if (entries.length === 0) return [];
+
+  const fileIds = entries
+    .map((e) => getGoogleDriveFileId(e.url))
+    .filter((id): id is string => Boolean(id));
+  const flags = await getNsfwFlagsByDriveFileIds(supabase, fileIds);
+
+  const byKey = new Map<string, { url: string; isNsfw: boolean }>();
+
+  for (const entry of entries) {
+    const fileId = getGoogleDriveFileId(entry.url);
+    const key = fileId ?? entry.url.trim();
+    if (!key) continue;
+
+    const fromDb = fileId ? Boolean(flags.get(fileId)) : false;
+    const isNsfw = Boolean(entry.isNsfw) || fromDb;
+    const existing = byKey.get(key);
+
+    if (!existing) {
+      byKey.set(key, { url: entry.url, isNsfw });
+      continue;
+    }
+
+    byKey.set(key, {
+      url: existing.url,
+      isNsfw: existing.isNsfw || isNsfw,
+    });
+  }
+
+  return Array.from(byKey.values());
+}
+
 export async function getNsfwFlagsByDriveFileIds(
   supabase: SupabaseClient,
   fileIds: string[]

@@ -8,6 +8,7 @@ import {
   revalidateGalleryCaches,
   revalidateOcPages,
 } from '@/lib/gallery/revalidate';
+import { assignProfileImagesFromGallery } from '@/lib/gallery/auto-profile-image';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -129,12 +130,23 @@ export async function POST(request: Request) {
       }
     }
 
+    let profileImagesSet: Awaited<ReturnType<typeof assignProfileImagesFromGallery>> = [];
+    if ((mode === 'add' || mode === 'replace') && validIds.length > 0) {
+      const firstGalleryItemId = validIds[0];
+      profileImagesSet = await assignProfileImagesFromGallery(
+        supabase,
+        ocs.map((ocId) => ({ ocId, galleryItemId: firstGalleryItemId }))
+      );
+    }
+
     revalidateGalleryCaches();
-    await revalidateOcPages(supabase, ocs);
+    const revalidateIds = [...new Set([...ocs, ...profileImagesSet.map((r) => r.ocId)])];
+    await revalidateOcPages(supabase, revalidateIds);
 
     return NextResponse.json({
       success: true,
       data: { itemCount: validIds.length, ocCount: ocs.length, mode },
+      profileImagesSet,
     });
   } catch (error) {
     logger.error('GalleryBulkOcTag', 'Request failed', error);

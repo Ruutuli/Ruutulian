@@ -58,6 +58,17 @@ function parseTags(input: string): string[] {
     .filter(Boolean);
 }
 
+type AutoProfileImageResult = { ocId: string; ocName: string; image_url: string };
+
+function formatAutoProfileImageNote(results: AutoProfileImageResult[] | undefined): string {
+  if (!results?.length) return '';
+  if (results.length === 1) {
+    return ` Set ${results[0].ocName}'s profile image (they had none).`;
+  }
+  const names = results.map((r) => r.ocName).join(', ');
+  return ` Set profile images for ${names} (no profile image yet).`;
+}
+
 function normalizeTextForOcMatch(raw: string): string {
   return raw
     .replace(/\.[a-z0-9]+$/i, '')
@@ -417,12 +428,15 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
         return;
       }
       const count = json.data?.itemCount ?? selectedIds.size;
+      const profileNote = formatAutoProfileImageNote(
+        json.profileImagesSet as AutoProfileImageResult[] | undefined
+      );
       setMessage({
         type: 'success',
         text:
           mode === 'remove'
             ? `Updated character links on ${count} image(s) (${modeLabel}: ${ocNames}).`
-            : `Updated character links on ${count} image(s) (${modeLabel}: ${ocNames}). Images were published for the public site.`,
+            : `Updated character links on ${count} image(s) (${modeLabel}: ${ocNames}). Images were published for the public site.${profileNote}`,
       });
       setSelectedIds(new Set());
       await reloadCurrentPage();
@@ -1319,16 +1333,31 @@ function GalleryAdminEditDrawer({
         return;
       }
       if (json.data?.published === true) setPublished(true);
+      applyAutoProfileImageResults(json.profileImagesSet as AutoProfileImageResult[] | undefined);
       await onSaved();
       const publishedNote =
         selectedOcIds.length > 0 && !item.published ? ' Published on the public site.' : '';
-      setLocalMessage(`Saved.${publishedNote}`);
+      if (!json.profileImagesSet?.length) {
+        setLocalMessage(`Saved.${publishedNote}`);
+      }
       window.setTimeout(() => setLocalMessage(null), 2000);
     } catch {
       setLocalMessage('Save failed');
     } finally {
       setSaving(false);
     }
+  }
+
+  function applyAutoProfileImageResults(results: AutoProfileImageResult[] | undefined) {
+    if (!results?.length) return;
+    setOcImageUrlOverrides((prev) => {
+      const next = { ...prev };
+      for (const r of results) next[r.ocId] = r.image_url;
+      return next;
+    });
+    const note = formatAutoProfileImageNote(results);
+    setLocalMessage(`Character links updated.${note}`);
+    window.setTimeout(() => setLocalMessage(null), 4000);
   }
 
   async function persistOcLinks(nextIds: string[]) {
@@ -1346,6 +1375,7 @@ function GalleryAdminEditDrawer({
         return;
       }
       if (json.data?.published === true) setPublished(true);
+      applyAutoProfileImageResults(json.profileImagesSet as AutoProfileImageResult[] | undefined);
       await onSaved();
     } catch {
       setLocalMessage('Failed to update character links');
@@ -1678,7 +1708,9 @@ function GalleryAdminEditDrawer({
               {localMessage ? (
                 <p
                   className={`text-sm px-1 ${
-                    localMessage === 'Saved' || localMessage.startsWith('Profile image updated')
+                    localMessage === 'Saved' ||
+                      localMessage.startsWith('Profile image updated') ||
+                      localMessage.startsWith('Character links updated')
                       ? 'text-green-400'
                       : 'text-red-400'
                   }`}

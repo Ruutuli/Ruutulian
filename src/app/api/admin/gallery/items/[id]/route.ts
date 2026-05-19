@@ -8,6 +8,7 @@ import {
   revalidateGalleryCaches,
   revalidateOcPages,
 } from '@/lib/gallery/revalidate';
+import { assignProfileImagesFromGallery } from '@/lib/gallery/auto-profile-image';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,7 +39,15 @@ export async function PATCH(
     const supabase = createAdminClient();
 
     let linkedOcIds: string[] = [];
+    let newlyLinkedOcIds: string[] = [];
     if (Array.isArray(ocIds)) {
+      const { data: prevLinks } = await supabase
+        .from('gallery_item_ocs')
+        .select('oc_id')
+        .eq('gallery_item_id', id);
+
+      const prevOcIds = new Set((prevLinks ?? []).map((r) => r.oc_id as string));
+
       const { error: delError } = await supabase.from('gallery_item_ocs').delete().eq('gallery_item_id', id);
       if (delError) {
         logger.error('GalleryItemPatch', 'Clear junction failed', delError);
@@ -46,6 +55,7 @@ export async function PATCH(
       }
 
       linkedOcIds = ocIds.filter((oid) => typeof oid === 'string' && oid.length > 0);
+      newlyLinkedOcIds = linkedOcIds.filter((oid) => !prevOcIds.has(oid));
       const rows = linkedOcIds.map((oc_id) => ({ gallery_item_id: id, oc_id }));
 
       if (rows.length > 0) {
@@ -110,12 +120,21 @@ export async function PATCH(
       return NextResponse.json({ success: false, error: fetchError.message }, { status: 400 });
     }
 
-    revalidateGalleryCaches();
-    if (linkedOcIds.length > 0) {
-      await revalidateOcPages(supabase, linkedOcIds);
+    let profileImagesSet: Awaited<ReturnType<typeof assignProfileImagesFromGallery>> = [];
+    if (newlyLinkedOcIds.length > 0) {
+      profileImagesSet = await assignProfileImagesFromGallery(
+        supabase,
+        newlyLinkedOcIds.map((ocId) => ({ ocId, galleryItemId: id }))
+      );
     }
 
-    return NextResponse.json({ success: true, data: row });
+    revalidateGalleryCaches();
+    const revalidateIds = [...new Set([...linkedOcIds, ...profileImagesSet.map((r) => r.ocId)])];
+    if (revalidateIds.length > 0) {
+      await revalidateOcPages(supabase, revalidateIds);
+    }
+
+    return NextResponse.json({ success: true, data: row, profileImagesSet });
   } catch (error) {
     logger.error('GalleryItemPatch', 'Request failed', error);
     return handleError(error, 'Failed to update gallery item');

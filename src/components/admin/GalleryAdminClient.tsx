@@ -91,6 +91,11 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
   const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkOcIds, setBulkOcIds] = useState<string[]>([]);
+  const [bulkOcSearch, setBulkOcSearch] = useState('');
+  const [bulkApplying, setBulkApplying] = useState(false);
 
   const pageRef = useRef(page);
   pageRef.current = page;
@@ -177,6 +182,101 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
   const hasActiveFilters =
     search.trim() !== '' || publishedFilter !== 'all' || ocId !== '' || sort !== 'sort_order';
 
+  const pageItemIds = useMemo(() => items.map((i) => i.id), [items]);
+  const allOnPageSelected =
+    pageItemIds.length > 0 && pageItemIds.every((id) => selectedIds.has(id));
+
+  const filteredBulkOcOptions = useMemo(() => {
+    const q = bulkOcSearch.trim().toLowerCase();
+    if (!q) return ocOptions;
+    return ocOptions.filter(
+      (oc) => oc.name.toLowerCase().includes(q) || oc.slug.toLowerCase().includes(q)
+    );
+  }, [ocOptions, bulkOcSearch]);
+
+  function exitSelectionMode() {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+    setBulkOcIds([]);
+    setBulkOcSearch('');
+  }
+
+  function toggleItemSelection(itemId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  }
+
+  function toggleSelectAllOnPage() {
+    if (allOnPageSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const id of pageItemIds) next.delete(id);
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const id of pageItemIds) next.add(id);
+        return next;
+      });
+    }
+  }
+
+  async function applyBulkOcTag(mode: 'add' | 'remove' | 'replace') {
+    if (selectedIds.size === 0 || bulkOcIds.length === 0) return;
+
+    const modeLabel =
+      mode === 'add' ? 'add' : mode === 'remove' ? 'remove' : 'replace with only';
+    const ocNames = bulkOcIds
+      .map((id) => ocOptions.find((o) => o.id === id)?.name)
+      .filter(Boolean)
+      .join(', ');
+
+    if (
+      mode === 'replace' &&
+      !window.confirm(
+        `Replace character links on ${selectedIds.size} image(s) with only: ${ocNames}? Existing links on those images will be cleared.`
+      )
+    ) {
+      return;
+    }
+
+    setBulkApplying(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/admin/gallery/items/bulk-oc-tag', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          itemIds: [...selectedIds],
+          ocIds: bulkOcIds,
+          mode,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        setMessage({ type: 'error', text: json.error || 'Bulk tag failed' });
+        return;
+      }
+      const count = json.data?.itemCount ?? selectedIds.size;
+      setMessage({
+        type: 'success',
+        text: `Updated character links on ${count} image(s) (${modeLabel}: ${ocNames}).`,
+      });
+      setSelectedIds(new Set());
+      await reloadCurrentPage();
+    } catch (e) {
+      logger.error('GalleryAdmin', 'Bulk tag failed', e);
+      setMessage({ type: 'error', text: 'Bulk tag request failed' });
+    } finally {
+      setBulkApplying(false);
+    }
+  }
+
   async function runSync() {
     setSyncing(true);
     setMessage(null);
@@ -207,8 +307,10 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
     }
   }
 
+  const showBulkBar = selectionMode && selectedIds.size > 0;
+
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${showBulkBar ? 'pb-52' : ''}`}>
       <section className="rounded-lg border border-gray-700/80 bg-gray-800/30 p-4 sm:p-5 space-y-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <p className="text-gray-400 text-sm max-w-2xl leading-relaxed">
@@ -313,10 +415,51 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
               Clear filters
             </button>
           ) : null}
+          <button
+            type="button"
+            onClick={() => {
+              if (selectionMode) exitSelectionMode();
+              else {
+                setSelectedId(null);
+                setSelectionMode(true);
+              }
+            }}
+            className={`text-sm px-3 py-1.5 rounded-md border transition-colors ${
+              selectionMode
+                ? 'border-purple-500 bg-purple-900/40 text-purple-200'
+                : 'border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700'
+            }`}
+          >
+            {selectionMode ? 'Cancel select' : 'Select images'}
+          </button>
           <span className="text-sm text-gray-500 ml-auto">
             {loading ? 'Loading…' : `${total.toLocaleString()} match${total === 1 ? '' : 'es'}`}
           </span>
         </div>
+
+        {selectionMode && items.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-gray-700/60">
+            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={allOnPageSelected}
+                onChange={toggleSelectAllOnPage}
+                className="rounded border-gray-600 bg-gray-700 text-purple-600"
+              />
+              Select all on this page ({pageItemIds.length})
+            </label>
+            {selectedIds.size > 0 ? (
+              <button
+                type="button"
+                onClick={() => setSelectedIds(new Set())}
+                className="text-sm text-gray-400 hover:text-gray-200 underline-offset-2 hover:underline"
+              >
+                Clear selection
+              </button>
+            ) : null}
+            <span className="text-sm text-purple-300 ml-auto">{selectedIds.size} selected</span>
+          </div>
+        ) : null}
       </section>
 
       {loading && items.length === 0 ? (
@@ -354,8 +497,14 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
               <GalleryAdminTile
                 key={item.id}
                 item={item}
-                selected={selectedId === item.id}
-                onSelect={() => setSelectedId(item.id)}
+                selectionMode={selectionMode}
+                selected={
+                  selectionMode ? selectedIds.has(item.id) : selectedId === item.id
+                }
+                onSelect={() => {
+                  if (selectionMode) toggleItemSelection(item.id);
+                  else setSelectedId(item.id);
+                }}
               />
             ))}
           </div>
@@ -370,7 +519,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
         </>
       )}
 
-      {selectedItem ? (
+      {selectedItem && !selectionMode ? (
         <GalleryAdminEditDrawer
           item={selectedItem}
           ocOptions={ocOptions}
@@ -378,6 +527,25 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
           onSaved={async () => {
             await reloadCurrentPage();
           }}
+        />
+      ) : null}
+
+      {selectionMode && selectedIds.size > 0 ? (
+        <GalleryBulkOcTagBar
+          selectedCount={selectedIds.size}
+          ocOptions={filteredBulkOcOptions}
+          bulkOcSearch={bulkOcSearch}
+          onBulkOcSearchChange={setBulkOcSearch}
+          bulkOcIds={bulkOcIds}
+          onToggleOc={(ocId) => {
+            setBulkOcIds((prev) =>
+              prev.includes(ocId) ? prev.filter((id) => id !== ocId) : [...prev, ocId]
+            );
+          }}
+          applying={bulkApplying}
+          onAdd={() => void applyBulkOcTag('add')}
+          onRemove={() => void applyBulkOcTag('remove')}
+          onReplace={() => void applyBulkOcTag('replace')}
         />
       ) : null}
     </div>
@@ -531,12 +699,107 @@ function GalleryAdminPaginationBar({
   );
 }
 
+function GalleryBulkOcTagBar({
+  selectedCount,
+  ocOptions,
+  bulkOcSearch,
+  onBulkOcSearchChange,
+  bulkOcIds,
+  onToggleOc,
+  applying,
+  onAdd,
+  onRemove,
+  onReplace,
+}: {
+  selectedCount: number;
+  ocOptions: GalleryOcOption[];
+  bulkOcSearch: string;
+  onBulkOcSearchChange: (value: string) => void;
+  bulkOcIds: string[];
+  onToggleOc: (ocId: string) => void;
+  applying: boolean;
+  onAdd: () => void;
+  onRemove: () => void;
+  onReplace: () => void;
+}) {
+  const canApply = bulkOcIds.length > 0 && !applying;
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-purple-700/60 bg-gray-900/98 backdrop-blur-sm shadow-[0_-12px_40px_rgba(0,0,0,0.5)]">
+      <div className="max-w-6xl mx-auto px-4 py-4 space-y-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <p className="text-sm text-gray-300">
+          Tag <span className="text-purple-300 font-medium">{selectedCount}</span> selected image
+          {selectedCount === 1 ? '' : 's'} with character(s):
+        </p>
+        <input
+          type="search"
+          value={bulkOcSearch}
+          onChange={(e) => onBulkOcSearchChange(e.target.value)}
+          placeholder="Search characters…"
+          className="w-full px-3 py-2 text-sm bg-gray-950 border border-gray-600 rounded-md text-gray-100"
+        />
+        <div className="max-h-32 overflow-y-auto rounded-md border border-gray-600 bg-gray-950/80 p-2 space-y-0.5">
+          {ocOptions.length === 0 ? (
+            <p className="text-sm text-gray-500 px-2 py-2">No characters match.</p>
+          ) : (
+            ocOptions.map((oc) => (
+              <label
+                key={oc.id}
+                className={`flex items-center gap-2.5 text-sm py-1.5 px-2 rounded-md cursor-pointer hover:bg-gray-800/80 ${
+                  bulkOcIds.includes(oc.id) ? 'text-gray-100 bg-gray-800/40' : 'text-gray-400'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={bulkOcIds.includes(oc.id)}
+                  onChange={() => onToggleOc(oc.id)}
+                  className="rounded border-gray-600 bg-gray-700 text-purple-600 shrink-0"
+                />
+                <span className="truncate">{oc.name}</span>
+              </label>
+            ))
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={!canApply}
+            onClick={onAdd}
+            className="px-4 py-2 text-sm rounded-md bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 font-medium"
+          >
+            {applying ? 'Applying…' : 'Add to selected'}
+          </button>
+          <button
+            type="button"
+            disabled={!canApply}
+            onClick={onRemove}
+            className="px-4 py-2 text-sm rounded-md border border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700 disabled:opacity-50"
+          >
+            Remove from selected
+          </button>
+          <button
+            type="button"
+            disabled={!canApply}
+            onClick={onReplace}
+            className="px-4 py-2 text-sm rounded-md border border-amber-600/70 bg-amber-900/30 text-amber-100 hover:bg-amber-900/50 disabled:opacity-50"
+            title="Clears existing character links on each image, then applies only the selected characters"
+          >
+            Replace links
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function GalleryAdminTile({
   item,
+  selectionMode,
   selected,
   onSelect,
 }: {
   item: GalleryAdminItem;
+  selectionMode: boolean;
   selected: boolean;
   onSelect: () => void;
 }) {
@@ -553,7 +816,9 @@ function GalleryAdminTile({
       onClick={onSelect}
       className={`group text-left rounded-lg border overflow-hidden transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
         selected
-          ? 'border-purple-500 ring-1 ring-purple-500/50'
+          ? selectionMode
+            ? 'border-purple-400 ring-2 ring-purple-400/60 bg-purple-950/20'
+            : 'border-purple-500 ring-1 ring-purple-500/50'
           : 'border-gray-700/80 hover:border-gray-500 bg-gray-800/40'
       }`}
     >
@@ -563,6 +828,18 @@ function GalleryAdminTile({
           alt={displayName}
           className="w-full h-full object-cover"
         />
+        {selectionMode ? (
+          <span
+            className={`absolute top-1.5 left-1.5 flex h-5 w-5 items-center justify-center rounded border text-[10px] font-bold ${
+              selected
+                ? 'bg-purple-600 border-purple-400 text-white'
+                : 'bg-gray-900/90 border-gray-500 text-transparent'
+            }`}
+            aria-hidden
+          >
+            ✓
+          </span>
+        ) : null}
         <span
           className={`absolute top-1.5 right-1.5 text-[10px] font-medium px-1.5 py-0.5 rounded ${
             item.published
@@ -823,7 +1100,7 @@ function GalleryAdminEditDrawer({
         aria-label="Close editor"
         onClick={onClose}
       />
-      <aside className="fixed top-0 right-0 z-50 h-dvh w-full max-w-lg sm:max-w-2xl lg:max-w-3xl bg-gray-900 border-l border-gray-700 shadow-2xl flex flex-col overflow-hidden">
+      <aside className="fixed top-0 right-0 z-50 h-dvh max-h-dvh w-full max-w-lg sm:max-w-2xl lg:max-w-3xl bg-gray-900 border-l border-gray-700 shadow-2xl flex flex-col overflow-hidden">
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-700 shrink-0">
           <div className="min-w-0">
             <h2 className="text-base font-semibold text-gray-100">Edit gallery item</h2>
@@ -841,18 +1118,19 @@ function GalleryAdminEditDrawer({
           </button>
         </div>
 
-        <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
-          <div className="lg:w-[min(42%,22rem)] shrink-0 border-b lg:border-b-0 lg:border-r border-gray-700 bg-gray-950 flex flex-col">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+          <div className="flex flex-col lg:flex-row lg:min-h-full">
+          <div className="lg:w-[min(42%,22rem)] shrink-0 border-b lg:border-b-0 lg:border-r border-gray-700 bg-gray-950 flex flex-col lg:sticky lg:top-0 lg:self-start">
             <button
               type="button"
               onClick={() => setImageLightbox(true)}
-              className="flex-1 min-h-[12rem] lg:min-h-0 p-4 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-inset"
+              className="p-4 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-inset max-h-[min(36vh,280px)] lg:max-h-[min(52vh,420px)]"
               title="Click to view full image"
             >
               <GoogleDriveImage
                 src={src}
                 alt={item.name || item.drive_file_id}
-                className="max-w-full max-h-[min(40vh,28rem)] lg:max-h-[calc(100dvh-12rem)] w-auto h-auto object-contain"
+                className="max-w-full max-h-[min(34vh,260px)] lg:max-h-[min(50vh,400px)] w-auto h-auto object-contain"
               />
             </button>
             <div className="shrink-0 p-4 space-y-3 border-t border-gray-800">
@@ -874,8 +1152,8 @@ function GalleryAdminEditDrawer({
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-            <div className="p-4 sm:p-5 space-y-5 pb-8">
+          <div className="flex-1 min-w-0">
+            <div className="p-4 sm:p-5 space-y-5 pb-4">
               <GalleryEditSection
                 step={1}
                 title="Character galleries"
@@ -1052,9 +1330,10 @@ function GalleryAdminEditDrawer({
               ) : null}
             </div>
           </div>
+          </div>
         </div>
 
-        <div className="shrink-0 px-4 sm:px-5 py-4 border-t border-gray-700 bg-gray-900/95">
+        <div className="shrink-0 z-20 px-4 sm:px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-gray-700 bg-gray-900 shadow-[0_-8px_24px_rgba(0,0,0,0.55)]">
           <p className="text-xs text-gray-500 mb-2">
             Save applies to character galleries, publish status, tags, and sort order only.
           </p>

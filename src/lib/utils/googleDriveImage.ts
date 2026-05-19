@@ -220,6 +220,7 @@ export function isImageUrl(url: string | null | undefined): boolean {
   if (/files\.catbox\.moe\//i.test(trimmed)) return true;
   if (/static\.wikia\.nocookie\.net\//i.test(trimmed)) return true;
   if (/supabase\.co\/storage\/v1\/object\//i.test(trimmed)) return true;
+  if (trimmed.startsWith('/api/images/proxy')) return true;
   if (IMAGE_EXTENSION.test(trimmed)) return true;
 
   try {
@@ -282,6 +283,30 @@ export function getProxyUrl(url: string | null | undefined): string {
   }
 
   return trimmed;
+}
+
+/** True when the browser decoded a 1×1 image (our proxy error fallback is a transparent PNG). */
+export function isTinyPlaceholderImage(naturalWidth: number, naturalHeight: number): boolean {
+  return naturalWidth <= 1 && naturalHeight <= 1;
+}
+
+/**
+ * Ordered URLs to try in the browser when the proxy returns a 1×1 fallback or fails.
+ * Skips duplicates and the proxy path itself.
+ */
+export function getBrowserImageFallbackUrls(url: string | null | undefined): string[] {
+  if (!url?.trim()) return [];
+  const trimmed = decodeUrlEntities(url.trim());
+  const fileId = getGoogleDriveFileId(trimmed);
+  if (!fileId) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const candidate of getGoogleDriveImageUrls(trimmed)) {
+    if (seen.has(candidate) || candidate.startsWith('/api/images/proxy')) continue;
+    seen.add(candidate);
+    out.push(candidate);
+  }
+  return out;
 }
 
 /**

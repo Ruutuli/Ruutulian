@@ -188,11 +188,16 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
 
   const filteredBulkOcOptions = useMemo(() => {
     const q = bulkOcSearch.trim().toLowerCase();
-    if (!q) return ocOptions;
+    if (!q) return [];
     return ocOptions.filter(
       (oc) => oc.name.toLowerCase().includes(q) || oc.slug.toLowerCase().includes(q)
     );
   }, [ocOptions, bulkOcSearch]);
+
+  const bulkSelectedOcs = useMemo(
+    () => ocOptions.filter((oc) => bulkOcIds.includes(oc.id)),
+    [ocOptions, bulkOcIds]
+  );
 
   function exitSelectionMode() {
     setSelectionMode(false);
@@ -296,9 +301,14 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
           text: `${errDetail} (${json.synced ?? 0} files touched).`,
         });
       } else {
+        const removed = json.removed ?? 0;
+        const removedNote =
+          removed > 0
+            ? ` Removed ${removed} item(s) from old or deleted folders.`
+            : '';
         setMessage({
           type: 'success',
-          text: `Synced ${json.synced ?? 0} image(s) from ${json.folders ?? 0} folder(s).`,
+          text: `Synced ${json.synced ?? 0} image(s) from ${json.folders ?? 0} configured folder(s).${removedNote}`,
         });
       }
       await loadItems(pageRef.current);
@@ -312,12 +322,19 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
 
   const showBulkBar = selectionMode && selectedIds.size > 0;
 
+  function handleBulkOcSearchChange(value: string) {
+    setBulkOcSearch(value);
+    setBulkOcIds([]);
+  }
+
   return (
-    <div className={`space-y-6 ${showBulkBar ? 'pb-52' : ''}`}>
+    <div className={showBulkBar ? 'lg:flex lg:gap-6 lg:items-start pr-[min(20rem,42vw)] lg:pr-0' : ''}>
+      <div className={`space-y-6 min-w-0 ${showBulkBar ? 'lg:flex-1' : 'w-full'}`}>
       <section className="rounded-lg border border-gray-700/80 bg-gray-800/30 p-4 sm:p-5 space-y-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <p className="text-gray-400 text-sm max-w-2xl leading-relaxed">
-            Pull images from the Drive folders configured in Site Settings (including nested subfolders).
+            Pull images only from the Drive folders listed in Site Settings (including nested subfolders).
+            Sync removes gallery rows from folders no longer in settings or files deleted from Drive.
             New files stay unpublished until you enable them. Share folders with your Google service account
             email (Viewer).
           </p>
@@ -532,19 +549,22 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
           }}
         />
       ) : null}
+      </div>
 
-      {selectionMode && selectedIds.size > 0 ? (
+      {showBulkBar ? (
         <GalleryBulkOcTagBar
           selectedCount={selectedIds.size}
           ocOptions={filteredBulkOcOptions}
+          selectedOcs={bulkSelectedOcs}
           bulkOcSearch={bulkOcSearch}
-          onBulkOcSearchChange={setBulkOcSearch}
+          onBulkOcSearchChange={handleBulkOcSearchChange}
           bulkOcIds={bulkOcIds}
           onToggleOc={(ocId) => {
             setBulkOcIds((prev) =>
               prev.includes(ocId) ? prev.filter((id) => id !== ocId) : [...prev, ocId]
             );
           }}
+          onClearOcSelection={() => setBulkOcIds([])}
           applying={bulkApplying}
           onAdd={() => void applyBulkOcTag('add')}
           onRemove={() => void applyBulkOcTag('remove')}
@@ -705,10 +725,12 @@ function GalleryAdminPaginationBar({
 function GalleryBulkOcTagBar({
   selectedCount,
   ocOptions,
+  selectedOcs,
   bulkOcSearch,
   onBulkOcSearchChange,
   bulkOcIds,
   onToggleOc,
+  onClearOcSelection,
   applying,
   onAdd,
   onRemove,
@@ -716,26 +738,32 @@ function GalleryBulkOcTagBar({
 }: {
   selectedCount: number;
   ocOptions: GalleryOcOption[];
+  selectedOcs: GalleryOcOption[];
   bulkOcSearch: string;
   onBulkOcSearchChange: (value: string) => void;
   bulkOcIds: string[];
   onToggleOc: (ocId: string) => void;
+  onClearOcSelection: () => void;
   applying: boolean;
   onAdd: () => void;
   onRemove: () => void;
   onReplace: () => void;
 }) {
   const canApply = bulkOcIds.length > 0 && !applying;
+  const hasSearch = bulkOcSearch.trim().length > 0;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-30 border-t-2 border-purple-500/80 bg-gray-950 shadow-[0_-16px_48px_rgba(0,0,0,0.85)] ring-1 ring-inset ring-gray-700/80">
-      <div className="max-w-6xl mx-auto px-4 py-4 space-y-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+    <aside
+      className="fixed right-0 top-16 bottom-0 z-30 w-[min(20rem,42vw)] lg:static lg:top-auto lg:bottom-auto lg:w-80 lg:max-h-[calc(100vh-6rem)] flex flex-col shrink-0 border-l-2 lg:border-2 border-purple-500/70 bg-gray-950 shadow-[-8px_0_32px_rgba(0,0,0,0.45)] lg:rounded-lg lg:shadow-xl overflow-hidden"
+      aria-label="Bulk character tagging"
+    >
+      <div className="px-4 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
         <p className="text-sm font-medium text-gray-100">
-          Tag <span className="text-purple-200 font-semibold">{selectedCount}</span> selected image
-          {selectedCount === 1 ? '' : 's'} with character(s):
+          Tag <span className="text-purple-200 font-semibold">{selectedCount}</span> image
+          {selectedCount === 1 ? '' : 's'}
         </p>
         <p className="text-xs text-gray-400 leading-relaxed">
-          Add or Replace also publishes images so they appear on each character&apos;s page and the public gallery.
+          Search, pick character(s), then apply. Changing the search clears your character pick.
         </p>
         <input
           type="search"
@@ -744,15 +772,47 @@ function GalleryBulkOcTagBar({
           placeholder="Search characters…"
           className="w-full px-3 py-2 text-sm bg-gray-900 border border-gray-500 rounded-md text-gray-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
         />
-        <div className="max-h-32 overflow-y-auto rounded-md border border-gray-500 bg-gray-900 p-2 space-y-0.5">
+        {selectedOcs.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-gray-500 w-full">To tag:</span>
+            {selectedOcs.map((oc) => (
+              <span
+                key={oc.id}
+                className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-purple-900/60 text-purple-100 ring-1 ring-purple-500/40"
+              >
+                {oc.name}
+                <button
+                  type="button"
+                  onClick={() => onToggleOc(oc.id)}
+                  className="text-purple-300 hover:text-white leading-none"
+                  aria-label={`Remove ${oc.name}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            <button
+              type="button"
+              onClick={onClearOcSelection}
+              className="text-xs text-gray-400 hover:text-gray-200 underline-offset-2 hover:underline"
+            >
+              Clear
+            </button>
+          </div>
+        ) : null}
+        <div className="min-h-[8rem] max-h-64 lg:max-h-[min(24rem,calc(100vh-22rem))] overflow-y-auto rounded-md border border-gray-500 bg-gray-900 p-2 space-y-0.5">
           {ocOptions.length === 0 ? (
-            <p className="text-sm text-gray-400 px-2 py-2">No characters match.</p>
+            <p className="text-sm text-gray-400 px-2 py-2">
+              {hasSearch ? 'No characters match.' : 'Type to search for a character.'}
+            </p>
           ) : (
             ocOptions.map((oc) => (
               <label
                 key={oc.id}
                 className={`flex items-center gap-2.5 text-sm py-1.5 px-2 rounded-md cursor-pointer hover:bg-gray-800 ${
-                  bulkOcIds.includes(oc.id) ? 'text-white bg-purple-900/50 ring-1 ring-purple-500/40' : 'text-gray-200'
+                  bulkOcIds.includes(oc.id)
+                    ? 'text-white bg-purple-900/50 ring-1 ring-purple-500/40'
+                    : 'text-gray-200'
                 }`}
               >
                 <input
@@ -766,35 +826,35 @@ function GalleryBulkOcTagBar({
             ))
           )}
         </div>
-        <div className="flex flex-wrap gap-2 pt-1 border-t border-gray-700">
-          <button
-            type="button"
-            disabled={!canApply}
-            onClick={onAdd}
-            className="px-4 py-2 text-sm rounded-md bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-50 font-medium shadow-sm"
-          >
-            {applying ? 'Applying…' : 'Add to selected'}
-          </button>
-          <button
-            type="button"
-            disabled={!canApply}
-            onClick={onRemove}
-            className="px-4 py-2 text-sm rounded-md border border-gray-500 bg-gray-800 text-gray-100 hover:bg-gray-700 disabled:opacity-50"
-          >
-            Remove from selected
-          </button>
-          <button
-            type="button"
-            disabled={!canApply}
-            onClick={onReplace}
-            className="px-4 py-2 text-sm rounded-md border border-amber-500 bg-amber-950 text-amber-100 hover:bg-amber-900 disabled:opacity-50"
-            title="Clears existing character links on each image, then applies only the selected characters"
-          >
-            Replace links
-          </button>
-        </div>
       </div>
-    </div>
+      <div className="shrink-0 px-4 py-3 border-t border-gray-700 bg-gray-900/80 space-y-2">
+        <button
+          type="button"
+          disabled={!canApply}
+          onClick={onAdd}
+          className="w-full px-4 py-2 text-sm rounded-md bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-50 font-medium"
+        >
+          {applying ? 'Applying…' : 'Add to selected'}
+        </button>
+        <button
+          type="button"
+          disabled={!canApply}
+          onClick={onRemove}
+          className="w-full px-4 py-2 text-sm rounded-md border border-gray-500 bg-gray-800 text-gray-100 hover:bg-gray-700 disabled:opacity-50"
+        >
+          Remove from selected
+        </button>
+        <button
+          type="button"
+          disabled={!canApply}
+          onClick={onReplace}
+          className="w-full px-4 py-2 text-sm rounded-md border border-amber-500 bg-amber-950 text-amber-100 hover:bg-amber-900 disabled:opacity-50"
+          title="Clears existing character links on each image, then applies only the selected characters"
+        >
+          Replace links
+        </button>
+      </div>
+    </aside>
   );
 }
 

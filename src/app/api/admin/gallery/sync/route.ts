@@ -51,9 +51,11 @@ export async function POST() {
     });
 
     const drive = await createGalleryDriveClient();
-    const now = new Date().toISOString();
+    const syncStartedAt = new Date().toISOString();
     let synced = 0;
     const errors: string[] = [];
+    const seenDriveFileIds = new Set<string>();
+    let folderListFailures = 0;
 
     for (const folderId of folderIds) {
       const trimmed = folderId.trim();
@@ -74,7 +76,7 @@ export async function POST() {
                 p_name: file.name ?? '',
                 p_mime_type: file.mimeType,
                 p_folder_id: trimmed,
-                p_last_synced_at: now,
+                p_last_synced_at: syncStartedAt,
               })
             )
           );
@@ -89,13 +91,72 @@ export async function POST() {
               errors.push(`${file.id}: ${rpcError.message}`);
             } else {
               synced += 1;
+              seenDriveFileIds.add(file.id);
             }
           }
         }
       } catch (e) {
+        folderListFailures += 1;
         const msg = e instanceof Error ? e.message : String(e);
         logger.error('GallerySync', 'Folder list failed', { folderId: trimmed, msg });
         errors.push(`folder ${trimmed}: ${msg}`);
+      }
+    }
+
+    let removedFromOldFolders = 0;
+    let removedStale = 0;
+
+    if (folderIds.length > 0) {
+      const folderList = `(${folderIds.join(',')})`;
+
+      const { data: oldFolderRows, error: oldFolderError } = await supabase
+        .from('gallery_items')
+        .delete()
+        .not('folder_id', 'in', folderList)
+        .select('id');
+
+      if (oldFolderError) {
+        logger.error('GallerySync', 'Failed to remove items from unconfigured folders', oldFolderError);
+        errors.push(`cleanup (old folders): ${oldFolderError.message}`);
+      } else {
+        removedFromOldFolders = oldFolderRows?.length ?? 0;
+      }
+
+      // Only prune configured folders when every root folder was listed successfully.
+      if (folderListFailures === 0) {
+        if (seenDriveFileIds.size > 0) {
+          const seenList = `(${[...seenDriveFileIds].join(',')})`;
+          const { data: staleRows, error: staleError } = await supabase
+            .from('gallery_items')
+            .delete()
+            .in('folder_id', folderIds)
+            .not('drive_file_id', 'in', seenList)
+            .select('id');
+
+          if (staleError) {
+            logger.error('GallerySync', 'Failed to remove stale items from configured folders', staleError);
+            errors.push(`cleanup (stale): ${staleError.message}`);
+          } else {
+            removedStale = staleRows?.length ?? 0;
+          }
+        } else {
+          const { data: emptyFolderRows, error: emptyFolderError } = await supabase
+            .from('gallery_items')
+            .delete()
+            .in('folder_id', folderIds)
+            .select('id');
+
+          if (emptyFolderError) {
+            logger.error('GallerySync', 'Failed to clear empty configured folders', emptyFolderError);
+            errors.push(`cleanup (empty folders): ${emptyFolderError.message}`);
+          } else {
+            removedStale = emptyFolderRows?.length ?? 0;
+          }
+        }
+      } else {
+        logger.warn('GallerySync', 'Skipped stale cleanup because one or more folders failed to list', {
+          folderListFailures,
+        });
       }
     }
 
@@ -108,8 +169,11 @@ export async function POST() {
 
     logger.info('GallerySync', 'finished', {
       synced,
+      removedFromOldFolders,
+      removedStale,
       errorCount: errors.length,
       folders: folderIds.length,
+      folderIds,
       errorsPreview: errors.length ? errors.slice(0, 20) : undefined,
       moreErrors: errors.length > 20 ? errors.length - 20 : 0,
     });
@@ -117,6 +181,9 @@ export async function POST() {
     return NextResponse.json({
       success: errors.length === 0,
       synced,
+      removedFromOldFolders,
+      removedStale,
+      removed: removedFromOldFolders + removedStale,
       errors,
       folders: folderIds.length,
     });

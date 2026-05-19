@@ -325,6 +325,29 @@ export async function fetchDriveFileThumbnailBuffer(
   }
 }
 
+/** Working/source art formats — excluded from gallery sync (not suitable for web display). */
+const GALLERY_EXCLUDED_EXTENSIONS = new Set(['psd', 'clip', 'sai', 'sai2']);
+
+const GALLERY_EXCLUDED_MIME_MARKERS = ['photoshop', 'x-photoshop', 'vnd.adobe.photoshop'] as const;
+
+/** True for PSD, Clip Studio (.clip), PaintTool SAI (.sai / .sai2), etc. */
+export function isExcludedGallerySourceFile(name: string, mimeType: string | null): boolean {
+  const lowerName = name.toLowerCase();
+  const dot = lowerName.lastIndexOf('.');
+  if (dot >= 0) {
+    const ext = lowerName.slice(dot + 1);
+    if (GALLERY_EXCLUDED_EXTENSIONS.has(ext)) return true;
+  }
+  const mt = (mimeType ?? '').toLowerCase();
+  return GALLERY_EXCLUDED_MIME_MARKERS.some((marker) => mt.includes(marker));
+}
+
+function isGallerySyncableImage(name: string, mimeType: string | null): boolean {
+  const mt = mimeType ?? '';
+  if (!mt.includes('image/')) return false;
+  return !isExcludedGallerySourceFile(name, mimeType);
+}
+
 const GOOGLE_DRIVE_FOLDER_MIME = 'application/vnd.google-apps.folder';
 
 /** Shared Drive / Team Drive listing; omitting corpora often returns empty children. */
@@ -357,7 +380,7 @@ export async function listImageFilesInFolderWithClient(
 
     const batch = res.data.files ?? [];
     for (const f of batch) {
-      if (f.id && typeof f.name === 'string') {
+      if (f.id && typeof f.name === 'string' && isGallerySyncableImage(f.name, f.mimeType ?? null)) {
         files.push({
           id: f.id,
           name: f.name,
@@ -421,6 +444,7 @@ export async function listImageFilesInFolderTreeWithClient(
 
       let subfolders = 0;
       let imageCount = 0;
+      let skippedSourceFiles = 0;
       let shortcuts = 0;
       const otherSamples: Array<{ name: string; mimeType: string }> = [];
 
@@ -435,9 +459,11 @@ export async function listImageFilesInFolderTreeWithClient(
           if (otherSamples.length < 5) {
             otherSamples.push({ name: f.name, mimeType: mt });
           }
-        } else if (mt.includes('image/')) {
+        } else if (isGallerySyncableImage(f.name, mt)) {
           imageCount += 1;
           images.push({ id: f.id, name: f.name, mimeType: f.mimeType ?? null });
+        } else if (mt.includes('image/') && isExcludedGallerySourceFile(f.name, mt)) {
+          skippedSourceFiles += 1;
         } else if (otherSamples.length < 5) {
           otherSamples.push({ name: f.name, mimeType: mt || '(empty)' });
         }
@@ -449,6 +475,7 @@ export async function listImageFilesInFolderTreeWithClient(
         batchSize: batch.length,
         subfoldersAddedToQueue: subfolders,
         imagesFoundThisPage: imageCount,
+        skippedSourceFiles,
         shortcuts,
         queueDepth: queue.length,
         foldersVisitedSoFar: visited.size,

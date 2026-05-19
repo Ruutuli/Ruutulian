@@ -10,8 +10,22 @@ interface CharacterOpt {
   count: number;
 }
 
-function characterFilterLabel(c: CharacterOpt): string {
-  return `${c.name}(${c.count})`;
+function characterFilterAriaLabel(c: CharacterOpt): string {
+  return `${c.name} (${c.count})`;
+}
+
+function CharacterFilterLabel({ name, count, active }: { name: string; count: number; active?: boolean }) {
+  return (
+    <>
+      <span className="truncate max-w-[10.5rem] sm:max-w-[12rem]">{name}</span>
+      <span
+        className={`tabular-nums shrink-0 ${active ? 'text-pink-300/75' : 'text-gray-500 font-normal'}`}
+        aria-hidden
+      >
+        ({count})
+      </span>
+    </>
+  );
 }
 
 interface GalleryFilterLinksProps {
@@ -21,6 +35,9 @@ interface GalleryFilterLinksProps {
   activeCharacter: string;
   className?: string;
 }
+
+const pillInactiveClass =
+  'border-gray-600/70 text-gray-200 bg-gray-900/50 hover:border-gray-500 hover:bg-gray-800/60 hover:text-gray-50';
 
 function FilterPill({
   href,
@@ -36,14 +53,22 @@ function FilterPill({
   return (
     <Link
       href={href}
-      className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-        active
-          ? activeClass
-          : 'border-gray-600/80 text-gray-300 bg-gray-900/40 hover:border-gray-500 hover:text-gray-100'
+      className={`inline-flex items-center gap-1 text-xs font-medium leading-snug px-3 py-1.5 rounded-full border transition-colors ${
+        active ? activeClass : pillInactiveClass
       }`}
     >
       {children}
     </Link>
+  );
+}
+
+function FilterPillList({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return (
+    <div
+      className={`rounded-lg border border-gray-700/45 bg-gray-950/35 p-2.5 flex flex-wrap gap-2 overflow-y-auto scrollbar-thin ${className}`}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -159,7 +184,7 @@ export function GalleryFilterLinks({
   const charActiveClass = 'border-pink-500/70 text-pink-100 bg-pink-950/40 shadow-sm shadow-pink-950/30';
 
   return (
-    <aside className={`wiki-card p-4 lg:p-5 space-y-4 ${className}`}>
+    <aside className={`wiki-card p-4 lg:p-5 space-y-5 ${className}`}>
       <div className="flex items-center justify-between gap-2 border-b border-gray-700/50 pb-3">
         <h2 className="text-sm font-semibold text-gray-200 flex items-center gap-2">
           <i className="fas fa-filter text-purple-400 text-xs" aria-hidden />
@@ -180,14 +205,14 @@ export function GalleryFilterLinks({
           <button
             type="button"
             onClick={() => setTagsExpanded((v) => !v)}
-            className="flex w-full items-center justify-between text-xs font-medium text-gray-400 uppercase tracking-wide mb-2 hover:text-gray-300"
+            className="flex w-full items-center justify-between text-xs font-medium text-gray-400 uppercase tracking-wide mb-2.5 py-0.5 hover:text-gray-300"
             aria-expanded={tagsExpanded}
           >
             <span>Tags</span>
             <i className={`fas fa-chevron-${tagsExpanded ? 'up' : 'down'} text-[10px]`} aria-hidden />
           </button>
           {tagsExpanded ? (
-            <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto scrollbar-thin pr-1">
+            <FilterPillList className="max-h-40">
               <FilterPill
                 href={buildHref({ tag: '', character: activeCharacter })}
                 active={!activeTag}
@@ -205,7 +230,7 @@ export function GalleryFilterLinks({
                   {t}
                 </FilterPill>
               ))}
-            </div>
+            </FilterPillList>
           ) : null}
         </section>
       ) : null}
@@ -215,20 +240,20 @@ export function GalleryFilterLinks({
           <button
             type="button"
             onClick={() => setCharactersExpanded((v) => !v)}
-            className="flex w-full items-center justify-between text-xs font-medium text-gray-400 uppercase tracking-wide mb-2 hover:text-gray-300"
+            className="flex w-full items-center justify-between text-xs font-medium text-gray-400 uppercase tracking-wide mb-2.5 py-0.5 hover:text-gray-300"
             aria-expanded={charactersExpanded}
           >
             <span>Characters</span>
             <i className={`fas fa-chevron-${charactersExpanded ? 'up' : 'down'} text-[10px]`} aria-hidden />
           </button>
           {charactersExpanded ? (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <label className="sr-only" htmlFor="gallery-character-search">
                 Search characters
               </label>
               <div className="relative">
                 <i
-                  className="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-[10px] pointer-events-none"
+                  className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs pointer-events-none"
                   aria-hidden
                 />
                 <input
@@ -244,10 +269,10 @@ export function GalleryFilterLinks({
                     e.preventDefault();
                     window.location.href = buildHref({ character: bestSuggestion.slug, tag: activeTag });
                   }}
-                  className="w-full text-xs pl-7 pr-2 py-2 rounded-lg border border-gray-600/80 bg-gray-900/60 text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500/80 focus:border-pink-500/50"
+                  className="w-full text-sm pl-9 pr-3 py-2.5 rounded-lg border border-gray-600 bg-gray-950/50 text-gray-100 placeholder:text-gray-500 shadow-inner shadow-black/20 focus:outline-none focus:ring-2 focus:ring-pink-500/60 focus:border-pink-500/40"
                 />
               </div>
-              <div className="flex flex-wrap gap-1.5 max-h-[min(32rem,60vh)] overflow-y-auto scrollbar-thin pr-1">
+              <FilterPillList className="max-h-[min(32rem,60vh)]">
                 <FilterPill
                   href={buildHref({ character: '', tag: activeTag })}
                   active={!activeCharacter}
@@ -258,10 +283,15 @@ export function GalleryFilterLinks({
                 {shouldSuggest ? (
                   <Link
                     href={buildHref({ character: bestSuggestion!.slug, tag: activeTag })}
-                    className="text-xs px-2.5 py-1 rounded-full border border-dashed border-pink-500/50 text-pink-200 bg-pink-950/20 hover:bg-pink-950/40 transition-colors"
-                    aria-label={`Is this ${characterFilterLabel(bestSuggestion!)}?`}
+                    className="inline-flex items-center gap-1 text-xs font-medium leading-snug px-3 py-1.5 rounded-full border border-dashed border-pink-500/55 text-pink-200 bg-pink-950/25 hover:bg-pink-950/45 transition-colors"
+                    aria-label={`Is this ${characterFilterAriaLabel(bestSuggestion!)}?`}
                   >
-                    {characterFilterLabel(bestSuggestion!)}?
+                    <CharacterFilterLabel
+                      name={bestSuggestion!.name}
+                      count={bestSuggestion!.count}
+                      active
+                    />
+                    <span className="shrink-0 text-pink-300/90">?</span>
                   </Link>
                 ) : null}
                 {filteredCharacters.map((c) => (
@@ -271,12 +301,16 @@ export function GalleryFilterLinks({
                     active={activeCharacter === c.slug}
                     activeClass={charActiveClass}
                   >
-                    {characterFilterLabel(c)}
+                    <CharacterFilterLabel
+                      name={c.name}
+                      count={c.count}
+                      active={activeCharacter === c.slug}
+                    />
                   </FilterPill>
                 ))}
-              </div>
+              </FilterPillList>
               {normalizedSearch && filteredCharacters.length === 0 ? (
-                <p className="text-xs text-gray-500">No characters match that search.</p>
+                <p className="text-xs text-gray-500 px-0.5">No characters match that search.</p>
               ) : null}
             </div>
           ) : null}

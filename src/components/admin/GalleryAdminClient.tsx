@@ -41,7 +41,7 @@ interface GalleryStats {
   unpublished: number;
 }
 
-type PublishedFilter = 'all' | 'published' | 'unpublished' | 'needs_work';
+type PublishedFilter = 'all' | 'published' | 'unpublished' | 'draft_no_character';
 type SortOption = 'sort_order' | 'name' | 'created' | 'updated' | 'live_first' | 'draft_first';
 
 interface GalleryAdminClientProps {
@@ -206,7 +206,9 @@ function buildItemsUrl(params: {
   if (params.search.trim()) sp.set('search', params.search.trim());
   if (params.publishedFilter === 'published') sp.set('publishedFilter', 'published');
   if (params.publishedFilter === 'unpublished') sp.set('publishedFilter', 'unpublished');
-  if (params.publishedFilter === 'needs_work') sp.set('publishedFilter', 'needs_work');
+  if (params.publishedFilter === 'draft_no_character') {
+    sp.set('publishedFilter', 'draft_no_character');
+  }
   if (params.ocId) sp.set('ocId', params.ocId);
   return `/api/admin/gallery/items?${sp.toString()}`;
 }
@@ -562,7 +564,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
               { value: 'all', label: 'All (live & draft)' },
               { value: 'published', label: 'Live only' },
               { value: 'unpublished', label: 'Draft only' },
-              { value: 'needs_work', label: 'Needs work (draft & untagged)' },
+              { value: 'draft_no_character', label: 'Draft, no character' },
             ]}
           />
           <FilterSelect

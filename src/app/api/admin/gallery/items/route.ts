@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const publishedOnly = searchParams.get('published') === 'true';
-    const publishedFilter = searchParams.get('publishedFilter'); // all | published | unpublished
+    const publishedFilter = searchParams.get('publishedFilter'); // all | published | unpublished | draft_no_character
     const searchRaw = (searchParams.get('search') ?? '').trim();
     const ocId = (searchParams.get('ocId') ?? '').trim();
     const sort = searchParams.get('sort') ?? 'sort_order';
@@ -77,19 +77,22 @@ export async function GET(request: Request) {
         { count: 'exact' }
       );
 
-    let taggedGalleryItemIds: string[] | null = null;
-    if (publishedFilter === 'needs_work') {
-      const { data: taggedLinks, error: taggedError } = await supabase
+    const isDraftNoCharacter =
+      publishedFilter === 'draft_no_character' || publishedFilter === 'needs_work';
+
+    let linkedGalleryItemIds: string[] | null = null;
+    if (isDraftNoCharacter) {
+      const { data: linkedRows, error: linkedError } = await supabase
         .from('gallery_item_ocs')
         .select('gallery_item_id');
 
-      if (taggedError) {
-        logger.error('GalleryItems', 'Tagged filter lookup failed', taggedError);
-        return NextResponse.json({ success: false, error: taggedError.message }, { status: 400 });
+      if (linkedError) {
+        logger.error('GalleryItems', 'Character link lookup failed', linkedError);
+        return NextResponse.json({ success: false, error: linkedError.message }, { status: 400 });
       }
 
-      taggedGalleryItemIds = [
-        ...new Set((taggedLinks ?? []).map((r) => r.gallery_item_id as string)),
+      linkedGalleryItemIds = [
+        ...new Set((linkedRows ?? []).map((r) => r.gallery_item_id as string)),
       ];
     }
 
@@ -99,10 +102,10 @@ export async function GET(request: Request) {
       query = query.eq('published', true);
     } else if (publishedFilter === 'unpublished') {
       query = query.eq('published', false);
-    } else if (publishedFilter === 'needs_work') {
+    } else if (isDraftNoCharacter) {
       query = query.eq('published', false);
-      if (taggedGalleryItemIds && taggedGalleryItemIds.length > 0) {
-        query = query.not('id', 'in', taggedGalleryItemIds);
+      if (linkedGalleryItemIds && linkedGalleryItemIds.length > 0) {
+        query = query.not('id', 'in', linkedGalleryItemIds);
       }
     }
 

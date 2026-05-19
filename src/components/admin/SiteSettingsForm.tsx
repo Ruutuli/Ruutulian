@@ -352,7 +352,7 @@ export function SiteSettingsForm() {
               ) : (
                 <p className="text-xs text-amber-400/90 mt-2">No folder IDs recognized yet — add one per line.</p>
               )}
-            </motion.div>
+            </div>
           </div>
 
         </div>

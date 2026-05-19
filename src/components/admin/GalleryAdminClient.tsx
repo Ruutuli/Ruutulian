@@ -927,7 +927,7 @@ function GalleryBulkOcTagBar({
               >
                 Dismiss
               </button>
-            </motion.div>
+            </div>
           </div>
         ) : null}
         <input
@@ -1008,15 +1008,6 @@ function GalleryBulkOcTagBar({
           className="w-full px-4 py-2 text-sm rounded-md border border-gray-500 bg-gray-800 text-gray-100 hover:bg-gray-700 disabled:opacity-50"
         >
           Remove from selected
-        </button>
-        <button
-          type="button"
-          disabled={!canApply}
-          onClick={onReplace}
-          className="w-full px-4 py-2 text-sm rounded-md border border-amber-500 bg-amber-950 text-amber-100 hover:bg-amber-900 disabled:opacity-50"
-          title="Clears existing character links on each image, then applies only the selected characters"
-        >
-          Replace links
         </button>
       </div>
     </aside>

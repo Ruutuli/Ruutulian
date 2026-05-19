@@ -8,6 +8,7 @@ export function revalidateGalleryCaches() {
   try {
     revalidateTag('site-config');
     revalidateTag(GALLERY_FACETS_REVALIDATE_TAG);
+    revalidatePath('/gallery');
   } catch {
     /* ignore */
   }

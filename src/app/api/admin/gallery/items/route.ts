@@ -64,37 +64,22 @@ export async function GET(request: Request) {
       }
     }
 
+    const isDraftNoCharacter =
+      publishedFilter === 'draft_no_character' || publishedFilter === 'needs_work';
+    const ocJoin = isDraftNoCharacter ? 'gallery_item_ocs!left' : 'gallery_item_ocs';
+
     let query = supabase
       .from('gallery_items')
       .select(
         `
         *,
-        gallery_item_ocs (
+        ${ocJoin} (
           oc_id,
           oc:ocs (id, name, slug, image_url)
         )
       `,
         { count: 'exact' }
       );
-
-    const isDraftNoCharacter =
-      publishedFilter === 'draft_no_character' || publishedFilter === 'needs_work';
-
-    let linkedGalleryItemIds: string[] | null = null;
-    if (isDraftNoCharacter) {
-      const { data: linkedRows, error: linkedError } = await supabase
-        .from('gallery_item_ocs')
-        .select('gallery_item_id');
-
-      if (linkedError) {
-        logger.error('GalleryItems', 'Character link lookup failed', linkedError);
-        return NextResponse.json({ success: false, error: linkedError.message }, { status: 400 });
-      }
-
-      linkedGalleryItemIds = [
-        ...new Set((linkedRows ?? []).map((r) => r.gallery_item_id as string)),
-      ];
-    }
 
     if (publishedOnly) {
       query = query.eq('published', true);
@@ -103,10 +88,7 @@ export async function GET(request: Request) {
     } else if (publishedFilter === 'unpublished') {
       query = query.eq('published', false);
     } else if (isDraftNoCharacter) {
-      query = query.eq('published', false);
-      if (linkedGalleryItemIds && linkedGalleryItemIds.length > 0) {
-        query = query.not('id', 'in', linkedGalleryItemIds);
-      }
+      query = query.eq('published', false).is('gallery_item_ocs', null);
     }
 
     if (searchRaw.length >= GALLERY_SEARCH_MIN_LEN) {

@@ -108,20 +108,26 @@ function collectCharacters(items: GalleryFacetRow[]): GalleryCharacterFacet[] {
 }
 
 function toPublicItems(items: GalleryPublicRow[]): GalleryPublicItem[] {
-  return items.map((item) => ({
-    id: item.id,
-    fileId: item.drive_file_id,
-    title: item.name?.trim() || '',
-    tags: [...(item.tags ?? [])].filter(Boolean),
-    isNsfw: Boolean(item.is_nsfw),
-    characterNames: (item.gallery_item_ocs ?? [])
-      .filter((row) => row.oc?.is_public)
-      .map((row) => ({
-        name: row.oc!.name,
-        slug: row.oc!.slug,
-        href: `/ocs/${row.oc!.slug}`,
-      })),
-  }));
+  return items.map((item) => {
+    const characterBySlug = new Map<string, { name: string; slug: string; href: string }>();
+    for (const row of item.gallery_item_ocs ?? []) {
+      const oc = row.oc;
+      if (!oc?.is_public || !oc.slug || characterBySlug.has(oc.slug)) continue;
+      characterBySlug.set(oc.slug, {
+        name: oc.name,
+        slug: oc.slug,
+        href: `/ocs/${oc.slug}`,
+      });
+    }
+    return {
+      id: item.id,
+      fileId: item.drive_file_id,
+      title: item.name?.trim() || '',
+      tags: [...(item.tags ?? [])].filter(Boolean),
+      isNsfw: Boolean(item.is_nsfw),
+      characterNames: [...characterBySlug.values()],
+    };
+  });
 }
 
 function galleryQueryString(page: number, tagFilter: string, characterSlug: string): string {
@@ -140,10 +146,13 @@ interface GalleryPageProps {
 export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const config = await getSiteConfig();
   const params = await searchParams;
-  const tagFilter = typeof params.tag === 'string' ? params.tag.trim() : '';
-  const characterSlug = typeof params.character === 'string' ? params.character.trim() : '';
+  const tagFilter =
+    typeof params.tag === 'string' ? params.tag.trim().slice(0, 120) : '';
+  const characterSlug =
+    typeof params.character === 'string' ? params.character.trim().slice(0, 120) : '';
   const pageRaw = typeof params.page === 'string' ? parseInt(params.page, 10) : 1;
-  const pageNum = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
+  const pageNum =
+    Number.isFinite(pageRaw) && pageRaw > 0 ? Math.min(Math.floor(pageRaw), 10_000) : 1;
 
   return (
     <div>
@@ -246,7 +255,7 @@ async function GalleryEnabledBody({
     characterOptions = collectCharacters(facetItems);
   }
 
-  let itemIdFilter: string[] | null = null;
+  let filterOcId: string | null = null;
   if (characterSlug) {
     const { data: ocRow } = await supabase
       .from('ocs')
@@ -255,21 +264,13 @@ async function GalleryEnabledBody({
       .eq('is_public', true)
       .maybeSingle();
 
-    if (!ocRow) {
-      itemIdFilter = [];
-    } else {
-      const { data: links } = await supabase
-        .from('gallery_item_ocs')
-        .select('gallery_item_id')
-        .eq('oc_id', ocRow.id);
-      itemIdFilter = [...new Set((links ?? []).map((l) => l.gallery_item_id))];
-    }
+    filterOcId = ocRow?.id ?? '';
   }
 
   const activeCharacterName =
     characterOptions.find((c) => c.slug === characterSlug)?.name ?? '';
 
-  if (itemIdFilter !== null && itemIdFilter.length === 0) {
+  if (filterOcId === '') {
     return (
       <GalleryPageLayout
         tagOptions={tagOptions}
@@ -285,6 +286,8 @@ async function GalleryEnabledBody({
     );
   }
 
+  const ocJoin = filterOcId ? 'gallery_item_ocs!inner' : 'gallery_item_ocs';
+
   let listQuery = supabase
     .from('gallery_items')
     .select(
@@ -295,7 +298,7 @@ async function GalleryEnabledBody({
       tags,
       is_nsfw,
       sort_order,
-      gallery_item_ocs (
+      ${ocJoin} (
         oc_id,
         oc:ocs (id, name, slug, is_public)
       )
@@ -308,8 +311,8 @@ async function GalleryEnabledBody({
     listQuery = listQuery.contains('tags', [tagFilter]);
   }
 
-  if (itemIdFilter !== null) {
-    listQuery = listQuery.in('id', itemIdFilter);
+  if (filterOcId) {
+    listQuery = listQuery.eq('gallery_item_ocs.oc_id', filterOcId);
   }
 
   const requestedPage = Math.max(1, pageNum);

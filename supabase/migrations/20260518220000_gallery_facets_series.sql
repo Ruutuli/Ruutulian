@@ -65,3 +65,8 @@ AS $$
     )
   );
 $$;
+
+REVOKE ALL ON FUNCTION public.get_gallery_public_facets() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_gallery_public_facets() TO anon;
+GRANT EXECUTE ON FUNCTION public.get_gallery_public_facets() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_gallery_public_facets() TO service_role;

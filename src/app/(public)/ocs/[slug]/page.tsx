@@ -215,33 +215,24 @@ export default async function OCDetailPage({
   }));
 
   try {
-    const { data: linkRows } = await supabase
-      .from('gallery_item_ocs')
-      .select('gallery_item_id')
-      .eq('oc_id', typedOc.id);
+    const { data: galleryRows } = await supabase
+      .from('gallery_items')
+      .select('drive_file_id, is_nsfw, gallery_item_ocs!inner(oc_id)')
+      .eq('published', true)
+      .eq('gallery_item_ocs.oc_id', typedOc.id)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: false })
+      .limit(24);
 
-    const galleryItemIds = (linkRows ?? [])
-      .map((r: any) => r.gallery_item_id)
-      .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0);
+    const taggedEntries = (galleryRows ?? [])
+      .map((r: { drive_file_id?: string | null; is_nsfw?: boolean | null }) =>
+        r.drive_file_id
+          ? { url: driveFileViewUrl(String(r.drive_file_id)), isNsfw: Boolean(r.is_nsfw) }
+          : null
+      )
+      .filter((e): e is { url: string; isNsfw: boolean } => Boolean(e));
 
-    if (galleryItemIds.length > 0) {
-      const { data: galleryRows } = await supabase
-        .from('gallery_items')
-        .select('drive_file_id, is_nsfw')
-        .in('id', galleryItemIds)
-        .eq('published', true)
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: false })
-        .limit(24);
-
-      const taggedEntries = (galleryRows ?? [])
-        .map((r: { drive_file_id?: string | null; is_nsfw?: boolean | null }) =>
-          r.drive_file_id
-            ? { url: driveFileViewUrl(String(r.drive_file_id)), isNsfw: Boolean(r.is_nsfw) }
-            : null
-        )
-        .filter((e): e is { url: string; isNsfw: boolean } => Boolean(e));
-
+    if (taggedEntries.length > 0) {
       const byUrl = new Map<string, { url: string; isNsfw: boolean }>();
       for (const entry of [...taggedEntries, ...galleryEntries]) {
         if (!byUrl.has(entry.url)) byUrl.set(entry.url, entry);

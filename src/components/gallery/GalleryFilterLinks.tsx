@@ -46,20 +46,20 @@ function CharacterFilterPill({
       }`}
       aria-label={characterFilterAriaLabel(character)}
     >
-      <span className="min-w-0 flex-1 leading-snug">
-        <span className="block truncate text-sm font-semibold" style={{ color: style.nameColor }}>
+      <span className="min-w-0 flex-1 truncate text-sm leading-snug">
+        <span className="font-semibold" style={{ color: style.nameColor }}>
           {character.name}
         </span>
         {character.series ? (
-          <span className="mt-0.5 block truncate text-xs">
-            <span className="text-gray-500/90" aria-hidden>
+          <>
+            <span className="mx-1.5 text-gray-500/80" aria-hidden>
               |
-            </span>{' '}
-            <span style={{ color: style.seriesColor }}>{character.series}</span>
-          </span>
-        ) : (
-          <span className="mt-0.5 block truncate text-xs text-gray-500">No series</span>
-        )}
+            </span>
+            <span className="font-medium" style={{ color: style.seriesColor }}>
+              {character.series}
+            </span>
+          </>
+        ) : null}
       </span>
       <span
         className="shrink-0 rounded-md px-2 py-0.5 text-[11px] font-medium tabular-nums"
@@ -326,7 +326,7 @@ export function GalleryFilterLinks({
                       character={bestSuggestion!}
                       dashed
                     />
-                  </motion.div>
+                  </div>
                 ) : null}
                 {filteredCharacters.map((c) => (
                   <CharacterFilterPill

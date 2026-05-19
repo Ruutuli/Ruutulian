@@ -76,6 +76,24 @@ interface GalleryStats {
 type PublishedFilter = 'all' | 'published' | 'unpublished' | 'draft_no_character';
 type SortOption = 'sort_order' | 'name' | 'created' | 'updated' | 'live_first' | 'draft_first';
 
+function linkedOcIds(item: GalleryAdminItem): string[] {
+  return (item.gallery_item_ocs ?? []).map((r) => r.oc_id).filter(Boolean);
+}
+
+function galleryItemMatchesFilters(
+  item: GalleryAdminItem,
+  filters: { publishedFilter: PublishedFilter; ocId: string }
+): boolean {
+  const { publishedFilter, ocId } = filters;
+  if (publishedFilter === 'published' && !item.published) return false;
+  if (publishedFilter === 'unpublished' && item.published) return false;
+  if (publishedFilter === 'draft_no_character') {
+    if (item.published || linkedOcIds(item).length > 0) return false;
+  }
+  if (ocId && !linkedOcIds(item).includes(ocId)) return false;
+  return true;
+}
+
 interface GalleryAdminClientProps {
   ocs: GalleryOcOption[];
 }
@@ -295,17 +313,6 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
     return pinnedEditItem?.id === selectedId ? pinnedEditItem : null;
   }, [items, selectedId, pinnedEditItem]);
 
-  const mergeUpdatedItem = useCallback((updated: GalleryAdminItem) => {
-    setPinnedEditItem(updated);
-    setItems((prev) => {
-      const idx = prev.findIndex((i) => i.id === updated.id);
-      if (idx === -1) return prev;
-      const next = [...prev];
-      next[idx] = updated;
-      return next;
-    });
-  }, []);
-
   useEffect(() => {
     if (!selectedId) return;
     const fromList = items.find((i) => i.id === selectedId);
@@ -378,6 +385,29 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
   }, [page, search, publishedFilter, ocId, sort, pageSize, loadItems]);
 
   const reloadCurrentPage = useCallback(() => loadItems(pageRef.current), [loadItems]);
+
+  const applySavedGalleryItem = useCallback(
+    (updated: GalleryAdminItem) => {
+      const f = filtersRef.current;
+      if (!galleryItemMatchesFilters(updated, f)) {
+        setItems((prev) => prev.filter((i) => i.id !== updated.id));
+        setTotal((t) => Math.max(0, t - 1));
+        setSelectedId((id) => (id === updated.id ? null : id));
+        setPinnedEditItem((pinned) => (pinned?.id === updated.id ? null : pinned));
+        void loadItems(pageRef.current);
+        return;
+      }
+      setPinnedEditItem(updated);
+      setItems((prev) => {
+        const idx = prev.findIndex((i) => i.id === updated.id);
+        if (idx === -1) return prev;
+        const next = [...prev];
+        next[idx] = updated;
+        return next;
+      });
+    },
+    [loadItems]
+  );
 
   function resetFilters() {
     setSearchInput('');
@@ -863,7 +893,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
           }}
           onSaved={async (updated) => {
             if (updated) {
-              mergeUpdatedItem(updated);
+              applySavedGalleryItem(updated);
               return;
             }
             await reloadCurrentPage();

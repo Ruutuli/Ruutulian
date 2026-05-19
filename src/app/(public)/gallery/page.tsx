@@ -17,7 +17,19 @@ export const dynamic = 'force-dynamic';
 
 interface OcJoinRow {
   oc_id: string;
-  oc: { id: string; name: string; slug: string; is_public: boolean } | null;
+  oc: {
+    id: string;
+    name: string;
+    slug: string;
+    is_public: boolean;
+    world: {
+      name: string;
+      slug: string;
+      primary_color: string;
+      accent_color: string;
+      is_public: boolean;
+    } | null;
+  } | null;
 }
 
 interface GalleryPublicRow {
@@ -53,24 +65,46 @@ function collectTags(items: GalleryFacetRow[]): string[] {
 }
 
 function collectCharacters(items: GalleryFacetRow[]): GalleryCharacterFacet[] {
-  const map = new Map<string, { name: string; count: number }>();
+  const map = new Map<
+    string,
+    {
+      name: string;
+      count: number;
+      series: string | null;
+      seriesSlug: string | null;
+      primaryColor: string | null;
+      accentColor: string | null;
+    }
+  >();
   for (const item of items) {
     const countedSlugs = new Set<string>();
     for (const row of item.gallery_item_ocs ?? []) {
       const oc = row.oc;
       if (!oc?.is_public || !oc.slug || countedSlugs.has(oc.slug)) continue;
       countedSlugs.add(oc.slug);
+      const world = oc.world?.is_public ? oc.world : null;
       const existing = map.get(oc.slug);
       if (existing) {
         existing.count += 1;
       } else {
-        map.set(oc.slug, { name: oc.name, count: 1 });
+        map.set(oc.slug, {
+          name: oc.name,
+          count: 1,
+          series: world?.name ?? null,
+          seriesSlug: world?.slug ?? null,
+          primaryColor: world?.primary_color ?? null,
+          accentColor: world?.accent_color ?? null,
+        });
       }
     }
   }
   return Array.from(map.entries())
-    .map(([slug, { name, count }]) => ({ slug, name, count }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .map(([slug, meta]) => ({ slug, ...meta }))
+    .sort((a, b) => {
+      const seriesCmp = (a.series ?? '').localeCompare(b.series ?? '');
+      if (seriesCmp !== 0) return seriesCmp;
+      return a.name.localeCompare(b.name);
+    });
 }
 
 function toPublicItems(items: GalleryPublicRow[]): GalleryPublicItem[] {
@@ -179,7 +213,12 @@ async function GalleryEnabledBody({
       tags,
       gallery_item_ocs (
         oc_id,
-        oc:ocs (slug, name, is_public)
+        oc:ocs (
+          slug,
+          name,
+          is_public,
+          world:worlds (name, slug, primary_color, accent_color, is_public)
+        )
       )
     `
       )

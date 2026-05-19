@@ -228,6 +228,7 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
   const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pinnedEditItem, setPinnedEditItem] = useState<GalleryAdminItem | null>(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [bulkOcIds, setBulkOcIds] = useState<string[]>([]);
@@ -246,10 +247,29 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
 
   const ocOptions = useMemo(() => [...ocs].sort((a, b) => a.name.localeCompare(b.name)), [ocs]);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const selectedItem = useMemo(
-    () => items.find((i) => i.id === selectedId) ?? null,
-    [items, selectedId]
-  );
+  const selectedItem = useMemo(() => {
+    if (!selectedId) return null;
+    const fromList = items.find((i) => i.id === selectedId);
+    if (fromList) return fromList;
+    return pinnedEditItem?.id === selectedId ? pinnedEditItem : null;
+  }, [items, selectedId, pinnedEditItem]);
+
+  const mergeUpdatedItem = useCallback((updated: GalleryAdminItem) => {
+    setPinnedEditItem(updated);
+    setItems((prev) => {
+      const idx = prev.findIndex((i) => i.id === updated.id);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      next[idx] = updated;
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const fromList = items.find((i) => i.id === selectedId);
+    if (fromList) setPinnedEditItem(fromList);
+  }, [items, selectedId]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -449,7 +469,6 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
             ? `Updated character links on ${count} image(s) (${modeLabel}: ${ocNames}).`
             : `Updated character links on ${count} image(s) (${modeLabel}: ${ocNames}). Images were published for the public site.${profileNote}`,
       });
-      setSelectedIds(new Set());
       setBulkTagPanelOpen(true);
       await reloadCurrentPage();
     } catch (e) {
@@ -711,7 +730,10 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
                 }
                 onSelect={() => {
                   if (selectionMode) toggleItemSelection(item.id);
-                  else setSelectedId(item.id);
+                  else {
+                    setSelectedId(item.id);
+                    setPinnedEditItem(item);
+                  }
                 }}
               />
             ))}
@@ -727,12 +749,19 @@ export function GalleryAdminClient({ ocs }: GalleryAdminClientProps) {
         </>
       )}
 
-      {selectedItem && !selectionMode ? (
+      {selectedId && selectedItem && !selectionMode ? (
         <GalleryAdminEditDrawer
           item={selectedItem}
           ocOptions={ocOptions}
-          onClose={() => setSelectedId(null)}
-          onSaved={async () => {
+          onClose={() => {
+            setSelectedId(null);
+            setPinnedEditItem(null);
+          }}
+          onSaved={async (updated) => {
+            if (updated) {
+              mergeUpdatedItem(updated);
+              return;
+            }
             await reloadCurrentPage();
           }}
         />
@@ -1249,7 +1278,7 @@ function GalleryAdminEditDrawer({
   item: GalleryAdminItem;
   ocOptions: GalleryOcOption[];
   onClose: () => void;
-  onSaved: () => Promise<void>;
+  onSaved: (updated?: GalleryAdminItem) => Promise<void>;
 }) {
   const [published, setPublished] = useState(item.published);
   const [isNsfw, setIsNsfw] = useState(Boolean(item.is_nsfw));
@@ -1270,17 +1299,27 @@ function GalleryAdminEditDrawer({
   const src = convertGoogleDriveUrl(driveFileViewUrl(item.drive_file_id));
 
   useEffect(() => {
-    setPublished(item.published);
-    setIsNsfw(Boolean(item.is_nsfw));
-    setTagsStr(tagsToString(item.tags));
-    setSortOrder(String(item.sort_order ?? 0));
-    setSelectedOcIds((item.gallery_item_ocs ?? []).map((r) => r.oc_id));
     setOcSearch('');
     setDismissedFilenameSuggestion(false);
     setOcImageUrlOverrides({});
     setLocalMessage(null);
     setImageLightbox(false);
-  }, [item]);
+  }, [item.id]);
+
+  useEffect(() => {
+    setPublished(item.published);
+    setIsNsfw(Boolean(item.is_nsfw));
+    setTagsStr(tagsToString(item.tags));
+    setSortOrder(String(item.sort_order ?? 0));
+    setSelectedOcIds((item.gallery_item_ocs ?? []).map((r) => r.oc_id));
+  }, [
+    item.id,
+    item.published,
+    item.is_nsfw,
+    item.tags,
+    item.sort_order,
+    item.gallery_item_ocs,
+  ]);
 
   const filenameSuggestedOc = useMemo(
     () => suggestOcFromFilenames([item], ocOptions),
@@ -1369,7 +1408,7 @@ function GalleryAdminEditDrawer({
       }
       if (json.data?.published === true) setPublished(true);
       applyAutoProfileImageResults(json.profileImagesSet as AutoProfileImageResult[] | undefined);
-      await onSaved();
+      if (json.data) await onSaved(json.data as GalleryAdminItem);
       const publishedNote =
         selectedOcIds.length > 0 && !item.published ? ' Published on the public site.' : '';
       if (!json.profileImagesSet?.length) {
@@ -1411,7 +1450,7 @@ function GalleryAdminEditDrawer({
       }
       if (json.data?.published === true) setPublished(true);
       applyAutoProfileImageResults(json.profileImagesSet as AutoProfileImageResult[] | undefined);
-      await onSaved();
+      if (json.data) await onSaved(json.data as GalleryAdminItem);
     } catch {
       setLocalMessage('Failed to update character links');
     } finally {

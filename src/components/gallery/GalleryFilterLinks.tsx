@@ -1,45 +1,92 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import Link from 'next/link';
+import type { GalleryCharacterFacet } from '@/lib/gallery/get-public-facets';
+import { getSeriesPillStyle } from '@/lib/gallery/series-pill-styles';
 
-interface CharacterOpt {
-  slug: string;
-  name: string;
-  count: number;
+function characterFilterAriaLabel(c: GalleryCharacterFacet): string {
+  const seriesPart = c.series ? `, ${c.series}` : '';
+  return `${c.name}${seriesPart} (${c.count} artworks)`;
 }
 
-function characterFilterAriaLabel(c: CharacterOpt): string {
-  return `${c.name} (${c.count})`;
+function seriesColorKey(c: GalleryCharacterFacet): string {
+  return c.seriesSlug ?? c.series ?? c.slug;
 }
 
-function CharacterFilterLabel({ name, count, active }: { name: string; count: number; active?: boolean }) {
+function CharacterFilterPill({
+  href,
+  active,
+  character,
+  dashed,
+}: {
+  href: string;
+  active: boolean;
+  character: GalleryCharacterFacet;
+  dashed?: boolean;
+}) {
+  const style = getSeriesPillStyle(seriesColorKey(character), {
+    primary: character.primaryColor,
+    accent: character.accentColor,
+    active,
+  });
+
+  const pillStyle: CSSProperties = {
+    borderColor: style.borderColor,
+    backgroundColor: style.backgroundColor,
+    boxShadow: style.activeRing,
+  };
+
   return (
-    <>
-      <span className="truncate max-w-[10.5rem] sm:max-w-[12rem]">{name}</span>
+    <Link
+      href={href}
+      style={pillStyle}
+      className={`group flex w-full items-center gap-2 rounded-lg border px-3 py-2.5 text-left transition-all hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 ${
+        dashed ? 'border-dashed' : ''
+      }`}
+      aria-label={characterFilterAriaLabel(character)}
+    >
+      <span className="min-w-0 flex-1 leading-snug">
+        <span className="block truncate text-sm font-semibold" style={{ color: style.nameColor }}>
+          {character.name}
+        </span>
+        {character.series ? (
+          <span className="mt-0.5 block truncate text-xs">
+            <span className="text-gray-500/90" aria-hidden>
+              |
+            </span>{' '}
+            <span style={{ color: style.seriesColor }}>{character.series}</span>
+          </span>
+        ) : (
+          <span className="mt-0.5 block truncate text-xs text-gray-500">No series</span>
+        )}
+      </span>
       <span
-        className={`tabular-nums shrink-0 ${active ? 'text-pink-300/75' : 'text-gray-500 font-normal'}`}
+        className="shrink-0 rounded-md px-2 py-0.5 text-[11px] font-medium tabular-nums"
+        style={{
+          color: style.countColor,
+          backgroundColor: active ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.25)',
+        }}
         aria-hidden
       >
-        ({count})
+        {character.count}
       </span>
-    </>
+    </Link>
   );
 }
 
 interface GalleryFilterLinksProps {
   tags: string[];
-  characters: CharacterOpt[];
+  characters: GalleryCharacterFacet[];
   activeTag: string;
   activeCharacter: string;
   className?: string;
 }
 
-const pillInactiveClass =
+const tagInactiveClass =
   'border-gray-600/70 text-gray-200 bg-gray-900/50 hover:border-gray-500 hover:bg-gray-800/60 hover:text-gray-50';
 
-function FilterPill({
+function TagFilterPill({
   href,
   active,
   activeClass,
@@ -54,21 +101,11 @@ function FilterPill({
     <Link
       href={href}
       className={`inline-flex items-center gap-1 text-xs font-medium leading-snug px-3 py-1.5 rounded-full border transition-colors ${
-        active ? activeClass : pillInactiveClass
+        active ? activeClass : tagInactiveClass
       }`}
     >
       {children}
     </Link>
-  );
-}
-
-function FilterPillList({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return (
-    <div
-      className={`rounded-lg border border-gray-700/45 bg-gray-950/35 p-2.5 flex flex-wrap gap-2 overflow-y-auto scrollbar-thin ${className}`}
-    >
-      {children}
-    </div>
   );
 }
 
@@ -101,7 +138,7 @@ export function GalleryFilterLinks({
     return raw
       .replace(/\.[a-z0-9]+$/i, '')
       .replace(/[_-]+/g, ' ')
-      .replace(/[^\w\s]/g, ' ')
+      .replace(/[^\w\s|]/g, ' ')
       .replace(/\s+/g, ' ')
       .toLowerCase()
       .trim();
@@ -128,30 +165,33 @@ export function GalleryFilterLinks({
     return v1[b.length];
   };
 
-  const normalizedCharacterName = (c: CharacterOpt) =>
-    c.name
+  const normalizedCharacterHaystack = (c: GalleryCharacterFacet) =>
+    [c.name, c.series ?? '']
+      .join(' ')
       .replace(/[_-]+/g, ' ')
       .replace(/[^\w\s]/g, ' ')
       .replace(/\s+/g, ' ')
       .toLowerCase()
       .trim();
 
+  const scoreCharacter = (c: GalleryCharacterFacet, q: string) => {
+    const cand = normalizedCharacterHaystack(c);
+    if (!cand) return 0;
+    if (cand.includes(q)) return 1;
+    if (q.includes(cand) && cand.length >= Math.max(3, q.length - 3)) return 0.75;
+    const dist = levenshteinDistance(q, cand);
+    const maxLen = Math.max(q.length, cand.length) || 1;
+    return 1 - dist / maxLen;
+  };
+
   const suggestions = useMemo(() => {
     const q = normalizedSearch;
     if (!q || q.length < 2) return [];
 
-    const scored = characters.map((c) => {
-      const cand = normalizedCharacterName(c);
-      if (!cand) return { c, score: 0 };
-      if (cand.includes(q)) return { c, score: 1 };
-      if (q.includes(cand) && cand.length >= Math.max(3, q.length - 3)) return { c, score: 0.75 };
-      const dist = levenshteinDistance(q, cand);
-      const maxLen = Math.max(q.length, cand.length) || 1;
-      const similarity = 1 - dist / maxLen;
-      return { c, score: similarity };
-    });
+    const scored = characters
+      .map((c) => ({ c, score: scoreCharacter(c, q) }))
+      .sort((a, b) => b.score - a.score || a.c.name.localeCompare(b.c.name));
 
-    scored.sort((a, b) => b.score - a.score || a.c.name.localeCompare(b.c.name));
     return scored.filter((s) => s.score >= 0.35).slice(0, 3);
   }, [characters, normalizedSearch]);
 
@@ -160,40 +200,32 @@ export function GalleryFilterLinks({
 
   const filteredCharacters = useMemo(() => {
     const q = normalizedSearch;
-    if (!q) {
-      return characters;
-    }
+    if (!q) return characters;
 
     return characters
-      .map((c) => {
-        const cand = normalizedCharacterName(c);
-        if (!cand) return { c, score: 0 };
-        if (cand.includes(q)) return { c, score: 1 };
-        if (q.includes(cand) && cand.length >= Math.max(3, q.length - 3)) return { c, score: 0.75 };
-        const dist = levenshteinDistance(q, cand);
-        const maxLen = Math.max(q.length, cand.length) || 1;
-        const similarity = 1 - dist / maxLen;
-        return { c, score: similarity };
-      })
+      .map((c) => ({ c, score: scoreCharacter(c, q) }))
       .filter((s) => s.score >= 0.35)
       .sort((a, b) => b.score - a.score || a.c.name.localeCompare(b.c.name))
       .map((s) => s.c);
-  }, [characters, levenshteinDistance, normalizedCharacterName, normalizedSearch]);
+  }, [characters, normalizedSearch]);
 
   const tagActiveClass = 'border-purple-500/70 text-purple-100 bg-purple-950/50 shadow-sm shadow-purple-950/40';
-  const charActiveClass = 'border-pink-500/70 text-pink-100 bg-pink-950/40 shadow-sm shadow-pink-950/30';
 
   return (
-    <aside className={`wiki-card p-4 lg:p-5 space-y-5 ${className}`}>
+    <aside
+      className={`wiki-card border border-gray-700/60 bg-gradient-to-b from-gray-900/80 to-gray-950/90 p-4 lg:p-5 space-y-5 shadow-lg shadow-black/20 ${className}`}
+    >
       <div className="flex items-center justify-between gap-2 border-b border-gray-700/50 pb-3">
-        <h2 className="text-sm font-semibold text-gray-200 flex items-center gap-2">
-          <i className="fas fa-filter text-purple-400 text-xs" aria-hidden />
+        <h2 className="text-sm font-semibold text-gray-100 flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-purple-950/60 border border-purple-500/30">
+            <i className="fas fa-filter text-purple-400 text-xs" aria-hidden />
+          </span>
           Filters
         </h2>
         {hasFilters ? (
           <Link
             href="/gallery"
-            className="text-xs text-purple-400 hover:text-pink-300 transition-colors whitespace-nowrap"
+            className="text-xs font-medium text-purple-400 hover:text-pink-300 transition-colors whitespace-nowrap px-2 py-1 rounded-md hover:bg-gray-800/60"
           >
             Clear all
           </Link>
@@ -205,32 +237,32 @@ export function GalleryFilterLinks({
           <button
             type="button"
             onClick={() => setTagsExpanded((v) => !v)}
-            className="flex w-full items-center justify-between text-xs font-medium text-gray-400 uppercase tracking-wide mb-2.5 py-0.5 hover:text-gray-300"
+            className="flex w-full items-center justify-between text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2.5 py-1 hover:text-gray-200 transition-colors"
             aria-expanded={tagsExpanded}
           >
             <span>Tags</span>
             <i className={`fas fa-chevron-${tagsExpanded ? 'up' : 'down'} text-[10px]`} aria-hidden />
           </button>
           {tagsExpanded ? (
-            <FilterPillList className="max-h-40">
-              <FilterPill
+            <div className="rounded-xl border border-gray-700/50 bg-gray-950/40 p-2.5 flex flex-wrap gap-2 max-h-40 overflow-y-auto scrollbar-thin">
+              <TagFilterPill
                 href={buildHref({ tag: '', character: activeCharacter })}
                 active={!activeTag}
                 activeClass={tagActiveClass}
               >
                 All
-              </FilterPill>
+              </TagFilterPill>
               {tags.map((t) => (
-                <FilterPill
+                <TagFilterPill
                   key={t}
                   href={buildHref({ tag: t, character: activeCharacter })}
                   active={activeTag === t}
                   activeClass={tagActiveClass}
                 >
                   {t}
-                </FilterPill>
+                </TagFilterPill>
               ))}
-            </FilterPillList>
+            </div>
           ) : null}
         </section>
       ) : null}
@@ -240,14 +272,14 @@ export function GalleryFilterLinks({
           <button
             type="button"
             onClick={() => setCharactersExpanded((v) => !v)}
-            className="flex w-full items-center justify-between text-xs font-medium text-gray-400 uppercase tracking-wide mb-2.5 py-0.5 hover:text-gray-300"
+            className="flex w-full items-center justify-between text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2.5 py-1 hover:text-gray-200 transition-colors"
             aria-expanded={charactersExpanded}
           >
             <span>Characters</span>
             <i className={`fas fa-chevron-${charactersExpanded ? 'up' : 'down'} text-[10px]`} aria-hidden />
           </button>
           {charactersExpanded ? (
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               <label className="sr-only" htmlFor="gallery-character-search">
                 Search characters
               </label>
@@ -261,7 +293,7 @@ export function GalleryFilterLinks({
                   type="search"
                   inputMode="search"
                   value={characterSearch}
-                  placeholder="Search characters…"
+                  placeholder="Search name or series…"
                   onChange={(e) => setCharacterSearch(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key !== 'Enter') return;
@@ -269,48 +301,44 @@ export function GalleryFilterLinks({
                     e.preventDefault();
                     window.location.href = buildHref({ character: bestSuggestion.slug, tag: activeTag });
                   }}
-                  className="w-full text-sm pl-9 pr-3 py-2.5 rounded-lg border border-gray-600 bg-gray-950/50 text-gray-100 placeholder:text-gray-500 shadow-inner shadow-black/20 focus:outline-none focus:ring-2 focus:ring-pink-500/60 focus:border-pink-500/40"
+                  className="w-full text-sm pl-9 pr-3 py-2.5 rounded-xl border border-gray-600/80 bg-gray-950/70 text-gray-100 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500/50"
                 />
               </div>
-              <FilterPillList className="max-h-[min(32rem,60vh)]">
-                <FilterPill
+              <div className="rounded-xl border border-gray-700/50 bg-gray-950/30 p-2 space-y-1.5 max-h-[min(32rem,60vh)] overflow-y-auto scrollbar-thin">
+                <Link
                   href={buildHref({ character: '', tag: activeTag })}
-                  active={!activeCharacter}
-                  activeClass={charActiveClass}
+                  className={`flex w-full items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                    !activeCharacter
+                      ? 'border-gray-500/70 bg-gray-800/80 text-gray-100'
+                      : 'border-gray-700/60 bg-gray-900/40 text-gray-300 hover:border-gray-500/70 hover:bg-gray-800/50'
+                  }`}
                 >
-                  All
-                </FilterPill>
+                  All characters
+                </Link>
                 {shouldSuggest ? (
-                  <Link
-                    href={buildHref({ character: bestSuggestion!.slug, tag: activeTag })}
-                    className="inline-flex items-center gap-1 text-xs font-medium leading-snug px-3 py-1.5 rounded-full border border-dashed border-pink-500/55 text-pink-200 bg-pink-950/25 hover:bg-pink-950/45 transition-colors"
-                    aria-label={`Is this ${characterFilterAriaLabel(bestSuggestion!)}?`}
-                  >
-                    <CharacterFilterLabel
-                      name={bestSuggestion!.name}
-                      count={bestSuggestion!.count}
-                      active
+                  <div className="space-y-1">
+                    <p className="px-1 text-[10px] font-medium uppercase tracking-wide text-pink-300/80">
+                      Did you mean?
+                    </p>
+                    <CharacterFilterPill
+                      href={buildHref({ character: bestSuggestion!.slug, tag: activeTag })}
+                      active={false}
+                      character={bestSuggestion!}
+                      dashed
                     />
-                    <span className="shrink-0 text-pink-300/90">?</span>
-                  </Link>
+                  </motion.div>
                 ) : null}
                 {filteredCharacters.map((c) => (
-                  <FilterPill
+                  <CharacterFilterPill
                     key={c.slug}
                     href={buildHref({ character: c.slug, tag: activeTag })}
                     active={activeCharacter === c.slug}
-                    activeClass={charActiveClass}
-                  >
-                    <CharacterFilterLabel
-                      name={c.name}
-                      count={c.count}
-                      active={activeCharacter === c.slug}
-                    />
-                  </FilterPill>
+                    character={c}
+                  />
                 ))}
-              </FilterPillList>
+              </div>
               {normalizedSearch && filteredCharacters.length === 0 ? (
-                <p className="text-xs text-gray-500 px-0.5">No characters match that search.</p>
+                <p className="text-xs text-gray-500 px-1">No characters match that search.</p>
               ) : null}
             </div>
           ) : null}

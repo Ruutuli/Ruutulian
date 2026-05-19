@@ -6,6 +6,10 @@ export type GalleryCharacterFacet = {
   slug: string;
   name: string;
   count: number;
+  series: string | null;
+  seriesSlug: string | null;
+  primaryColor: string | null;
+  accentColor: string | null;
 };
 
 export type GalleryPublicFacets = {
@@ -48,7 +52,19 @@ function parseFacetsPayload(data: unknown): GalleryPublicFacets {
           ? Math.max(0, Math.floor(countRaw))
           : 0;
       if (!slug) return null;
-      return { slug, name, count };
+      const series =
+        typeof r.series === 'string' && r.series.trim() ? r.series.trim() : null;
+      const seriesSlug =
+        typeof r.series_slug === 'string' && r.series_slug.trim() ? r.series_slug.trim() : null;
+      const primaryColor =
+        typeof r.primary_color === 'string' && r.primary_color.trim()
+          ? r.primary_color.trim()
+          : null;
+      const accentColor =
+        typeof r.accent_color === 'string' && r.accent_color.trim()
+          ? r.accent_color.trim()
+          : null;
+      return { slug, name, count, series, seriesSlug, primaryColor, accentColor };
     })
     .filter((x): x is GalleryCharacterFacet => x !== null);
   return { publishedCount, tags, characters };
@@ -65,7 +81,7 @@ async function loadGalleryPublicFacetsFromDb(): Promise<GalleryPublicFacets> {
 
 const getGalleryPublicFacetsCachedInner = unstable_cache(
   loadGalleryPublicFacetsFromDb,
-  ['gallery-public-facets-v2'],
+  ['gallery-public-facets-v3'],
   { tags: [GALLERY_FACETS_REVALIDATE_TAG], revalidate: 600 }
 );
 

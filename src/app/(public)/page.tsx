@@ -27,7 +27,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const revalidate = 60; // Cache RSC payload to reduce repeated full fetches; random content refreshes per revalidate window
-export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   const supabase = await createClient();

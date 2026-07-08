@@ -2,6 +2,24 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { logger } from '@/lib/logger'
+import { WORLD_PUBLIC_DETAIL_COLUMNS } from './world-public-queries'
+
+const OC_WORLD_JOIN = `world:worlds(${WORLD_PUBLIC_DETAIL_COLUMNS})`
+
+const OC_IDENTITY_JOIN = `identity:oc_identities(
+  id,
+  name,
+  created_at,
+  updated_at,
+  versions:ocs(
+    id,
+    name,
+    slug,
+    world_id,
+    is_public,
+    world:worlds(id, name, slug)
+  )
+)`
 
 /** Single shared admin/service-role client per Node isolate — avoids churn from thousands of client instances (middleware + APIs). */
 let adminClientSingleton: SupabaseClient | undefined
@@ -80,19 +98,9 @@ export function buildOCSelectQueryWithExplicitFK() {
     *,
     likes,
     dislikes,
-    world:worlds(*),
+    ${OC_WORLD_JOIN},
     story_alias:story_aliases!fk_ocs_story_alias_id(id, name, slug, description),
-    identity:oc_identities(
-      *,
-      versions:ocs(
-        id,
-        name,
-        slug,
-        world_id,
-        is_public,
-        world:worlds(id, name, slug)
-      )
-    )
+    ${OC_IDENTITY_JOIN}
   `;
 }
 
@@ -105,19 +113,9 @@ export function buildOCSelectQueryWithImplicitFK() {
     *,
     likes,
     dislikes,
-    world:worlds(*),
+    ${OC_WORLD_JOIN},
     story_alias:story_aliases(id, name, slug, description),
-    identity:oc_identities(
-      *,
-      versions:ocs(
-        id,
-        name,
-        slug,
-        world_id,
-        is_public,
-        world:worlds(id, name, slug)
-      )
-    )
+    ${OC_IDENTITY_JOIN}
   `;
 }
 
@@ -129,18 +127,8 @@ export function buildOCSelectQueryFallback() {
     *,
     likes,
     dislikes,
-    world:worlds(*),
-    identity:oc_identities(
-      *,
-      versions:ocs(
-        id,
-        name,
-        slug,
-        world_id,
-        is_public,
-        world:worlds(id, name, slug)
-      )
-    )
+    ${OC_WORLD_JOIN},
+    ${OC_IDENTITY_JOIN}
   `;
 }
 

@@ -42,14 +42,8 @@ export function SiteName() {
       const fetchTime = Date.now();
       
       try {
-        // Add cache-busting parameter to ensure fresh data
-        const response = await fetch(`/api/site-config?t=${fetchTime}`, {
-          cache: 'no-store',
+        const response = await fetch('/api/site-config', {
           signal: abortController.signal,
-          headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache',
-          },
         });
         
         if (cancelled || abortController.signal.aborted) return;
@@ -103,20 +97,6 @@ export function SiteName() {
 
     fetchSiteName();
 
-    // Refresh when page becomes visible (user switches back to tab)
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        // Small delay to ensure any pending updates are complete
-        scheduleTimeout(() => {
-          if (!cancelled) {
-            fetchSiteName();
-          }
-        }, 100);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
     // Listen for custom event to refresh site name (dispatched after settings save)
     const handleRefresh = (event?: Event) => {
       // If the event includes the new websiteName, use it immediately
@@ -156,7 +136,6 @@ export function SiteName() {
         clearTimeout(id);
       }
       timeoutsRef.current.clear();
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('site-settings-updated', handleRefresh);
     };
   }, []);

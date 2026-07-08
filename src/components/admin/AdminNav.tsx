@@ -1,31 +1,144 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { SignOutButton } from './SignOutButton';
 
 interface AdminNavProps {
   userEmail: string;
 }
 
-export function AdminNav({ userEmail }: AdminNavProps) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+type NavLink = { href: string; label: string };
 
-  const navLinks = [
-    { href: '/admin', label: 'Home' },
-    { href: '/admin/worlds', label: 'Worlds' },
-    { href: '/admin/ocs', label: 'OCs' },
-    { href: '/admin/fanfics', label: 'Fanfics' },
-    { href: '/admin/timelines', label: 'Timelines' },
-    { href: '/admin/world-lore', label: 'Lore' },
-    { href: '/admin/writing-prompts', label: 'Prompts' },
-    { href: '/admin/writing-prompt-responses', label: 'Responses' },
-    { href: '/admin/fields', label: 'Fields' },
-    { href: '/admin/stats', label: 'Stats' },
-    { href: '/admin/analytics', label: 'Analytics' },
-    { href: '/admin/gallery', label: 'Gallery' },
-    { href: '/admin/settings', label: 'Settings' },
-  ];
+type NavGroup = {
+  label: string;
+  links: NavLink[];
+};
+
+const navGroups: NavGroup[] = [
+  {
+    label: 'Content',
+    links: [
+      { href: '/admin/worlds', label: 'Worlds' },
+      { href: '/admin/ocs', label: 'OCs' },
+      { href: '/admin/fanfics', label: 'Fanfics' },
+      { href: '/admin/timelines', label: 'Timelines' },
+      { href: '/admin/world-lore', label: 'Lore' },
+    ],
+  },
+  {
+    label: 'Writing',
+    links: [
+      { href: '/admin/writing-prompts', label: 'Prompts' },
+      { href: '/admin/writing-prompt-responses', label: 'Responses' },
+    ],
+  },
+  {
+    label: 'Site',
+    links: [
+      { href: '/admin/gallery', label: 'Gallery' },
+      { href: '/admin/fields', label: 'Fields' },
+      { href: '/admin/settings', label: 'Settings' },
+    ],
+  },
+  {
+    label: 'Insights',
+    links: [
+      { href: '/admin/stats', label: 'Stats' },
+      { href: '/admin/analytics', label: 'Analytics' },
+    ],
+  },
+];
+
+function isLinkActive(pathname: string, href: string) {
+  if (href === '/admin') {
+    return pathname === '/admin';
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function isGroupActive(pathname: string, group: NavGroup) {
+  return group.links.some((link) => isLinkActive(pathname, link.href));
+}
+
+function NavDropdown({
+  group,
+  pathname,
+}: {
+  group: NavGroup;
+  pathname: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const active = isGroupActive(pathname, group);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen((open) => !open)}
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+        className={`inline-flex items-center gap-1.5 font-medium text-sm lg:text-base transition-colors ${
+          active ? 'text-purple-400' : 'text-gray-300 hover:text-purple-400'
+        }`}
+      >
+        {group.label}
+        <i
+          className={`fas fa-chevron-down text-[10px] transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          aria-hidden="true"
+        />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full z-50 mt-2 min-w-[11rem] rounded-lg border border-gray-700 bg-gray-900 py-1 shadow-xl">
+          {group.links.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              onClick={() => setIsOpen(false)}
+              className={`block px-4 py-2 text-sm transition-colors ${
+                isLinkActive(pathname, link.href)
+                  ? 'bg-gray-800 text-purple-400'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-purple-400'
+              }`}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function AdminNav({ userEmail }: AdminNavProps) {
+  const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const toggleMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -35,7 +148,6 @@ export function AdminNav({ userEmail }: AdminNavProps) {
     setIsMobileMenuOpen(false);
   };
 
-  // Close menu on window resize
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 768) {
@@ -46,7 +158,6 @@ export function AdminNav({ userEmail }: AdminNavProps) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Prevent body scroll when menu is open
   useEffect(() => {
     if (isMobileMenuOpen) {
       document.body.style.overflow = 'hidden';
@@ -58,7 +169,6 @@ export function AdminNav({ userEmail }: AdminNavProps) {
     };
   }, [isMobileMenuOpen]);
 
-  // Close menu on Escape key
   useEffect(() => {
     if (!isMobileMenuOpen) return;
     const handleEscape = (e: KeyboardEvent) => {
@@ -82,18 +192,22 @@ export function AdminNav({ userEmail }: AdminNavProps) {
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-4 lg:gap-6">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="text-gray-300 hover:text-purple-400 transition-colors font-medium text-sm lg:text-base"
-                >
-                  {link.label}
-                </Link>
+            <div className="hidden md:flex items-center gap-4 lg:gap-5">
+              <Link
+                href="/admin"
+                className={`font-medium text-sm lg:text-base transition-colors ${
+                  isLinkActive(pathname, '/admin')
+                    ? 'text-purple-400'
+                    : 'text-gray-300 hover:text-purple-400'
+                }`}
+              >
+                Home
+              </Link>
+              {navGroups.map((group) => (
+                <NavDropdown key={group.label} group={group} pathname={pathname} />
               ))}
-              <div className="flex items-center gap-3 pl-4 lg:pl-6 border-l border-gray-700">
-                <span className="text-xs lg:text-sm text-gray-400 hidden lg:inline">
+              <div className="flex items-center gap-3 pl-4 lg:pl-5 border-l border-gray-700">
+                <span className="text-xs lg:text-sm text-gray-400 hidden lg:inline max-w-[12rem] truncate">
                   {userEmail}
                 </span>
                 <SignOutButton />
@@ -121,15 +235,12 @@ export function AdminNav({ userEmail }: AdminNavProps) {
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[100] md:hidden">
-          {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/70 fade-in"
             onClick={closeMenu}
           />
-          
-          {/* Menu Panel */}
+
           <div className="absolute top-0 right-0 bottom-0 w-80 bg-gray-900 shadow-xl overflow-y-auto slide-in-from-right">
-            {/* Close Button */}
             <div className="sticky top-0 bg-gray-900 z-10 flex justify-end p-4 border-b border-gray-700">
               <button
                 type="button"
@@ -140,19 +251,45 @@ export function AdminNav({ userEmail }: AdminNavProps) {
                 <i className="fas fa-times text-xl" aria-hidden="true"></i>
               </button>
             </div>
-            
-            <div className="flex flex-col px-4 py-4 space-y-1">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={closeMenu}
-                  className="text-gray-300 hover:text-purple-400 hover:bg-gray-800 px-4 py-3 rounded-lg transition-colors font-medium text-lg"
-                >
-                  {link.label}
-                </Link>
+
+            <div className="flex flex-col px-4 py-4 space-y-4">
+              <Link
+                href="/admin"
+                onClick={closeMenu}
+                className={`px-4 py-3 rounded-lg transition-colors font-medium text-lg ${
+                  isLinkActive(pathname, '/admin')
+                    ? 'bg-gray-800 text-purple-400'
+                    : 'text-gray-300 hover:text-purple-400 hover:bg-gray-800'
+                }`}
+              >
+                Home
+              </Link>
+
+              {navGroups.map((group) => (
+                <div key={group.label}>
+                  <div className="px-4 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    {group.label}
+                  </div>
+                  <div className="space-y-1">
+                    {group.links.map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={closeMenu}
+                        className={`block px-4 py-2.5 rounded-lg transition-colors font-medium ${
+                          isLinkActive(pathname, link.href)
+                            ? 'bg-gray-800 text-purple-400'
+                            : 'text-gray-300 hover:text-purple-400 hover:bg-gray-800'
+                        }`}
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
               ))}
-              <div className="pt-4 mt-4 border-t border-gray-700">
+
+              <div className="pt-4 mt-2 border-t border-gray-700">
                 <div className="px-4 py-2">
                   <div className="text-xs text-gray-500 mb-1">Signed in as</div>
                   <div className="text-sm text-gray-300 font-medium break-words">{userEmail}</div>

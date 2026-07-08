@@ -18,11 +18,16 @@ interface Tag {
   name: string;
 }
 
-export function FanficFilters() {
+export interface FanficFiltersProps {
+  worlds?: World[];
+  tags?: Tag[];
+}
+
+export function FanficFilters({ worlds: worldsProp, tags: tagsProp }: FanficFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [worlds, setWorlds] = useState<World[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
+  const [worlds, setWorlds] = useState<World[]>(worldsProp ?? []);
+  const [tags, setTags] = useState<Tag[]>(tagsProp ?? []);
   const [searchInput, setSearchInput] = useState<string>('');
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -37,6 +42,10 @@ export function FanficFilters() {
   }, [search]);
 
   useEffect(() => {
+    if (worldsProp) {
+      setWorlds(worldsProp);
+      return;
+    }
     async function fetchWorlds() {
       const supabase = createClient();
       const { data } = await supabase
@@ -47,9 +56,13 @@ export function FanficFilters() {
       if (data) setWorlds(data);
     }
     fetchWorlds();
-  }, []);
+  }, [worldsProp]);
 
   useEffect(() => {
+    if (tagsProp) {
+      setTags(tagsProp);
+      return;
+    }
     async function fetchTags() {
       try {
         const supabase = createClient();
@@ -68,7 +81,7 @@ export function FanficFilters() {
       }
     }
     fetchTags();
-  }, []);
+  }, [tagsProp]);
 
   const updateFilter = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -77,6 +90,7 @@ export function FanficFilters() {
     } else {
       params.delete(key);
     }
+    params.delete('page');
     router.push(`/fanfics?${params.toString()}`);
   };
 

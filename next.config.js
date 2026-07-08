@@ -30,9 +30,8 @@ const nextConfig = {
       },
     ],
     // Increase timeout for external image fetching
-    minimumCacheTTL: 60,
-    // Add device sizes for better optimization
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    minimumCacheTTL: 86400,
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   // Disable automatic trailing slash redirects to prevent redirect loops
@@ -70,6 +69,12 @@ const nextConfig = {
   },
   async headers() {
     return [
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
       {
         source: '/(.*)',
         headers: [

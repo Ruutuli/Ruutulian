@@ -153,18 +153,23 @@ export function decodeUrlEntities(url: string): string {
 }
 
 /**
- * Gets multiple URL formats for Google Drive images to try as fallbacks
+ * Gets multiple URL formats for Google Drive images to try as fallbacks.
+ * Default max width is 800px — enough for cards/grids without pulling full-res assets.
  */
-export function getGoogleDriveImageUrls(url: string | null | undefined): string[] {
+export function getGoogleDriveImageUrls(
+  url: string | null | undefined,
+  maxWidth = 800
+): string[] {
   if (!url) return [];
-  
+
   const fileId = getGoogleDriveFileId(url);
   if (!fileId) return [url];
-  
-  // Thumbnail + lh3 with size suffix are most reliable for link-shared files from servers
+
+  const w = Math.min(Math.max(maxWidth, 200), 1920);
+
   return [
-    `https://drive.google.com/thumbnail?id=${fileId}&sz=w1920`,
-    `https://lh3.googleusercontent.com/d/${fileId}=w1920-rw`,
+    `https://drive.google.com/thumbnail?id=${fileId}&sz=w${w}`,
+    `https://lh3.googleusercontent.com/d/${fileId}=w${w}-rw`,
     `https://lh3.googleusercontent.com/d/${fileId}`,
     `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`,
     `https://drive.google.com/uc?export=download&id=${fileId}`,

@@ -13,7 +13,6 @@ interface Chapter {
   id: string;
   chapter_number: number;
   title?: string | null;
-  content?: string | null;
   word_count?: number | null;
   image_url?: string | null;
 }
@@ -37,8 +36,7 @@ export function ChapterList({ chapters, fanficSlug }: ChapterListProps) {
     const query = searchQuery.toLowerCase();
     return chapters.filter(ch => 
       ch.title?.toLowerCase().includes(query) ||
-      ch.chapter_number.toString().includes(query) ||
-      ch.content?.toLowerCase().includes(query)
+      ch.chapter_number.toString().includes(query)
     );
   }, [chapters, searchQuery]);
 

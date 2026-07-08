@@ -319,7 +319,7 @@ export default async function OCDetailPage({
   // Fetch quotes
   const { data: quotes } = await supabase
     .from('character_quotes')
-    .select('*')
+    .select('id, quote_text, context, created_at, updated_at')
     .eq('oc_id', typedOc.id)
     .order('created_at', { ascending: false });
 
@@ -334,7 +334,7 @@ export default async function OCDetailPage({
   // Fetch story snippets
   const { data: storySnippets, error: storySnippetsError } = await supabase
     .from('story_snippets')
-    .select('*')
+    .select('id, title, snippet_text, created_at, updated_at')
     .eq('oc_id', typedOc.id)
     .order('created_at', { ascending: false });
   
@@ -351,7 +351,7 @@ export default async function OCDetailPage({
   // Fetch development log
   const { data: developmentLog } = await supabase
     .from('character_development_log')
-    .select('*')
+    .select('id, change_type, notes, created_at')
     .eq('oc_id', typedOc.id)
     .order('created_at', { ascending: false });
 
@@ -359,7 +359,14 @@ export default async function OCDetailPage({
   const { data: writingPromptResponses } = await supabase
     .from('writing_prompt_responses')
     .select(`
-      *,
+      id,
+      oc_id,
+      other_oc_id,
+      category,
+      prompt_text,
+      response_text,
+      created_at,
+      updated_at,
       other_oc:ocs!other_oc_id(id, name, slug)
     `)
     .eq('oc_id', typedOc.id)

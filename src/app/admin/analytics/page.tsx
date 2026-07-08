@@ -9,6 +9,8 @@ import { AnalyticsDashboard } from '@/components/analytics/AnalyticsDashboard';
 import { RecentPageViewsTable } from '@/components/analytics/RecentPageViewsTable';
 import { StatCard } from '@/components/stats/StatCard';
 import type { PageViewEvent } from '@/lib/analytics/types';
+import { OC_STATS_SELECT } from '@/lib/supabase/oc-public-queries';
+import { fetchPublicSiteStats } from '@/lib/stats/public-site-stats';
 
 export const metadata: Metadata = {
   title: 'Page Analytics',
@@ -38,10 +40,16 @@ export default async function AdminAnalyticsPage() {
         : 'Analytics tables or functions are not available. Run the page_view_analytics migration.';
   }
 
-  const { data: publicOCs } = await supabase
-    .from('ocs')
-    .select('*')
-    .eq('is_public', true);
+  const siteStats = await fetchPublicSiteStats(supabase);
+  let publicOCs = siteStats?.analytics_ocs ?? [];
+
+  if (!siteStats) {
+    const { data: fallbackOCs } = await supabase
+      .from('ocs')
+      .select(OC_STATS_SELECT)
+      .eq('is_public', true);
+    publicOCs = fallbackOCs ?? [];
+  }
 
   const loreIds = recent
     .filter((e) => e.entity_type === 'lore' && e.entity_id)

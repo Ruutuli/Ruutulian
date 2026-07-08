@@ -6,6 +6,7 @@ import { FeatureTile } from '@/components/admin/FeatureTile';
 import { RecentActivity } from '@/components/admin/RecentActivity';
 import { OCProgress } from '@/components/admin/OCProgress';
 import { RandomOCOfTheDay } from '@/components/admin/RandomOCOfTheDay';
+import { OC_ADMIN_PROGRESS_SELECT } from '@/lib/supabase/oc-public-queries';
 
 export const metadata: Metadata = {
   title: 'Admin Dashboard',
@@ -48,7 +49,7 @@ export default async function AdminDashboard() {
   // Fetch all OCs for progress tracking
   const { data: allOCs } = await supabase
     .from('ocs')
-    .select('*, world:worlds(id, name, slug)')
+    .select(OC_ADMIN_PROGRESS_SELECT)
     .order('name', { ascending: true });
 
   // Query recent activity (last 10 items across all tables)

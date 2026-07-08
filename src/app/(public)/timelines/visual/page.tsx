@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { generatePageMetadata } from '@/lib/config/metadata-helpers';
 import { getSiteConfig } from '@/lib/config/site-config';
 import { logger } from '@/lib/logger';
+import { TIMELINE_VISUAL_SELECT } from '@/lib/supabase/oc-public-queries';
 
 export async function generateMetadata() {
   const config = await getSiteConfig();
@@ -21,7 +22,7 @@ export default async function InteractiveTimelinePage() {
 
   const { data: events, error } = await supabase
     .from('timeline_events')
-    .select('*')
+    .select(TIMELINE_VISUAL_SELECT)
     .not('year', 'is', null)
     .order('year', { ascending: true });
 

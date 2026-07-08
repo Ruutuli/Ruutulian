@@ -9,18 +9,26 @@ interface World {
   name: string;
 }
 
+export interface LoreFiltersProps {
+  worlds?: World[];
+}
+
 const loreTypes = ['clan', 'organization', 'location', 'religion', 'species', 'technique', 'concept', 'artifact', 'other'] as const;
 
-export function LoreFilters() {
+export function LoreFilters({ worlds: worldsProp }: LoreFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [worlds, setWorlds] = useState<World[]>([]);
+  const [worlds, setWorlds] = useState<World[]>(worldsProp ?? []);
 
   const search = searchParams.get('search') || '';
   const worldId = searchParams.get('world') || '';
   const loreType = searchParams.get('lore_type') || '';
 
   useEffect(() => {
+    if (worldsProp) {
+      setWorlds(worldsProp);
+      return;
+    }
     async function fetchWorlds() {
       const supabase = createClient();
       const { data } = await supabase
@@ -31,7 +39,7 @@ export function LoreFilters() {
       if (data) setWorlds(data);
     }
     fetchWorlds();
-  }, []);
+  }, [worldsProp]);
 
   const updateFilter = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -40,6 +48,7 @@ export function LoreFilters() {
     } else {
       params.delete(key);
     }
+    params.delete('page');
     router.push(`/lore?${params.toString()}`);
   };
 

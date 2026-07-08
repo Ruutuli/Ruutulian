@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
-export const revalidate = 0; // Always fetch fresh
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export default async function RandomCharacterPage() {
   const supabase = await createClient();

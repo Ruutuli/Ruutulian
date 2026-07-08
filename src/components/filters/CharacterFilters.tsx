@@ -10,13 +10,25 @@ interface World {
   name: string;
 }
 
-export function CharacterFilters() {
+export interface CharacterFiltersProps {
+  worlds?: World[];
+  tags?: Array<{ id: string; name: string }>;
+  genderOptions?: string[];
+  sexOptions?: string[];
+}
+
+export function CharacterFilters({
+  worlds: worldsProp,
+  tags: tagsProp,
+  genderOptions: genderOptionsProp,
+  sexOptions: sexOptionsProp,
+}: CharacterFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [worlds, setWorlds] = useState<World[]>([]);
-  const [tags, setTags] = useState<Array<{ id: string; name: string }>>([]);
-  const [genderOptions, setGenderOptions] = useState<string[]>([]);
-  const [sexOptions, setSexOptions] = useState<string[]>([]);
+  const [worlds, setWorlds] = useState<World[]>(worldsProp ?? []);
+  const [tags, setTags] = useState<Array<{ id: string; name: string }>>(tagsProp ?? []);
+  const [genderOptions, setGenderOptions] = useState<string[]>(genderOptionsProp ?? []);
+  const [sexOptions, setSexOptions] = useState<string[]>(sexOptionsProp ?? []);
   const [searchInput, setSearchInput] = useState<string>('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -41,6 +53,11 @@ export function CharacterFilters() {
   }, [worldId, seriesType, gender, sex, tagId]);
 
   useEffect(() => {
+    if (worldsProp) {
+      setWorlds(worldsProp);
+      return;
+    }
+
     let cancelled = false;
 
     async function fetchWorlds() {
@@ -57,9 +74,14 @@ export function CharacterFilters() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [worldsProp]);
 
   useEffect(() => {
+    if (tagsProp) {
+      setTags(tagsProp);
+      return;
+    }
+
     let cancelled = false;
 
     async function fetchTags() {
@@ -86,9 +108,15 @@ export function CharacterFilters() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [tagsProp]);
 
   useEffect(() => {
+    if (genderOptionsProp && sexOptionsProp) {
+      setGenderOptions(genderOptionsProp);
+      setSexOptions(sexOptionsProp);
+      return;
+    }
+
     let cancelled = false;
 
     async function fetchFilterOptions() {
@@ -125,7 +153,7 @@ export function CharacterFilters() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [genderOptionsProp, sexOptionsProp]);
 
   // Debounced search update
   useEffect(() => {
@@ -141,6 +169,7 @@ export function CharacterFilters() {
         } else {
           params.delete('search');
         }
+        params.delete('page');
         router.push(`/ocs?${params.toString()}`);
       }, 300);
     }

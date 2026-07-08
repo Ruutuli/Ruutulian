@@ -5,6 +5,7 @@ import { generatePageMetadata } from '@/lib/config/metadata-helpers';
 import { getSiteConfig } from '@/lib/config/site-config';
 import { logger } from '@/lib/logger';
 import { attachImageNsfwFlags } from '@/lib/gallery/nsfw-lookup';
+import { OC_CARD_COMPARE_SELECT } from '@/lib/supabase/oc-public-queries';
 
 export async function generateMetadata() {
   const config = await getSiteConfig();
@@ -22,7 +23,7 @@ export default async function CharacterCardsPage() {
 
   const { data: ocs, error } = await supabase
     .from('ocs')
-    .select('*, world:worlds(id, name, slug, primary_color, accent_color)')
+    .select(OC_CARD_COMPARE_SELECT)
     .eq('is_public', true)
     .order('name');
 

@@ -8,6 +8,7 @@ import { getSiteConfig } from '@/lib/config/site-config';
 import { logMemoryUsage } from '@/lib/memory-monitor';
 import type { OC } from '@/types/oc';
 import { attachImageNsfwFlags } from '@/lib/gallery/nsfw-lookup';
+import { fetchOCFilterFacets } from '@/lib/supabase/oc-public-queries';
 
 export async function generateMetadata() {
   const config = await getSiteConfig();
@@ -19,7 +20,6 @@ export async function generateMetadata() {
 }
 
 export const revalidate = 60;
-export const dynamic = 'force-dynamic';
 
 const PAGE_SIZE = 25;
 
@@ -57,7 +57,9 @@ export default async function OCsPage({ searchParams }: OCsPageProps) {
   const tagId = typeof searchParams.tag === 'string' ? searchParams.tag : '';
   const page = Math.max(1, parseInt(typeof searchParams.page === 'string' ? searchParams.page : '1', 10) || 1);
 
-  const usePagination = !search;
+  const filterFacets = await fetchOCFilterFacets(supabase);
+
+  const usePagination = true;
 
   function buildBaseQuery(select: string, withTagFilter = false) {
     let q = supabase
@@ -157,7 +159,12 @@ export default async function OCsPage({ searchParams }: OCsPageProps) {
       />
 
       <Suspense fallback={<div className="wiki-card p-6 mb-6">Loading filters...</div>}>
-        <CharacterFilters />
+        <CharacterFilters
+          worlds={filterFacets.worlds}
+          tags={filterFacets.tags}
+          genderOptions={filterFacets.genderOptions}
+          sexOptions={filterFacets.sexOptions}
+        />
       </Suspense>
 
       {filteredOCs.length > 0 ? (

@@ -13,7 +13,7 @@ import {
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 interface OcJoinRow {
   oc_id: string;

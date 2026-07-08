@@ -14,7 +14,9 @@
     "db:login": "supabase login",
     "db:link": "supabase link",
     "db:push": "supabase db push",
-    "db:migration-list": "supabase migration list"
+    "db:push:yes": "supabase db push --yes",
+    "db:migration-list": "supabase migration list",
+    "predev": "npm run db:push:yes"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",

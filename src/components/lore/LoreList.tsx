@@ -7,29 +7,11 @@ import { LoreCard } from './LoreCard';
 
 interface LoreListProps {
   loreEntries: WorldLore[];
-  searchParams: { [key: string]: string | string[] | undefined };
 }
 
-export function LoreList({ loreEntries, searchParams }: LoreListProps) {
-  const search = typeof searchParams.search === 'string' ? searchParams.search : '';
-
-  // Filter by search term (name, description, or world name)
-  const filteredEntries = useMemo(() => {
-    if (!search) return loreEntries;
-
-    const searchLower = search.toLowerCase();
-    return loreEntries.filter(
-      (entry) =>
-        entry.name.toLowerCase().includes(searchLower) ||
-        entry.description?.toLowerCase().includes(searchLower) ||
-        entry.description_markdown?.toLowerCase().includes(searchLower) ||
-        entry.world?.name.toLowerCase().includes(searchLower)
-    );
-  }, [loreEntries, search]);
-
-  // Group by world/fandom
+export function LoreList({ loreEntries }: LoreListProps) {
   const groupedByWorld = useMemo(() => {
-    return filteredEntries.reduce((acc, entry) => {
+    return loreEntries.reduce((acc, entry) => {
       const worldId = entry.world?.id || 'unknown';
       const worldName = entry.world?.name || 'Unknown World';
       
@@ -43,7 +25,7 @@ export function LoreList({ loreEntries, searchParams }: LoreListProps) {
       acc[worldId].entries.push(entry);
       return acc;
     }, {} as Record<string, { world: WorldLore['world']; worldName: string; entries: WorldLore[] }>);
-  }, [filteredEntries]);
+  }, [loreEntries]);
 
   // Sort entries within each world by lore type, then by name
   const sortedGroups = useMemo(() => {
@@ -60,14 +42,10 @@ export function LoreList({ loreEntries, searchParams }: LoreListProps) {
     }));
   }, [groupedByWorld]);
 
-  if (filteredEntries.length === 0) {
+  if (loreEntries.length === 0) {
     return (
       <div className="wiki-card p-12 text-center">
-        <p className="text-gray-500 text-lg">
-          {loreEntries.length > 0
-            ? 'No lore entries match your search or filters.'
-            : 'No lore entries available yet.'}
-        </p>
+        <p className="text-gray-500 text-lg">No lore entries match your search or filters.</p>
       </div>
     );
   }

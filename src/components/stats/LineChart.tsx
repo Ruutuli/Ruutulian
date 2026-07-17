@@ -16,9 +16,10 @@ interface LineChartProps {
 
 export function LineChart({ data, dataKeys, title, height = 300 }: LineChartProps) {
   return (
-    <div className="wiki-card p-6">
+    <div className="wiki-card p-4 sm:p-6 overflow-x-auto">
       {title && <h3 className="text-lg font-semibold text-gray-200 mb-4">{title}</h3>}
-      <ResponsiveContainer width="100%" height={height}>
+      <div className="w-full min-w-[280px]">
+        <ResponsiveContainer width="100%" height={height}>
         <RechartsLineChart data={data} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
           <XAxis 
@@ -54,7 +55,8 @@ export function LineChart({ data, dataKeys, title, height = 300 }: LineChartProp
             />
           ))}
         </RechartsLineChart>
-      </ResponsiveContainer>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

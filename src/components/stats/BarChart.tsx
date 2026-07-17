@@ -53,9 +53,9 @@ const VerticalLabel = (props: any) => {
 
 export function BarChart({ data, dataKey = 'value', color = '#ec4899', title, height = 300, horizontal = false }: BarChartProps) {
   return (
-    <div className="wiki-card p-4 md:p-6">
+    <div className="wiki-card p-4 md:p-6 overflow-x-auto">
       {title && <h3 className="text-lg font-semibold text-gray-200 mb-4">{title}</h3>}
-      <div className="w-full" style={{ minHeight: `${height}px` }}>
+      <div className="w-full min-w-0" style={{ minHeight: `${height}px` }}>
         <ResponsiveContainer width="100%" height={height}>
           <RechartsBarChart 
             data={data} 
@@ -74,8 +74,8 @@ export function BarChart({ data, dataKey = 'value', color = '#ec4899', title, he
                   type="category"
                   dataKey="name"
                   stroke="#9ca3af"
-                  tick={{ fill: '#9ca3af', fontSize: 12 }}
-                  width={100}
+                  tick={{ fill: '#9ca3af', fontSize: 11 }}
+                  width={120}
                 />
               </>
             ) : (

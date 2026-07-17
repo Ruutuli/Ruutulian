@@ -50,6 +50,7 @@ interface FanficChapterResponse {
   id: string;
   chapter_number: number;
   title: string | null;
+  content: string | null;
   word_count: number | null;
   image_url: string | null;
   is_published: boolean;
@@ -116,7 +117,7 @@ export default async function FanficDetailPage({
       characters:fanfic_characters(id, oc_id, name, oc:ocs(id, name, slug)),
       relationships:fanfic_relationships(id, relationship_text, relationship_type),
       tags:fanfic_tags(tag:tags(id, name)),
-      chapters:fanfic_chapters(id, chapter_number, title, word_count, image_url, is_published, published_at, created_at, updated_at)
+      chapters:fanfic_chapters(id, chapter_number, title, content, word_count, image_url, is_published, published_at, created_at, updated_at)
     `)
     .eq('slug', resolvedParams.slug)
     .eq('is_public', true)
@@ -133,7 +134,7 @@ export default async function FanficDetailPage({
         characters:fanfic_characters(id, oc_id, name, oc:ocs(id, name, slug)),
         relationships:fanfic_relationships(id, relationship_text, relationship_type),
         tags:fanfic_tags(tag:tags(id, name)),
-        chapters:fanfic_chapters(id, chapter_number, title, word_count, image_url, is_published, published_at, created_at, updated_at)
+        chapters:fanfic_chapters(id, chapter_number, title, content, word_count, image_url, is_published, published_at, created_at, updated_at)
       `)
       .eq('slug', resolvedParams.slug)
       .eq('is_public', true)

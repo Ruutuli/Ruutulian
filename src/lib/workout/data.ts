@@ -142,7 +142,7 @@ export const HOME_AB_CIRCUIT = {
   restBetweenRounds: '1–2 min',
   location: 'home' as const,
   notes:
-    'Separate from gym days — do at home when you can. All moves in order, then repeat for 3 rounds. Dragon flags are extra.',
+    'Separate from gym days — do at home when you can. 6 moves in order, then repeat for 3 rounds.',
 };
 
 export const ROUTINE: RoutineExercise[] = [
@@ -409,32 +409,6 @@ export const ROUTINE: RoutineExercise[] = [
     cue: 'Squeeze your core and glutes. Don’t let your hips sag.',
   },
   {
-    id: 'russian-twists',
-    name: 'Russian Twists',
-    category: 'core',
-    location: 'home',
-    startingWeight: null,
-    weightUnit: 'bodyweight',
-    sets: 3,
-    reps: '20',
-    repType: 'total',
-    circuitOrder: 4,
-    cue: 'Go slow. Keep your chest lifted.',
-  },
-  {
-    id: 'mountain-climbers',
-    name: 'Mountain Climbers',
-    category: 'core',
-    location: 'home',
-    startingWeight: null,
-    weightUnit: 'time',
-    sets: 3,
-    reps: '30',
-    repType: 'seconds',
-    circuitOrder: 5,
-    cue: 'Drive knees in fast but controlled.',
-  },
-  {
     id: 'leg-raises',
     name: 'Leg Raises',
     category: 'core',
@@ -444,7 +418,7 @@ export const ROUTINE: RoutineExercise[] = [
     sets: 3,
     reps: '10–12',
     repType: 'reps',
-    circuitOrder: 6,
+    circuitOrder: 4,
     cue: 'If your back arches, bend your knees slightly.',
   },
   {
@@ -457,8 +431,7 @@ export const ROUTINE: RoutineExercise[] = [
     sets: 3,
     reps: '20–30',
     repType: 'seconds',
-    circuitOrder: 7,
-    isFinisher: true,
+    circuitOrder: 5,
     cue: 'Hold tight. It sucks a little.',
   },
   {
@@ -471,7 +444,8 @@ export const ROUTINE: RoutineExercise[] = [
     sets: 1,
     reps: 'attempt',
     repType: 'reps',
-    notes: 'Extra work — focus on form, not reps',
+    circuitOrder: 6,
+    notes: 'Focus on form, not reps',
     cue: 'Controlled negatives when you can get them.',
   },
 ];

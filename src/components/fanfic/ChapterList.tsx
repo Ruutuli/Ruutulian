@@ -13,6 +13,7 @@ interface Chapter {
   id: string;
   chapter_number: number;
   title?: string | null;
+  content?: string | null;
   word_count?: number | null;
   image_url?: string | null;
 }

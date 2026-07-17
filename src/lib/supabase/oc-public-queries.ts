@@ -124,6 +124,8 @@ export const LORE_LIST_SELECT = `
   banner_image_url,
   world_id,
   story_alias_id,
+  created_at,
+  updated_at,
   world:worlds!inner(id, name, slug, is_public, primary_color, accent_color),
   story_alias:story_aliases(id, name, slug),
   related_ocs:world_lore_ocs(id, oc:ocs(id, name, slug))

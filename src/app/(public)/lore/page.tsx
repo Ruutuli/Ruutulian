@@ -7,6 +7,7 @@ import { NumberedPagination } from '@/components/ui/NumberedPagination';
 import { generatePageMetadata } from '@/lib/config/metadata-helpers';
 import { getSiteConfig } from '@/lib/config/site-config';
 import { LORE_LIST_SELECT, fetchLoreFilterWorlds } from '@/lib/supabase/oc-public-queries';
+import type { WorldLore } from '@/types/oc';
 
 export async function generateMetadata() {
   const config = await getSiteConfig();
@@ -84,7 +85,7 @@ export default async function LorePage({ searchParams }: LorePageProps) {
       </Suspense>
 
       <section className="mt-8">
-        <LoreList loreEntries={loreEntries || []} />
+        <LoreList loreEntries={(loreEntries || []) as unknown as WorldLore[]} />
         <NumberedPagination
           page={page}
           totalPages={totalPages}

@@ -102,7 +102,7 @@ export default async function FanficsPage({ searchParams }: FanficsPageProps) {
         ...new Set(
           fanficsData
             .map((f: any) => f.story_alias_id)
-            .filter((id): id is string => Boolean(id))
+            .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)
         ),
       ];
       if (aliasIds.length > 0) {
@@ -112,7 +112,7 @@ export default async function FanficsPage({ searchParams }: FanficsPageProps) {
           .in('id', aliasIds);
         if (storyAliases) {
           const aliasMap = new Map(storyAliases.map((sa) => [sa.id, sa]));
-          fanficsData.forEach((fanfic) => {
+          fanficsData.forEach((fanfic: any) => {
             if (fanfic.story_alias_id) {
               fanfic.story_alias = aliasMap.get(fanfic.story_alias_id) ?? null;
             }

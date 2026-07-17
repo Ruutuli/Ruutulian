@@ -356,7 +356,7 @@ export default async function OCDetailPage({
     .order('created_at', { ascending: false });
 
   // Fetch writing prompt responses
-  const { data: writingPromptResponses } = await supabase
+  const { data: writingPromptResponsesRaw } = await supabase
     .from('writing_prompt_responses')
     .select(`
       id,
@@ -371,6 +371,17 @@ export default async function OCDetailPage({
     `)
     .eq('oc_id', typedOc.id)
     .order('created_at', { ascending: false });
+
+  const writingPromptResponses = (writingPromptResponsesRaw ?? []).map((row) => {
+    const otherOc = row.other_oc as
+      | { id: string; name: string; slug: string }
+      | { id: string; name: string; slug: string }[]
+      | null;
+    return {
+      ...row,
+      other_oc: Array.isArray(otherOc) ? otherOc[0] ?? null : otherOc ?? null,
+    };
+  });
 
   // Helper function to render a field value
   const renderFieldValue = (field: WorldFieldDefinition, value: string | number | string[] | null) => {

@@ -58,13 +58,13 @@ export default async function FanficsPage({ searchParams }: FanficsPageProps) {
 
   const select = tagId ? FANFIC_LIST_SELECT_WITH_TAG : FANFIC_LIST_SELECT;
 
-  function applyFilters<T extends ReturnType<typeof supabase.from>>(q: T) {
-    let next = q.eq('is_public', true) as T;
-    if (worldId) next = next.eq('world_id', worldId) as T;
-    if (rating) next = next.eq('rating', rating) as T;
-    if (tagId) next = next.eq('fanfic_tags.tag_id', tagId) as T;
+  function applyFilters(q: any) {
+    let next = q.eq('is_public', true);
+    if (worldId) next = next.eq('world_id', worldId);
+    if (rating) next = next.eq('rating', rating);
+    if (tagId) next = next.eq('fanfic_tags.tag_id', tagId);
     if (search) {
-      next = next.or(`title.ilike.%${search}%,author.ilike.%${search}%`) as T;
+      next = next.or(`title.ilike.%${search}%,author.ilike.%${search}%`);
     }
     return next;
   }
@@ -101,7 +101,7 @@ export default async function FanficsPage({ searchParams }: FanficsPageProps) {
       const aliasIds = [
         ...new Set(
           fanficsData
-            .map((f) => f.story_alias_id)
+            .map((f: any) => f.story_alias_id)
             .filter((id): id is string => Boolean(id))
         ),
       ];

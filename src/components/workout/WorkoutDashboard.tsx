@@ -8,7 +8,6 @@ import { StatsSection } from '@/components/stats/StatsSection';
 import {
   ROUTINE,
   WORKOUT_GOALS,
-  HOME_AB_CIRCUIT,
   WEEKLY_SPLIT,
   CATEGORY_LABELS,
   CATEGORY_COLORS,
@@ -397,21 +396,6 @@ export function WorkoutDashboard() {
               iconColor="text-amber-400"
             >
               <p className="text-sm text-gray-400 -mt-4 mb-4">{day.subtitle}</p>
-
-              <div className="wiki-card p-5 mb-4 border border-amber-500/20">
-                <h4 className="text-gray-200 font-semibold mb-2">Ab Circuit — {HOME_AB_CIRCUIT.rounds} rounds</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-400">
-                  <p>
-                    <span className="text-gray-500">Between moves:</span> {HOME_AB_CIRCUIT.restBetweenMoves}
-                  </p>
-                  <p>
-                    <span className="text-gray-500">Between rounds:</span> {HOME_AB_CIRCUIT.restBetweenRounds}
-                  </p>
-                  <p>
-                    <span className="text-gray-500">Where:</span> Home
-                  </p>
-                </div>
-              </div>
 
               <div className="space-y-3 mb-4">
                 {getRoutineByCategory('core')

@@ -135,13 +135,6 @@ export const CATEGORY_COLORS: Record<WorkoutCategory, string> = {
   cardio: '#ef4444',
 };
 
-export const HOME_AB_CIRCUIT = {
-  rounds: 3,
-  restBetweenMoves: '30–45 sec',
-  restBetweenRounds: '1–2 min',
-  location: 'home' as const,
-};
-
 export const ROUTINE: RoutineExercise[] = [
   {
     id: 'stairmaster-warmup',

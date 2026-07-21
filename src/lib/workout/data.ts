@@ -114,7 +114,6 @@ export const WEEKLY_SPLIT: Array<{
     color: '#f59e0b',
     categories: ['core'],
     exerciseIds: ['hip-thrust'],
-    status: 'Building the habit',
   },
 ];
 
@@ -141,8 +140,6 @@ export const HOME_AB_CIRCUIT = {
   restBetweenMoves: '30–45 sec',
   restBetweenRounds: '1–2 min',
   location: 'home' as const,
-  notes:
-    'Separate from gym days — do at home when you can. 6 moves in order, then repeat for 3 rounds.',
 };
 
 export const ROUTINE: RoutineExercise[] = [

@@ -10,7 +10,6 @@ import {
   WORKOUT_GOALS,
   HOME_AB_CIRCUIT,
   WEEKLY_SPLIT,
-  GYM_CARDIO,
   CATEGORY_LABELS,
   CATEGORY_COLORS,
   LOCAL_STORAGE_KEY,
@@ -35,7 +34,6 @@ import {
   formatLongDate,
   formatSettings,
   groupCompleteLogsByDate,
-  isInferredLog,
   getWorkoutDays,
   getDefaultRepsValue,
   getTodayLocalDate,
@@ -301,11 +299,6 @@ export function WorkoutDashboard() {
                       <div className="flex items-center gap-2 mb-1">
                         <i className={`${day.icon} text-sm`} style={{ color: day.color }} />
                         <h4 className="text-gray-200 font-semibold">{day.title}</h4>
-                        {day.status && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400">
-                            {day.status}
-                          </span>
-                        )}
                       </div>
                       <p className="text-sm text-gray-400">{day.subtitle}</p>
                       <p className="text-xs text-gray-500 mt-2 capitalize">{day.location}</p>
@@ -317,11 +310,6 @@ export function WorkoutDashboard() {
                 </div>
               ))}
             </div>
-            <p className="text-sm text-gray-500 mt-4">
-              {WORKOUT_GOALS.gymDaysPerWeek} gym days per week — {GYM_CARDIO.machine}{' '}
-              {GYM_CARDIO.minutes} min before & after at level {GYM_CARDIO.level}. Home abs are separate.
-              Exercises not logged on a day are shown at the same weight as your previous session.
-            </p>
           </StatsSection>
 
           <div className="wiki-card p-4 sm:p-6">
@@ -409,9 +397,6 @@ export function WorkoutDashboard() {
               iconColor="text-amber-400"
             >
               <p className="text-sm text-gray-400 -mt-4 mb-4">{day.subtitle}</p>
-              {day.status && (
-                <p className="text-sm text-amber-400/90 mb-4">{day.status}</p>
-              )}
 
               <div className="wiki-card p-5 mb-4 border border-amber-500/20">
                 <h4 className="text-gray-200 font-semibold mb-2">Ab Circuit — {HOME_AB_CIRCUIT.rounds} rounds</h4>
@@ -426,7 +411,6 @@ export function WorkoutDashboard() {
                     <span className="text-gray-500">Where:</span> Home
                   </p>
                 </div>
-                <p className="text-xs text-gray-500 mt-3">{HOME_AB_CIRCUIT.notes}</p>
               </div>
 
               <div className="space-y-3 mb-4">
@@ -450,7 +434,6 @@ export function WorkoutDashboard() {
                           )}
                           <span className="text-sm text-amber-400/90">{formatExercisePrescription(exercise)}</span>
                         </div>
-                        {exercise.cue && <p className="text-sm text-gray-500 mt-1">{exercise.cue}</p>}
                       </div>
                     </div>
                   ))}
@@ -545,19 +528,6 @@ export function WorkoutDashboard() {
             );
           })}
 
-          <StatsSection title="Home Abs" icon="fas fa-house" iconColor="text-amber-400">
-            <div className="wiki-card p-5 text-sm text-gray-400">
-              <p className="text-gray-300 mb-2">Bodyweight circuit — track by feel, not weight.</p>
-              <p>
-                {HOME_AB_CIRCUIT.rounds} rounds · {HOME_AB_CIRCUIT.restBetweenMoves} between moves ·{' '}
-                {HOME_AB_CIRCUIT.restBetweenRounds} between rounds
-              </p>
-              <p className="mt-2 text-gray-500">
-                Log hold times or reps in the Progress Log when you want to track improvements (plank duration,
-                dragon flag attempts, etc.).
-              </p>
-            </div>
-          </StatsSection>
         </div>
       )}
 
@@ -592,9 +562,6 @@ export function WorkoutDashboard() {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                           <span className="text-gray-200 font-medium break-words">{log.exerciseName}</span>
-                          {isInferredLog(log) && (
-                            <span className="text-xs text-gray-500">(carried over)</span>
-                          )}
                           <span
                             className="text-xs px-2 py-0.5 rounded-full shrink-0"
                             style={{
@@ -917,8 +884,6 @@ function RoutineCard({
         </span>
       </div>
       <p className="text-sm text-gray-400 mt-1">{formatExercisePrescription(exercise)}</p>
-      {exercise.notes && <p className="text-xs text-gray-500 mt-1">{exercise.notes}</p>}
-      {exercise.cue && <p className="text-xs text-gray-500 mt-1 italic">{exercise.cue}</p>}
       {settings.length > 0 && (
         <ul className="mt-2 space-y-0.5">
           {settings.map((setting) => (
@@ -946,7 +911,6 @@ function LatestSession({ logs, date }: { logs: WorkoutLogEntry[]; date: string }
           <div key={log.id} className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center py-2 px-3 bg-gray-800/50 rounded-lg">
             <span className="text-gray-300 text-sm break-words min-w-0">
               {log.exerciseName}
-              {isInferredLog(log) && <span className="text-gray-500 text-xs ml-1">(carried)</span>}
             </span>
             <span className="text-gray-200 text-sm font-medium sm:text-right shrink-0">{formatLogSummary(log)}</span>
           </div>

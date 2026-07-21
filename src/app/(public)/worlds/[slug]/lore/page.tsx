@@ -77,10 +77,8 @@ export async function generateMetadata({
 
 export default async function WorldLorePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams?: { [key: string]: string | string[] | undefined };
 }) {
   const supabase = await createClient();
   const resolvedParams = await params;
@@ -116,10 +114,7 @@ export default async function WorldLorePage({
       />
 
       <section className="mt-8">
-        <LoreList
-          loreEntries={(loreEntries || []) as unknown as WorldLore[]}
-          searchParams={searchParams || {}}
-        />
+        <LoreList loreEntries={(loreEntries || []) as unknown as WorldLore[]} />
       </section>
     </div>
   );

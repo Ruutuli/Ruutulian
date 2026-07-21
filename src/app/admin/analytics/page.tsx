@@ -48,7 +48,7 @@ export default async function AdminAnalyticsPage() {
       .from('ocs')
       .select(OC_STATS_SELECT)
       .eq('is_public', true);
-    publicOCs = fallbackOCs ?? [];
+    publicOCs = (fallbackOCs ?? []) as unknown as typeof publicOCs;
   }
 
   const loreIds = recent

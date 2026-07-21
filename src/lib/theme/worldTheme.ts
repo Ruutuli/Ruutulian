@@ -1,6 +1,9 @@
-import type { World } from '@/types/oc';
+type WorldThemeSource =
+  | { primary_color?: string | null; accent_color?: string | null }
+  | null
+  | undefined;
 
-export function getWorldTheme(world: World | null | undefined) {
+export function getWorldTheme(world: WorldThemeSource) {
   if (!world) {
     return {
       primary: '#64748b',
@@ -14,7 +17,7 @@ export function getWorldTheme(world: World | null | undefined) {
   };
 }
 
-export function applyWorldThemeStyles(world: World | null | undefined) {
+export function applyWorldThemeStyles(world: WorldThemeSource) {
   const theme = getWorldTheme(world);
   return {
     '--world-primary': theme.primary,

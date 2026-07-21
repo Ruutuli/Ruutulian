@@ -72,9 +72,48 @@ export const OC_CARD_COMPARE_SELECT = `
   world:worlds(id, name, slug, primary_color, accent_color)
 `;
 
+export interface OCCardCompareWorld {
+  id: string;
+  name: string;
+  slug: string;
+  primary_color?: string | null;
+  accent_color?: string | null;
+}
+
+/** Slim OC shape returned by OC_CARD_COMPARE_SELECT (+ optional NSFW flag from attachImageNsfwFlags). */
+export interface OCCardCompareOC {
+  id: string;
+  name: string;
+  slug: string;
+  image_url?: string | null;
+  image_is_nsfw?: boolean;
+  age?: number | null;
+  status?: string | null;
+  species?: string | null;
+  alignment?: string | null;
+  stat_strength?: number | null;
+  stat_dexterity?: number | null;
+  stat_constitution?: number | null;
+  stat_intelligence?: number | null;
+  stat_wisdom?: number | null;
+  stat_charisma?: number | null;
+  world?: OCCardCompareWorld | OCCardCompareWorld[] | null;
+}
+
 /** Fields for the interactive timeline visualization. */
 export const TIMELINE_VISUAL_SELECT =
   'id, title, description, year, timeline_id, date_data, category, world_id';
+
+export interface TimelineVisualEvent {
+  id: string;
+  title: string;
+  description?: string | null;
+  year?: number | null;
+  timeline_id?: string | null;
+  date_data?: Record<string, unknown> | null;
+  category?: string | null;
+  world_id?: string;
+}
 
 /** Fanfic index cards — excludes chapter bodies and long notes. */
 export const FANFIC_LIST_SELECT = `

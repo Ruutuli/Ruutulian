@@ -1,17 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import type { OC } from '@/types/oc';
 import { NsfwGoogleDriveImage } from '@/components/oc/NsfwGoogleDriveImage';
 import { applyWorldThemeStyles } from '@/lib/theme/worldTheme';
+import type { OCCardCompareOC } from '@/lib/supabase/oc-public-queries';
 
 interface CharacterCardProps {
-  oc: OC;
+  oc: OCCardCompareOC;
   className?: string;
 }
 
+function resolveWorld(world: OCCardCompareOC['world']) {
+  if (!world) return undefined;
+  return Array.isArray(world) ? world[0] : world;
+}
+
 export function CharacterCard({ oc, className = '' }: CharacterCardProps) {
-  const themeStyles = applyWorldThemeStyles(oc.world);
+  const world = resolveWorld(oc.world);
+  const themeStyles = applyWorldThemeStyles(world);
 
   return (
     <Link
@@ -47,10 +53,10 @@ export function CharacterCard({ oc, className = '' }: CharacterCardProps) {
           
           {/* Key Stats */}
           <div className="space-y-2 mb-3">
-            {oc.world && (
+            {world && (
               <div className="flex items-center gap-2 text-sm">
                 <i className="fas fa-globe text-purple-400 w-4"></i>
-                <span className="text-gray-300 truncate">{oc.world.name}</span>
+                <span className="text-gray-300 truncate">{world.name}</span>
               </div>
             )}
             {oc.age && (

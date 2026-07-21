@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { CharacterComparison } from '@/components/interactive/CharacterComparison';
 import { PageHeader } from '@/components/layout/PageHeader';
-import type { OC } from '@/types/oc';
 import { generatePageMetadata } from '@/lib/config/metadata-helpers';
 import { getSiteConfig } from '@/lib/config/site-config';
 import { logger } from '@/lib/logger';

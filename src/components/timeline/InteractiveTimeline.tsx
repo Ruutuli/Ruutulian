@@ -1,20 +1,19 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import type { TimelineEvent } from '@/types/oc';
 import Link from 'next/link';
-import { format } from 'date-fns';
+import type { TimelineVisualEvent } from '@/lib/supabase/oc-public-queries';
 
 interface InteractiveTimelineProps {
-  events: TimelineEvent[];
-  onEventClick?: (event: TimelineEvent) => void;
+  events: TimelineVisualEvent[];
+  onEventClick?: (event: TimelineVisualEvent) => void;
   className?: string;
 }
 
 export function InteractiveTimeline({ events, onEventClick, className = '' }: InteractiveTimelineProps) {
   const [zoom, setZoom] = useState(1);
   const [panX, setPanX] = useState(0);
-  const [selectedEvent, setSelectedEvent] = useState<TimelineEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<TimelineVisualEvent | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
@@ -64,7 +63,7 @@ export function InteractiveTimeline({ events, onEventClick, className = '' }: In
   };
 
   // Calculate position for event
-  const getEventPosition = (event: TimelineEvent): number => {
+  const getEventPosition = (event: TimelineVisualEvent): number => {
     const year = event.year || minYear;
     return ((year - minYear) / yearRange) * 100;
   };

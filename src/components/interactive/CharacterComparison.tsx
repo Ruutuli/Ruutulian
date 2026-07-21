@@ -1,19 +1,24 @@
 'use client';
 
 import { useState } from 'react';
-import type { OC } from '@/types/oc';
 import { DnDRadarChart } from '@/components/visualizations/RadarChart';
 import Image from 'next/image';
 import Link from 'next/link';
 import { convertGoogleDriveUrl, shouldUseUnoptimizedImage } from '@/lib/utils/googleDriveImage';
 import { GoogleDriveImage } from '@/components/oc/GoogleDriveImage';
+import type { OCCardCompareOC } from '@/lib/supabase/oc-public-queries';
 
 interface CharacterComparisonProps {
-  oc1: OC | null;
-  oc2: OC | null;
-  onSelectOC1?: (oc: OC | null) => void;
-  onSelectOC2?: (oc: OC | null) => void;
-  availableOCs?: OC[];
+  oc1: OCCardCompareOC | null;
+  oc2: OCCardCompareOC | null;
+  onSelectOC1?: (oc: OCCardCompareOC | null) => void;
+  onSelectOC2?: (oc: OCCardCompareOC | null) => void;
+  availableOCs?: OCCardCompareOC[];
+}
+
+function resolveWorld(world: OCCardCompareOC['world']) {
+  if (!world) return undefined;
+  return Array.isArray(world) ? world[0] : world;
 }
 
 export function CharacterComparison({
@@ -26,7 +31,7 @@ export function CharacterComparison({
   const [showSelector1, setShowSelector1] = useState(false);
   const [showSelector2, setShowSelector2] = useState(false);
 
-  const renderOCInfo = (oc: OC | null, side: 'left' | 'right') => {
+  const renderOCInfo = (oc: OCCardCompareOC | null, side: 'left' | 'right') => {
     if (!oc) {
       return (
         <div className="flex flex-col items-center justify-center h-full text-gray-400">
@@ -42,8 +47,8 @@ export function CharacterComparison({
           <Link href={`/ocs/${oc.slug}`} className="hover:text-purple-400 transition-colors">
             <h3 className="text-2xl font-bold text-gray-100 mb-2">{oc.name}</h3>
           </Link>
-          {oc.world && (
-            <p className="text-gray-400">{oc.world.name}</p>
+          {resolveWorld(oc.world) && (
+            <p className="text-gray-400">{resolveWorld(oc.world)!.name}</p>
           )}
         </div>
 

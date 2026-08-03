@@ -190,6 +190,12 @@ export interface PublicLoreListResult {
   count: number;
 }
 
+type LoreListQueryResult = {
+  data: Array<Record<string, unknown>> | null;
+  error: { message: string; code?: string; details?: string } | null;
+  count: number | null;
+};
+
 async function stitchStoryAliasesForLoreList(
   supabase: SupabaseClient,
   loreEntries: Array<Record<string, unknown>>
@@ -230,7 +236,9 @@ export async function fetchPublicLoreList(
   const worldId = filters.worldId ?? '';
   const loreType = filters.loreType ?? '';
 
-  const applyFilters = (query: ReturnType<SupabaseClient['from']>) => {
+  const applyFilters = (
+    query: ReturnType<ReturnType<SupabaseClient['from']>['select']>
+  ) => {
     let filtered = query.eq('world.is_public', true);
     if (worldId) filtered = filtered.eq('world_id', worldId);
     if (loreType) filtered = filtered.eq('lore_type', loreType);
@@ -240,12 +248,12 @@ export async function fetchPublicLoreList(
     return filtered;
   };
 
-  let result = await applyFilters(
+  let result = (await applyFilters(
     supabase.from('world_lore').select(LORE_LIST_SELECT, { count: 'exact' })
   )
     .order('world_id', { ascending: true })
     .order('name', { ascending: true })
-    .range((page - 1) * pageSize, page * pageSize - 1);
+    .range((page - 1) * pageSize, page * pageSize - 1)) as LoreListQueryResult;
 
   if (
     result.error &&
@@ -253,12 +261,12 @@ export async function fetchPublicLoreList(
     (result.error.message?.includes('story_aliases') ||
       result.error.details?.includes('story_alias'))
   ) {
-    result = await applyFilters(
+    result = (await applyFilters(
       supabase.from('world_lore').select(LORE_LIST_SELECT_FALLBACK, { count: 'exact' })
     )
       .order('world_id', { ascending: true })
       .order('name', { ascending: true })
-      .range((page - 1) * pageSize, page * pageSize - 1);
+      .range((page - 1) * pageSize, page * pageSize - 1)) as LoreListQueryResult;
 
     if (result.data) {
       await stitchStoryAliasesForLoreList(supabase, result.data);

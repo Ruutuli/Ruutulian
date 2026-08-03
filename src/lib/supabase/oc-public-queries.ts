@@ -152,8 +152,7 @@ export const FANFIC_LIST_SELECT_WITH_TAG = `
   tags:fanfic_tags!inner(tag_id, tag:tags(id, name))
 `;
 
-/** Lore index cards — excludes full article bodies. */
-export const LORE_LIST_SELECT = `
+const LORE_LIST_BODY = `
   id,
   slug,
   name,
@@ -166,9 +165,115 @@ export const LORE_LIST_SELECT = `
   created_at,
   updated_at,
   world:worlds!inner(id, name, slug, is_public, primary_color, accent_color),
-  story_alias:story_aliases(id, name, slug),
   related_ocs:world_lore_ocs(id, oc:ocs(id, name, slug))
-`;
+`.replace(/\s+/g, ' ');
+
+/** Lore index cards — excludes full article bodies. */
+export const LORE_LIST_SELECT = LORE_LIST_BODY.replace(
+  'story_alias_id, created_at',
+  'story_alias_id, story_alias:story_aliases!fk_world_lore_story_alias_id(id, name, slug), created_at'
+);
+
+/** Retry path when story_aliases relationship fails to embed. */
+export const LORE_LIST_SELECT_FALLBACK = LORE_LIST_BODY;
+
+export interface PublicLoreListFilters {
+  search?: string;
+  worldId?: string;
+  loreType?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PublicLoreListResult {
+  loreEntries: Array<Record<string, unknown>>;
+  count: number;
+}
+
+async function stitchStoryAliasesForLoreList(
+  supabase: SupabaseClient,
+  loreEntries: Array<Record<string, unknown>>
+): Promise<void> {
+  const storyAliasIds = [
+    ...new Set(
+      loreEntries
+        .map((entry) => entry.story_alias_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    ),
+  ];
+
+  if (storyAliasIds.length === 0) return;
+
+  const { data: storyAliases } = await supabase
+    .from('story_aliases')
+    .select('id, name, slug')
+    .in('id', storyAliasIds);
+
+  if (!storyAliases) return;
+
+  const storyAliasMap = new Map(storyAliases.map((alias) => [alias.id, alias]));
+  for (const entry of loreEntries) {
+    if (typeof entry.story_alias_id === 'string') {
+      const storyAlias = storyAliasMap.get(entry.story_alias_id);
+      if (storyAlias) entry.story_alias = storyAlias;
+    }
+  }
+}
+
+export async function fetchPublicLoreList(
+  supabase: SupabaseClient,
+  filters: PublicLoreListFilters = {}
+): Promise<PublicLoreListResult> {
+  const page = Math.max(1, filters.page ?? 1);
+  const pageSize = Math.max(1, filters.pageSize ?? 24);
+  const search = filters.search?.trim() ?? '';
+  const worldId = filters.worldId ?? '';
+  const loreType = filters.loreType ?? '';
+
+  const applyFilters = (query: ReturnType<SupabaseClient['from']>) => {
+    let filtered = query.eq('world.is_public', true);
+    if (worldId) filtered = filtered.eq('world_id', worldId);
+    if (loreType) filtered = filtered.eq('lore_type', loreType);
+    if (search) {
+      filtered = filtered.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+    }
+    return filtered;
+  };
+
+  let result = await applyFilters(
+    supabase.from('world_lore').select(LORE_LIST_SELECT, { count: 'exact' })
+  )
+    .order('world_id', { ascending: true })
+    .order('name', { ascending: true })
+    .range((page - 1) * pageSize, page * pageSize - 1);
+
+  if (
+    result.error &&
+    (result.error.code === 'PGRST200' || result.error.code === 'PGRST201') &&
+    (result.error.message?.includes('story_aliases') ||
+      result.error.details?.includes('story_alias'))
+  ) {
+    result = await applyFilters(
+      supabase.from('world_lore').select(LORE_LIST_SELECT_FALLBACK, { count: 'exact' })
+    )
+      .order('world_id', { ascending: true })
+      .order('name', { ascending: true })
+      .range((page - 1) * pageSize, page * pageSize - 1);
+
+    if (result.data) {
+      await stitchStoryAliasesForLoreList(supabase, result.data);
+    }
+  }
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  return {
+    loreEntries: result.data ?? [],
+    count: result.count ?? 0,
+  };
+}
 
 /** Admin OC progress tracking — all completion fields, no unrelated blobs. */
 export const OC_ADMIN_PROGRESS_SELECT = `

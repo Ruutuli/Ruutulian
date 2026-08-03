@@ -119,17 +119,39 @@ export async function generateMetadata({
 
 export const revalidate = 300;
 
-type GalleryEntry = { url: string; isNsfw: boolean };
+type GalleryEntry = {
+  id: string;
+  fileId: string;
+  url: string;
+  title: string;
+  tags: string[];
+  isNsfw: boolean;
+};
 
 function mapGalleryRows(
-  rows: { drive_file_id?: string | null; is_nsfw?: boolean | null }[] | null
+  rows:
+    | {
+        id?: string | null;
+        drive_file_id?: string | null;
+        name?: string | null;
+        tags?: string[] | null;
+        is_nsfw?: boolean | null;
+      }[]
+    | null
 ): GalleryEntry[] {
   return (rows ?? [])
-    .map((r) =>
-      r.drive_file_id
-        ? { url: driveFileViewUrl(String(r.drive_file_id)), isNsfw: Boolean(r.is_nsfw) }
-        : null
-    )
+    .map((r) => {
+      if (!r.drive_file_id || !r.id) return null;
+      const fileId = String(r.drive_file_id);
+      return {
+        id: String(r.id),
+        fileId,
+        url: driveFileViewUrl(fileId),
+        title: r.name?.trim() || '',
+        tags: [...(r.tags ?? [])].filter(Boolean),
+        isNsfw: Boolean(r.is_nsfw),
+      };
+    })
     .filter((e): e is GalleryEntry => Boolean(e));
 }
 
@@ -262,7 +284,7 @@ export default async function OCDetailPage({
         const taggedEnd = Math.min(end, taggedTotal - 1);
         const { data: galleryRows, error: rowsError } = await supabase
           .from('gallery_items')
-          .select('drive_file_id, is_nsfw, gallery_item_ocs!inner(oc_id)')
+          .select('id, drive_file_id, name, tags, is_nsfw, gallery_item_ocs!inner(oc_id)')
           .eq('published', true)
           .eq('gallery_item_ocs.oc_id', typedOc.id)
           .order('sort_order', { ascending: true })
@@ -277,8 +299,12 @@ export default async function OCDetailPage({
         const legacyStart = Math.max(0, start - taggedTotal);
         const legacyEnd = Math.min(legacyTotal - 1, end - taggedTotal);
         pageEntries.push(
-          ...legacyGalleryUrls.slice(legacyStart, legacyEnd + 1).map((url) => ({
+          ...legacyGalleryUrls.slice(legacyStart, legacyEnd + 1).map((url, i) => ({
+            id: `legacy-${legacyStart + i}-${url}`,
+            fileId: '',
             url,
+            title: '',
+            tags: [] as string[],
             isNsfw: false,
           }))
         );

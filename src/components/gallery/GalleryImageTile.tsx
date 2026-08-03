@@ -9,6 +9,8 @@ import type { GalleryLayoutMode } from '@/components/gallery/gallery-public-type
 
 interface GalleryImageTileProps {
   fileId: string;
+  /** When set, used instead of building a URL from fileId (legacy OC gallery URLs). */
+  imageSrc?: string;
   title: string;
   tags: string[];
   isNsfw: boolean;
@@ -19,6 +21,7 @@ interface GalleryImageTileProps {
 
 export function GalleryImageTile({
   fileId,
+  imageSrc,
   title,
   tags,
   isNsfw,
@@ -26,7 +29,7 @@ export function GalleryImageTile({
   layout,
   onOpen,
 }: GalleryImageTileProps) {
-  const src = convertGoogleDriveUrl(driveFileViewUrl(fileId));
+  const src = imageSrc ?? convertGoogleDriveUrl(driveFileViewUrl(fileId));
   const displayTitle = title?.trim() || 'Untitled';
   const isMasonry = layout === 'masonry';
 

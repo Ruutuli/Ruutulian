@@ -6,7 +6,7 @@ import { LoreFilters } from '@/components/filters/LoreFilters';
 import { NumberedPagination } from '@/components/ui/NumberedPagination';
 import { generatePageMetadata } from '@/lib/config/metadata-helpers';
 import { getSiteConfig } from '@/lib/config/site-config';
-import { LORE_LIST_SELECT, fetchLoreFilterWorlds } from '@/lib/supabase/oc-public-queries';
+import { fetchLoreFilterWorlds, fetchPublicLoreList } from '@/lib/supabase/oc-public-queries';
 import type { WorldLore } from '@/types/oc';
 
 export async function generateMetadata() {
@@ -49,25 +49,16 @@ export default async function LorePage({ searchParams }: LorePageProps) {
   const loreType = typeof searchParams.lore_type === 'string' ? searchParams.lore_type : '';
   const page = Math.max(1, parseInt(typeof searchParams.page === 'string' ? searchParams.page : '1', 10) || 1);
 
-  const worlds = await fetchLoreFilterWorlds(supabase);
-
-  let query = supabase
-    .from('world_lore')
-    .select(LORE_LIST_SELECT, { count: 'exact' })
-    .eq('world.is_public', true);
-
-  if (worldId) query = query.eq('world_id', worldId);
-  if (loreType) query = query.eq('lore_type', loreType);
-  if (search) {
-    query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
-  }
-
-  const { data: loreEntries, count } = await query
-    .order('world_id', { ascending: true })
-    .order('name', { ascending: true })
-    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
-
-  const totalCount = count ?? 0;
+  const [worlds, { loreEntries, count: totalCount }] = await Promise.all([
+    fetchLoreFilterWorlds(supabase),
+    fetchPublicLoreList(supabase, {
+      search,
+      worldId,
+      loreType,
+      page,
+      pageSize: PAGE_SIZE,
+    }),
+  ]);
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (

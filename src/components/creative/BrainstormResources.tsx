@@ -98,16 +98,16 @@ export function BrainstormResources({ categories }: BrainstormResourcesProps) {
             </div>
 
             {filteredItems.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
+              <ul className="columns-1 sm:columns-2 xl:columns-3 gap-x-8 [column-fill:_balance]">
                 {filteredItems.map((item) => (
-                  <span
+                  <li
                     key={item}
-                    className="px-3 py-1.5 bg-gray-800/80 border border-gray-700/80 rounded-lg text-sm text-gray-200 hover:border-purple-500/50 hover:bg-gray-800 transition-colors"
+                    className="break-inside-avoid border-b border-gray-800/80 py-2 text-sm text-gray-200 leading-snug"
                   >
                     {item}
-                  </span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             ) : (
               <div className="text-center py-12 text-gray-400">
                 <i className="fas fa-search text-3xl mb-3 opacity-50"></i>

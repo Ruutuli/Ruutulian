@@ -32,7 +32,7 @@ yarn-error.log*
 site-config.json
 
 # Google service account keys (Drive / gallery sync — never commit)
-ruutuli-07f405959e17.json
+ruutuli-*.json
 
 # vercel
 .vercel
@@ -44,4 +44,5 @@ next-env.d.ts
 # session data
 .data/
 
-ruutuli-07f405959e17.json
+# script run output
+scripts/output/

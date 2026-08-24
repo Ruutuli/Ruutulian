@@ -14,8 +14,8 @@ dist
 *.tsbuildinfo
 
 # Documentation - not needed in production (keep brainstorm CSV for /tools/brainstorm)
-docs/*
-!docs/OC IDEAS AND BRAINSTORMING - Options.csv
+docs/guides
+docs/reports
 *.md
 README.md
 

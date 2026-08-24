@@ -6,6 +6,7 @@ import { cache } from 'react';
 const CSV_PATH = path.join(
   process.cwd(),
   'docs',
+  'data',
   'OC IDEAS AND BRAINSTORMING - Options.csv'
 );
 

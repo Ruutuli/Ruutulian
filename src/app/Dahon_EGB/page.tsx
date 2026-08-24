@@ -203,7 +203,16 @@ const shopCatalog = [
 const shelfItems = shopCatalog.filter((item) => item.kind === 'product');
 const serviceItems = shopCatalog.filter((item) => item.kind === 'service');
 
-const relations = [
+const relations: ReadonlyArray<{
+  id: string;
+  name: string;
+  role: string;
+  status: string;
+  hearts: number;
+  portrait?: string;
+  initials: string;
+  blurb: string;
+}> = [
   {
     id: 'lluem',
     name: 'Lluem Abre',
@@ -226,7 +235,7 @@ const relations = [
     blurb:
       "A capable, demanding matriarch who trusts Dahon with the family's most sensitive work. Their love is real, though much of it has always been expressed through duty and expectation.",
   },
-] as const;
+];
 
 const trivia = [
   'He smooths his sleeves when anxious and offers tea whenever he does not know what else to say.',

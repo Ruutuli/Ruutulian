@@ -52,7 +52,9 @@ const fetchSiteConfigFromDB = cache(async (): Promise<SiteConfig> => {
     .maybeSingle();
 
   if (error) {
-    throw new Error(`Site settings error: ${error.message}`);
+    // Don't crash the build/pages when Supabase is unreachable (e.g. paused project) — fall back to defaults.
+    console.warn(`Site settings unavailable, using defaults: ${error.message}`);
+    return { ...DEFAULT_SITE_CONFIG, siteUrl: process.env.NEXT_PUBLIC_SITE_URL || DEFAULT_SITE_CONFIG.siteUrl };
   }
 
   if (!data) {
